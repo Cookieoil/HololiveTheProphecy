@@ -36,10 +36,10 @@ enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/godot
 [file_customization]
 
 folder_colors={
-"res://Autoload/": "orange",
 "res://Core/": "yellow",
 "res://Data/": "green",
 "res://GDTest/": "teal",
+"res://Managers/": "orange",
 "res://Scenes/": "purple",
 "res://Shaders/": "pink",
 "res://Trash/": "gray",

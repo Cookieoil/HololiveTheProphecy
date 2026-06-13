@@ -198,10 +198,10 @@ func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
 	# Inject async hooks
 	ctx.request_n_target = func(count: int, filter: Callable) -> Array[Unit]:
 		return ui.ask_N_target(state, count, filter)
-	ctx.request_all_targets = func(count: int, filter: Callable) -> Array[Unit]:
-		return ui.get_living_enemies(state, count, filter)
-	ctx.request_card_choice = func(filter: Callable) -> Card:
-		return ui.ask_card_choice(state, filter)
+	ctx.request_all_targets = func(filter: Callable) -> Array[Unit]:
+		return ui.get_living_enemies(state, filter)
+	ctx.request_card_choice = func(count: int, filter: Callable) -> Array[Unit]:
+		return ui.ask_card_choice(state, count, filter)
 	ctx.log_message = func(msg: String) -> void:
 		ui.show_message("  " + msg)
 

@@ -60,7 +60,7 @@ enum ValueSource {
 
 ## Player can select or automatically choose
 enum CardSelectMode {
-	ASK_ANY, # Player chooses any card in hand
+	PICK_N_CARD, # Player chooses any card in hand
 	AUTO_HIGHEST, # Auto-select highest value card
 	AUTO_TOP_N, # uto-select top N cards by value
 }
@@ -86,7 +86,7 @@ enum CardModType {
 
 @export_group("Action")
 @export var action_type: Action = Action.DEAL_DAMAGE
-@export var card_select_mode: CardSelectMode = CardSelectMode.ASK_ANY
+@export var card_select_mode: CardSelectMode = CardSelectMode.PICK_N_CARD
 @export var card_mod_type: CardModType = CardModType.BUFF
 @export var card_count: int = 1 # For draw_card and auto_top_n
 
@@ -119,7 +119,7 @@ func _resolve_targets(ctx: SkillContext) -> Array[Unit]:
 			var is_ally := ctx.caster.is_ally
 			var filter := func(u: Unit) -> bool:
 				return u.is_ally != is_ally and not u.is_dead
-			var results: Array[Unit] = await ctx.request_n_target.call(
+			var results: Array[Unit] = await ctx.pick_n_target.call(
 				target_count, filter
 			)
 			ctx.targets = results
@@ -308,7 +308,7 @@ func _lose_hp(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
 			target.data.display_name, lost, target
 		])
 		if target.is_dead:
-			ctx.log("💀 %s is defeated by self-damage!" % target.data.display_name)
+			ctx.log("%s is defeated by self-damage!" % target.data.display_name)
 			EventBus.unit_died.emit(target)
 
 
@@ -329,12 +329,12 @@ func _apply_modifier(ctx: SkillContext, targets: Array[Unit], value: int) -> voi
 
 func _modify_card(ctx: SkillContext, value: int) -> void:
 	match card_select_mode:
-		CardSelectMode.ASK_ANY:
+		CardSelectMode.PICK_N_CARD:
 			if ctx.game_state.hand.is_empty():
 				ctx.log("No cards in hand to modify.")
 				return
 			var filter := func(_c: Card) -> bool: return true
-			var chosen: Card = await ctx.request_card_choice.call(filter)
+			var chosen: Card = await ctx.pick_n_card.call(card_count, filter)
 			if chosen == null:
 				ctx.log("No card chosen.")
 				return
@@ -379,9 +379,9 @@ func _discard_card(ctx: SkillContext) -> void:
 
 	var chosen: Card = null
 	match card_select_mode:
-		CardSelectMode.ASK_ANY:
+		CardSelectMode.PICK_N_CARD:
 			var filter := func(_c: Card) -> bool: return true
-			chosen = await ctx.request_card_choice.call(filter)
+			chosen = await ctx.pick_n_card.call(card_count, filter)
 		CardSelectMode.AUTO_HIGHEST:
 			chosen = ctx.game_state.get_highest_card_in_hand()
 		CardSelectMode.AUTO_TOP_N:

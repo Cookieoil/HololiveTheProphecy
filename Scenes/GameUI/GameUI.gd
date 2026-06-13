@@ -33,13 +33,13 @@ func get_player_action(_state: GameState) -> Dictionary:
 	return {}
 
 ## Ask the player to choose one unit from a filtered list.
-func ask_target(_state: GameState, _filter: Callable) -> Unit:
-	return null
+func get_living_enemies(_state: GameState, _filter: Callable) -> Array[Unit]:
+	return []
 
 ## Ask the player to choose N units (no repeats) from a filtered list.
-func ask_multi_target(_state: GameState, _count: int, _filter: Callable) -> Array[Unit]:
+func get_n_target(_state: GameState, _count: int, _filter: Callable) -> Array[Unit]:
 	return []
 
 ## Ask the player to choose a card from hand.
-func ask_card_choice(_state: GameState, _filter: Callable) -> Card:
-	return null
+func get_card_choice(_state: GameState, _count: int, _filter: Callable) -> Array[Unit]:
+	return []

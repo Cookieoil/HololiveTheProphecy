@@ -21,11 +21,11 @@ var card_value: int = 0
 var stored_value: int = 0
 
 # func(count: int, filter: Callable) -> Array[Unit]
-var request_n_target: Callable = Callable()
+var pick_n_target: Callable = Callable()
 # func(count: int, filter: Callable) -> Array[Unit]
-var request_all_targets: Callable = Callable()
-# func(filter: Callable) -> Card
-var request_card_choice: Callable = Callable()
+var get_all_targets: Callable = Callable() # this one doesn't do anything for now (delete later)
+# func(count: int, filter: Callable) -> Array[Unit]
+var pick_n_card: Callable = Callable()
 # func(message: String) -> void
 var log_message: Callable = Callable()
 
