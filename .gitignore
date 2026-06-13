@@ -1,0 +1,9 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Extra safety ignores
+*.uid
+.mono/
+data_*/
+mono_crash_*.json

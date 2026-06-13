@@ -1,0 +1,53 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name="Hololive: The Prophecy"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+run/max_fps=60
+config/icon="res://Trash/icon.svg"
+
+[autoload]
+
+EventBus="*uid://b6p5m3780dqx"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/godotsize/plugin.cfg")
+
+[file_customization]
+
+folder_colors={
+"res://Autoload/": "orange",
+"res://Core/": "yellow",
+"res://Data/": "green",
+"res://GDTest/": "teal",
+"res://Scenes/": "purple",
+"res://Shaders/": "pink",
+"res://Trash/": "gray",
+"res://addons/": "red",
+"res://reports/": "blue"
+}
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
