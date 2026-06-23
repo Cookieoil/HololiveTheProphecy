@@ -8,7 +8,7 @@ extends Resource
 
 enum MergedMode {
 	AND,    # Merged effects, then base effects
-	INSTEAD,# Only merged effect
+	OR,# Only merged effect
 }
 
 @export var skill_name: String = ""
