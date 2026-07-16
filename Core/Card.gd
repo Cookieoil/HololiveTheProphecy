@@ -26,6 +26,18 @@ static func reset_id_counter() -> void:
 	_next_id = 0
 
 
+## Returns a human-readable suffix for this card's merge state.
+func get_suffix() -> String:
+	if is_double_merged:
+		return " DMV"
+	elif is_merged:
+		return " MV"
+	return " V"
+	
+## Returns a colored string for a given numeric value using the card's suffix.
+func format_value(value: int) -> String:
+	return ColorUtils.colorize(str(value) + get_suffix(), ColorUtils.COLOR_CARD)
+
 ## constructor. Triggers automatically when call .new()
 ## or .instantiate()
 func _init(value: int = 2) -> void:

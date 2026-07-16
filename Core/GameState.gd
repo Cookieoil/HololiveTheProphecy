@@ -13,14 +13,14 @@ const MERGES_PER_TURN: int = 2
 
 ## Deck composition: [[value, count],...]
 @export var DEFAULT_DECKLIST: Array = [
-	[2, 6],
+	[2, 7],
 	[3, 5],
-	[5, 4],
+	[5, 3],
 ]
 
 var CURRENT_DECKLIST: Array = DEFAULT_DECKLIST
  ## Dice sides per turn index (0-based). Clamped at last entry.
-@export var turn_dice_progression: Array[int] = [6, 10, 14, 18]
+var turn_dice_progression: Array[int] = [6, 10, 14, 18]
 var dice_size_modifier: int = 0
 
 ## Runtime State
@@ -40,6 +40,7 @@ enum WaveTransition {
 var wave_transition_mode: int = WaveTransition.FULL_TURN
 var actions_left: int = 0
 var merges_left: int = 0
+var next_skill_bonus: int = 0
 var current_wave: int = 0
 var turn_number: int = 0
 
@@ -77,6 +78,10 @@ func build_deck(decklist: Array = CURRENT_DECKLIST) -> void:
 		var count: int = entry[1]
 		for i in count:
 			deck.append(Card.new(value))
+	deck.shuffle()
+	
+func set_dice_progression(prog: Array[int]) -> void:
+	if not prog.is_empty(): turn_dice_progression.assign(prog)
 #endregion
 
 #region Card Operations
@@ -311,4 +316,40 @@ func all_allies_dead() -> bool:
 			return false
 	return true
 	
+# Add this to GameState (inside the Merge Operations region)
+func get_merge_error(a: Card, b: Card) -> String:
+	if not hand.has(a) or not hand.has(b):
+		return "One or both cards are not in your hand."
+	if a == b:
+		return "You cannot merge a card with itself."
+	if merges_left <= 0:
+		return "You have no merges remaining this turn."
+	
+	# Check cross merge (both unmerged, distinct)
+	if not a.is_merged and not b.is_merged:
+		return ""  # valid – cross merge is allowed
+	
+	# At least one is merged – check double merge conditions
+	var a_val = a.get_effective_value()
+	var b_val = b.get_effective_value()
+	
+	# Exactly one is merged → the merged card's value must match the unmerged card's value
+	if a.is_merged != b.is_merged:
+		var merged = a if a.is_merged else b
+		var unmerged = b if a.is_merged else a
+		if merged.get_effective_value() == unmerged.get_effective_value():
+			return ""  # valid double merge
+		else:
+			return "Merged card value (%d) doesn't match unmerged card value (%d)." % [
+				merged.get_effective_value(), unmerged.get_effective_value()
+			]
+	
+	# Both are merged – they must have the same effective value
+	if a.is_merged and b.is_merged:
+		if a_val == b_val:
+			return ""  # valid double merge
+		else:
+			return "Both cards are merged but their values differ (%d vs %d)." % [a_val, b_val]
+	
+	return "Cannot merge these cards."  # fallback (should never be reached)
 #endregion

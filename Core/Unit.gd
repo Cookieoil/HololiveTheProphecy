@@ -53,23 +53,40 @@ func gain_shield(amount: int) -> int:
 	return actual_gained
 	
 func reset_shield() -> void:
-	shield == 0
+	shield = 0
 	
 ## Directly reduce shield (e.g. Buff merged skill 1). Can't go below 0.
-## Returns amount actually removed.
+## @param amount	 the damage amount unit received
+## @return removed	 return the amount of deduced shield from that damage
 func reduce_shield(amount: int) -> int:
 	# Maxi pick the largest num, Mini pick the smallest num
 	var removed := mini(shield, maxi(0, amount))
 	shield -= removed
 	return removed
 
-## Lose HP directly, bypassing shields. Can't go below 0.
-## Returns actual HP lost.
-func lose_hp(amount: int) -> int:
+## Deal damage to HP directly, bypassing shields. Can't go below 0.
+## @param amount	 the int true damage amount unit received
+## @return lost		 return the int amount of hp lost from that damage.
+func deal_true_damage(amount: int) -> int:
 	# Maxi pick the largest num, Mini pick the smallest num
 	var lost := mini(current_hp, maxi(0, amount))
 	current_hp -= lost
 	return lost
+	
+## Modify the value based on the amount
+## @param amount	the int amount to modify the value
+func apply_value_modifier(amount: int) -> void:
+	value_modifier += amount
+
+## Reset the value modifer to 0
+func clear_value_modifier() -> void:
+	value_modifier = 0
+
+## raise the unit max HP based on the new max HP
+## @param new_max	the int new max HP
+func raise_max_hp(new_max: int) -> void:
+	max_hp = maxi(1, new_max)
+	current_hp = mini(current_hp, max_hp)
 	
 func _to_string() -> String:
 	var status := "DEAD" if is_dead else "HP:%d/%d Sh:%d" % [current_hp, max_hp, shield]

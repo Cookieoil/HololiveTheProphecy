@@ -7,14 +7,15 @@ extends Resource
 ## @version 5/11/2026
 
 enum MergedMode {
-	AND,    # Merged effects, then base effects
-	OR,# Only merged effect
+	AND_MERGED_FIRST,	# Merged effects, then base effects
+	AND_BASE_FIRST, 	# Base effects first, then merged effects (for "that target" follow-ups)
+	OR,					# Only merged effect
 }
 
 @export var skill_name: String = ""
 @export var description: String = ""
 @export var merged_description: String = ""
-@export var merged_mode: MergedMode = MergedMode.AND
+@export var merged_mode: MergedMode = MergedMode.AND_MERGED_FIRST
 
 ## Populated via inspector (.tres) or code.
 @export var base_effects: Array[SkillEffect] = []
@@ -23,9 +24,6 @@ enum MergedMode {
 ## For enemy skills: merged_effects trigger when dice value >= this.
 ## Leave at 0 for ally skills (uses card merge state instead).
 @export var condition_threshold: int = 0
-
-@export var base_effect: Array[SkillEffect] = []
-@export var merged_effect: Array[SkillEffect] = []
 
 ## Ensure each instance owns its own arrays 
 ## (no shared-default-array bug).

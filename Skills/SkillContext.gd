@@ -20,13 +20,11 @@ var game_state: GameState
 var card_value: int = 0
 var stored_value: int = 0
 
-# func(count: int, filter: Callable) -> Array[Unit]
+# Async callable: func(count: int, filter: Callable) -> Array[Unit]
 var pick_n_target: Callable = Callable()
-# func(count: int, filter: Callable) -> Array[Unit]
-var get_all_targets: Callable = Callable() # this one doesn't do anything for now (delete later)
-# func(count: int, filter: Callable) -> Array[Unit]
+# Async callable: func(count: int, filter: Callable) -> Array[Unit]
 var pick_n_card: Callable = Callable()
-# func(message: String) -> void
+# Sync callable: func(message: String) -> void
 var log_message: Callable = Callable()
 
 func _init(p_caster: Unit, p_card: Card, p_state: GameState) -> void:

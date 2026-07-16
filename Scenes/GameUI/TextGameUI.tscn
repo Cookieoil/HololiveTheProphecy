@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://c5pflgb6taide"]
+
+[ext_resource type="Script" uid="uid://lhph1pgtdkuw" path="res://Scenes/GameUI/TextGameUI.gd" id="1_0vy65"]
+[ext_resource type="Script" uid="uid://b3on7jqr1a0jf" path="res://Scenes/GameUI/TextGameMain.gd" id="1_ipder"]
+[ext_resource type="Script" uid="uid://c531tgv6loyv0" path="res://Managers/GameManager.gd" id="3_llpe0"]
+
+[node name="Main" type="Node2D" unique_id=163559082 node_paths=PackedStringArray("game_manager", "text_ui")]
+script = ExtResource("1_ipder")
+game_manager = NodePath("GameManager")
+text_ui = NodePath("TextGameUI")
+turn_dice_progression = Array[int]([6, 10, 14, 18])
+
+[node name="TextGameUI" type="Node2D" parent="." unique_id=348509416]
+script = ExtResource("1_0vy65")
+
+[node name="Output" type="RichTextLabel" parent="TextGameUI" unique_id=490191867]
+offset_left = -635.0
+offset_top = -358.0
+offset_right = 640.0
+offset_bottom = 283.0
+
+[node name="Input" type="LineEdit" parent="TextGameUI" unique_id=2091204357]
+offset_left = -632.0
+offset_top = 285.0
+offset_right = 630.0
+offset_bottom = 351.0
+
+[node name="Camera2D" type="Camera2D" parent="TextGameUI" unique_id=1851257377]
+
+[node name="Background" type="ColorRect" parent="TextGameUI" unique_id=1561097992]
+z_index = -7
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -728.0
+offset_top = -429.0
+offset_right = 778.0
+offset_bottom = 423.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="GameManager" type="Node" parent="." unique_id=1388082652]
+script = ExtResource("3_llpe0")

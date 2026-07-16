@@ -15,13 +15,15 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Hololive: The Prophecy"
+run/main_scene="uid://c5pflgb6taide"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 run/max_fps=60
 config/icon="res://Trash/icon.svg"
 
 [autoload]
 
-EventBus="*uid://b6p5m3780dqx"
+EventBus="*uid://ddut3jex7xgkl"
+ColorUtils="*uid://s4v00fmpp2le"
 
 [display]
 

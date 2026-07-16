@@ -1,185 +1,275 @@
 class_name TextGameUI
 extends GameUI
-## Text-based implementation of GameUI.
-## Uses RichTextLabel + LineEdit for console-style interaction.
-## Attach this as a child Node of your test scene.
+## Console-style text interface for testing only.
+## Outputs to a RichTextLabel, reads from a LineEdit.
 ##
 ## @author TheGreatJellyfish
-## @version 5/17/2026
+## @version 7/13/2026
 
 @onready var output: RichTextLabel = $Output
 @onready var input: LineEdit = $Input
 
-signal _input_submitted(text: String)
-
+## Internal signal that bridges LineEdit.text_submitted -> await
+signal _text_entered(text: String)
 
 func _ready() -> void:
-	input.text_submitted.connect(_on_input_text_submitted)
-
-
-func _on_input_text_submitted(text: String) -> void:
+	if input:
+		input.text_submitted.connect(_on_input_submitted)
+		input.focus_exited.connect(_on_input_focus_exited)
+		input.keep_editing_on_text_submit = true 
+		# Settings for better UX
+		input.caret_blink = true
+		input.context_menu_enabled = false
+		input.editable = true
+	else: 
+		push_warning("TextUI: No Input assigned. Input will not work.")
+	if not output:
+		push_warning("TextUI: No Output assigned. Output will not work.")
+	
+	# Focus on ready
+	await get_tree().process_frame
+	focus_input()
+		
+func _on_input_submitted(text: String) -> void:
 	input.clear()
-	_print("> %s" % text)
-	_input_submitted.emit(text)
-
-
-#region Display
-func _print(text: String) -> void:
-	if output:
-		output.append_text(text + "\n")
-	else:
-		print(text)
-
-func show_message(text: String) -> void:
-	_print(text)
-
-func show_game_state(state: GameState) -> void:
-	_print("=== TURN %d | Actions: %d | Merges: %d ===" % [
-		state.turn_number, state.actions_left, state.merges_left])
-	_print("-- Allies --")
-	for u in state.allies:
-		_print("  [%d] %s" % [u.slot_index, u])
-	_print("-- Enemies --")
-	for u in state.enemies:
-		_print("  [%d] %s" % [u.slot_index, u])
-	show_hand(state.hand)
-
-func show_hand(hand: Array[Card]) -> void:
-	_print("-- Hand (%d cards) --" % hand.size())
-	for i in hand.size():
-		_print("  [%d] %s" % [i, hand[i]])
-
-func show_enemy_intents(intents: Array[EnemyIntent]) -> void:
-	_print("-- Enemy Intents --")
-	for intent in intents:
-		_print("  %s" % intent)
-#endregion
-
-
-#region Async Input Helpers
-## Wait for player to type a line. Returns the trimmed string.
-func _get_raw_input(prompt: String = "") -> String:
+	_append_output(">" + text) # echo the player input
+	_text_entered.emit(text)
+	
+func _on_input_focus_exited() -> void:
+	call_deferred("focus_input")
+	
+#region Helpers
+func focus_input() -> void:
+	if input:
+		input.grab_focus()
+		
+func _card_display(card: Card) -> String:
+	var val = card.get_effective_value()
+	var suffix = "V"
+	if card.is_double_merged:
+		suffix = "DMV"
+	elif card.is_merged:
+		suffix = "MV"
+	return "%d %s" % [val, suffix]
+	
+## Await one line of player input.
+func _await_input(prompt: String = "") -> String:
 	if prompt != "":
-		_print(prompt)
-	var text: String = await _input_submitted
-	return text.strip_edges()
-
-## Prompt for an integer within [min_val, max_val].
-func _get_int_input(prompt: String, min_val: int, max_val: int) -> int:
-	while true:
-		var text := await _get_raw_input(prompt)
-		if text.is_valid_int():
-			var num := text.to_int()
-			if num >= min_val and num <= max_val:
-				return num
-		_print("  Enter a number between %d and %d." % [min_val, max_val])
-	return min_val # unreachable, satisfies return type
+		_append_output(prompt)
+	call_deferred("focus_input")
+	var text: String = await _text_entered
+	return text.strip_escapes() # erase useless input words
+	
+func _append_output(line: String) -> void:
+	print(line)
+	if output:
+		output.append_text(line + "\n")
+		# automatically scroll to bottom
+		output.scroll_to_line(output.get_line_count() - 1)
+		
 #endregion
 
+#region Display overrides
+func show_message(_msg: String) -> void:
+	_append_output(_msg)
+	
+func show_enemy_intents(_intents: Array[EnemyIntent]) -> void:
+	@warning_ignore("static_called_on_instance")
+	_append_output(ColorUtils.colorize("── Enemy Intents ──", ColorUtils.COLOR_HEADER))
+	for intent in _intents:
+		@warning_ignore("static_called_on_instance")
+		var name_str : String = ColorUtils.colorize(intent.enemy.data.display_name, ColorUtils.COLOR_ENEMY)
+		@warning_ignore("static_called_on_instance")
+		var val_str : String = ColorUtils.colorize(str(intent.effective_value), ColorUtils.COLOR_CARD)
+		@warning_ignore("static_called_on_instance")
+		_append_output("  [%d] %s Rolls %s → %s" % [
+			intent.enemy.slot_index, name_str, val_str, intent.skill.skill_name
+		])
 
-#region Async Player Actions
-func get_player_action(state: GameState) -> Dictionary:
-	_print("\nActions: [p]lay, [m]erge, [c]onvert, [e]nd turn")
+		
+func show_game_state(_state: GameState) -> void:
+	_append_output("")
+	_append_output(ColorUtils.colorize("── Board ──", ColorUtils.COLOR_HEADER))
+	
+	# Allies
+	_append_output(ColorUtils.colorize("Allies:", ColorUtils.COLOR_HEADER))
+	for i in _state.allies.size():
+		var u := _state.allies[i]
+		var name : String = ColorUtils.colorize(u.data.display_name, ColorUtils.COLOR_ALLY)
+		var hp : String = ColorUtils.colorize(str(u.current_hp), ColorUtils.COLOR_HP)
+		var max_hp : String = ColorUtils.colorize(str(u.max_hp), ColorUtils.COLOR_HP)
+		var shield : String = ColorUtils.colorize(str(u.shield), ColorUtils.COLOR_SHIELD)
+		var dead_tag : String = ColorUtils.colorize(" [DEFEATED]", ColorUtils.COLOR_DEAD) if u.is_dead else ""
+		_append_output("  [%d] %s  HP: %s/%s  Shield: %s%s" % [
+			i, name, hp, max_hp, shield, dead_tag
+		])
+		
+	# Enemies
+	_append_output(ColorUtils.colorize("Enemies:", ColorUtils.COLOR_HEADER))
+	for i in _state.enemies.size():
+		var u := _state.enemies[i]
+		var name : String = ColorUtils.colorize(u.data.display_name, ColorUtils.COLOR_ENEMY)
+		var hp : String = ColorUtils.colorize(str(u.current_hp), ColorUtils.COLOR_HP)
+		var max_hp : String = ColorUtils.colorize(str(u.max_hp), ColorUtils.COLOR_HP)
+		var shield : String = ColorUtils.colorize(str(u.shield), ColorUtils.COLOR_SHIELD)
+		var dead_tag : String = ColorUtils.colorize(" [DEFEATED]", ColorUtils.COLOR_DEAD) if u.is_dead else ""
+		_append_output("  [%d] %s  HP: %s/%s  Shield: %s%s" % [
+			i, name, hp, max_hp, shield, dead_tag
+		])
+
+func show_hand_and_resources(_state: GameState) -> void:
+	_append_output("")
+	_append_output(ColorUtils.colorize("── Hand ──", ColorUtils.COLOR_HEADER))
+	for i in _state.hand.size():
+		var display = ColorUtils.colorize(_card_display(_state.hand[i]), ColorUtils.COLOR_CARD)
+		_append_output("  [%d] %s" % [i, display])
+	_append_output("Actions: %d  |  Merges: %d  |  Deck: %d  |  Discard: %d" % [
+		_state.actions_left, _state.merges_left, _state.deck.size(), _state.discard.size()
+	])
+	
+#region Player Input overrides
+func get_player_action(_state: GameState) -> Dictionary:
 	while true:
-		var cmd := await _get_raw_input(">> ")
-		match cmd.to_lower():
+		_append_output(ColorUtils.colorize("Commands: play <card#> <ally#>  |  merge <card#> <card#>  |  convert  |  stats  |  hand  |  end", 
+		ColorUtils.COLOR_HEADER))
+		
+		var raw := await _await_input(">> ")
+		var parts := raw.split(" ", false) # Split string into substring
+		if parts.is_empty():
+			continue
+			
+		var cmd := parts[0].to_lower() # lowercase
+		
+		if cmd == "end":
+			return {"type": "end_turn"}
+			
+		if cmd == "convert":
+			return {"type": "convert"}
+			
+		if cmd == "hand":
+			return {"type": "hand"}
+			
+		if cmd == "stats":
+			return {"type": "stats"}
+			
+		if cmd == "play":
+			if parts.size() < 3:
+				show_message("Usage: play <card#> <ally#>")
+				continue
+			if not parts[1].is_valid_int() or not parts[2].is_valid_int():
+				show_message("Indices must be numbers.")
+				continue
+			var ci := parts[1].to_int()
+			var ai := parts[2].to_int()
+			if ci < 0 or ci >= _state.hand.size():
+				show_message("Card index out of range (0–%d)." % (_state.hand.size() - 1))
+				continue
+			if ai < 0 or ai >= _state.allies.size():
+				show_message("Ally index out of range (0–%d)." % (_state.allies.size() - 1))
+				continue
+			return {
+				"type": "play",
+				"card": _state.hand[ci],
+				"target_ally": _state.allies[ai],
+			}
+			
+		if cmd == "merge":
+			if parts.size() < 3:
+				show_message("Usage: merge <card#> <card#>")
+				continue
+			if not parts[1].is_valid_int() or not parts[2].is_valid_int():
+				show_message("Indices must be numbers.")
+				continue
+			var ia := parts[1].to_int()
+			var ib := parts[2].to_int()
+			if ia < 0 or ia >= _state.hand.size() or ib < 0 or ib >= _state.hand.size():
+				show_message("Card index out of range (0–%d)." % (_state.hand.size() - 1))
+				continue
+			if ia == ib:
+				show_message("Cannot merge a card with itself.")
+				continue
+			return {
+				"type": "merge",
+				"card_a": _state.hand[ia],
+				"card_b": _state.hand[ib],
+			}
 
-			"p", "play":
-				if state.hand.is_empty():
-					_print("  No cards in hand.")
-					continue
-				var ci := await _get_int_input(
-					"  Card index (0-%d):" % (state.hand.size() - 1),
-					0, state.hand.size() - 1)
-				var card: Card = state.hand[ci]
-				var living := state.get_living_allies()
-				_print("  Allies:")
-				for i in living.size():
-					_print("    [%d] %s" % [i, living[i]])
-				var ai := await _get_int_input(
-					"  Ally index (0-%d):" % (living.size() - 1),
-					0, living.size() - 1)
-				return {
-					"type": "play",
-					"card": card,
-					"target_ally": living[ai],
-				}
+		show_message("Unknown command '%s'." % cmd)
 
-			"m", "merge":
-				if state.hand.size() < 2:
-					_print("  Need at least 2 cards.")
-					continue
-				show_hand(state.hand)
-				var ai2 := await _get_int_input(
-					"  First card index:", 0, state.hand.size() - 1)
-				var bi := await _get_int_input(
-					"  Second card index:", 0, state.hand.size() - 1)
-				if ai2 == bi:
-					_print("  Can't merge a card with itself.")
-					continue
-				return {
-					"type": "merge",
-					"card_a": state.hand[ai2],
-					"card_b": state.hand[bi],
-				}
-
-			"c", "convert":
-				return { "type": "convert" }
-
-			"e", "end":
-				return { "type": "end_turn" }
-
-			_:
-				_print("  Unknown command.")
-
-
-	return { "type": "end_turn" } # unreachable
-
-
-func ask_target(state: GameState, filter: Callable) -> Unit:
-	var valid: Array[Unit] = []
-	for u in (state.enemies + state.allies):
-		if not u.is_dead and filter.call(u):
-			valid.append(u)
-	if valid.is_empty():
-		_print("  (No valid targets)")
-		return null
-	_print("  Choose target:")
-	for i in valid.size():
-		_print("    [%d] %s" % [i, valid[i]])
-	var idx := await _get_int_input("  Target index:", 0, valid.size() - 1)
-	return valid[idx]
-
-
-func ask_multi_target(state: GameState, count: int, filter: Callable) -> Array[Unit]:
-	var valid: Array[Unit] = []
-	for u in (state.enemies + state.allies):
-		if not u.is_dead and filter.call(u):
-			valid.append(u)
+	# Unreachable, but satisfies return type
+	return {"type": "end_turn"}
+	
+func ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]:
 	var chosen: Array[Unit] = []
+	var available: Array = []  # each element: {"unit": Unit, "idx": int}
+	for i in units.size():
+		available.append({"unit": units[i], "idx": i})
+
 	for n in count:
-		if valid.is_empty():
+		if available.is_empty():
 			break
-		_print("  Choose target %d of %d:" % [n + 1, count])
-		for i in valid.size():
-			_print("    [%d] %s" % [i, valid[i]])
-		var idx := await _get_int_input("  Target index:", 0, valid.size() - 1)
-		chosen.append(valid[idx])
-		valid.remove_at(idx) # can't choose same target twice
+		_append_output(ColorUtils.colorize("Pick target %d of %d:" % [n+1, count], ColorUtils.COLOR_HEADER))
+		for entry in available:
+			var u: Unit = entry.unit          # get the Unit from the dict
+			var idx: int = entry.idx          # original index
+			var name: String = ColorUtils.colorize(u.data.display_name, ColorUtils.COLOR_ENEMY if not u.is_ally else ColorUtils.COLOR_ALLY)
+			var hp: String = ColorUtils.colorize(str(u.current_hp), ColorUtils.COLOR_HP)
+			var max_hp: String = ColorUtils.colorize(str(u.max_hp), ColorUtils.COLOR_HP)
+			var shield: String = ColorUtils.colorize(str(u.shield), ColorUtils.COLOR_SHIELD)
+			_append_output("  [%d] %s  HP: %s/%s  Shield: %s" % [idx, name, hp, max_hp, shield])
+	
+		while true:
+			var raw := await _await_input("target>> ")
+			if not raw.is_valid_int():
+				show_message("Enter a number.")
+				continue
+			var idx := raw.to_int()
+			var found_entry = null
+			for entry in available:
+				if entry.idx == idx:
+					found_entry = entry
+					break
+			if found_entry == null:
+				show_message("Index %d not available (already picked or out of range 0–%d)." % [idx, units.size()-1])
+				continue
+			chosen.append(found_entry.unit)
+			available.erase(found_entry)
+			break
 	return chosen
 
 
-func ask_card_choice(state: GameState, filter: Callable) -> Card:
-	var valid: Array[Card] = []
-	for c in state.hand:
-		if filter.call(c):
-			valid.append(c)
-	if valid.is_empty():
-		_print("  (No valid cards)")
-		return null
-	_print("  Choose a card:")
-	for i in valid.size():
-		_print("    [%d] %s" % [i, valid[i]])
-	var idx := await _get_int_input("  Card index:", 0, valid.size() - 1)
-	return valid[idx]
+func ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]:
+	var chosen: Array[Card] = []
+	var available: Array = []  # each element: {"unit": Unit, "idx": int}
+	for i in cards.size():
+		available.append({"card": cards[i], "idx": i})
+
+	for n in count:
+		if available.is_empty():
+			break
+		_append_output(ColorUtils.colorize("Pick %d out of %d card(s):" % [n+1, count], ColorUtils.COLOR_HEADER))
+		for entry in available:
+			var card: Card = entry.card
+			var idx: int = entry.idx
+			var display: String = ColorUtils.colorize(_card_display(card), ColorUtils.COLOR_CARD)
+			_append_output("  [%d] %s" % [idx, display])
+	
+		while true:
+			var raw := await _await_input("card>> ")
+			if not raw.is_valid_int():
+				show_message("Enter a number.")
+				continue
+			var idx := raw.to_int()
+			var found_entry = null
+			for entry in available:
+				if entry.idx == idx:
+					found_entry = entry
+					break
+			if found_entry == null:
+				show_message("Index %d not available (already picked or out of range 0–%d)." % [idx, cards.size()-1])
+				continue
+			chosen.append(found_entry.card)
+			available.erase(found_entry)
+			break
+	return chosen
 #endregion
