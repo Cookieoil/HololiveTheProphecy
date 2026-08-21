@@ -7,3 +7,7 @@
 .mono/
 data_*/
 mono_crash_*.json
+
+# Excel import and merge
+*.xlsx binary
+*.xlsx merge=ours

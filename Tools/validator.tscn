@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://tpcr7ypiidf4"]
+
+[ext_resource type="Script" uid="uid://dfewri5nuj5nc" path="res://Tools/validate_gameData.gd" id="1_6v2pl"]
+
+[node name="Validator" type="Node" unique_id=1580695674]
+script = ExtResource("1_6v2pl")

@@ -12,6 +12,11 @@ var current_intents: Array[EnemyIntent] = []
 var game_running: bool = false
 var instructions_shown: bool = false
 
+const _WAVE_MODE_MAP := {
+	"full_turn": GameState.WaveTransition.FULL_TURN,
+	"immediate_skip": GameState.WaveTransition.IMMEDIATE_SKIP,
+}
+
 #region Helpers
 func _color_unit(unit: Unit) -> String:
 	var col = ColorUtils.COLOR_ALLY if unit.is_ally else ColorUtils.COLOR_ENEMY
@@ -43,7 +48,8 @@ func _color_card_value(card: Card) -> String:
 func setup_game(
 	ally_data: Array[UnitData],
 	wave_defs: Array,
-	p_ui: GameUI
+	p_ui: GameUI,
+	config: Dictionary = {}
 ) -> void:
 	state = GameState.new()
 	ui = p_ui
@@ -53,10 +59,19 @@ func setup_game(
 	state.initialize_allies(ally_data)
 	# Initialize enemies
 	_spawn_wave(0)
-	state.build_deck() # Fire-and-forget coroutine
+	state.build_deck() # decklist already set by _apply_config
 
 	game_running = true
 	_run_game_loop()
+
+func _apply_config(config: Dictionary) -> void:
+	if config.has("decklist"):
+		state.CURRENT_DECKLIST = config["decklist"]
+	if config.has("dice_progression"):
+		state.set_dice_progression(config["dice_progression"])
+	if config.has("wave_transition_mode"):
+		var mode_str: String = config["wave_transition_mode"]
+		state.wave_transition_mode = _WAVE_MODE_MAP.get(mode_str, GameState.WaveTransition.FULL_TURN)
 
 func _spawn_wave(wave_index: int) -> void:
 	state.current_wave = wave_index
@@ -218,10 +233,11 @@ func _handle_play(card: Card, ally: Unit) -> void:
 		ally_str, card_str, merged_str, skill_str
 	])
 	
-	if skill.skill_name == "Skill 1 (odd)":
-		ui.show_message(ColorUtils.colorize("> " + ally.data.skill_1.description, ColorUtils.COLOR_DEAD))
+	if card.is_merged:
+		ui.show_message(ColorUtils.colorize("> " + skill.description, ColorUtils.COLOR_DEAD))
+		ui.show_message(ColorUtils.colorize("> " + skill.merged_description, ColorUtils.COLOR_DEAD))
 	else:
-		ui.show_message(ColorUtils.colorize("> " + ally.data.skill_2.description, ColorUtils.COLOR_DEAD))
+		ui.show_message(ColorUtils.colorize("> " + skill.description, ColorUtils.COLOR_DEAD))
 		
 	# Build context
 	var ctx := _build_ally_context(ally, card)

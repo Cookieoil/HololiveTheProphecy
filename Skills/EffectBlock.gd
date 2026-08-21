@@ -443,9 +443,9 @@ func _modify_card(ctx: SkillContext, value: int) -> void:
 
 
 func _apply_card_mod(ctx: SkillContext, card: Card, value: int) -> void:
-	var old_val := card.get_effective_value()
-	var card_str := card.format_value(old_val)
-	var val_str := ColorUtils.colorize(str(value), ColorUtils.COLOR_CARD)
+	var old_val: int = card.get_effective_value()
+	var card_str: String = card.format_value(old_val)
+	var val_str: String = ColorUtils.colorize(str(value), ColorUtils.COLOR_CARD)
 	match card_mod_type:
 		CardModType.BUFF:
 			card.value_buff += value

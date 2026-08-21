@@ -9,9 +9,17 @@ extends GameUI
 @onready var output: RichTextLabel = $Output
 @onready var input: LineEdit = $Input
 
+const ICON_MAP := {
+	"damage": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
+	"shield": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
+	"heal":   "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
+	"action": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
+}
+
 ## Internal signal that bridges LineEdit.text_submitted -> await
 signal _text_entered(text: String)
 
+#region Setup
 func _ready() -> void:
 	if input:
 		input.text_submitted.connect(_on_input_submitted)
@@ -37,7 +45,8 @@ func _on_input_submitted(text: String) -> void:
 	
 func _on_input_focus_exited() -> void:
 	call_deferred("focus_input")
-	
+#endregion
+
 #region Helpers
 func focus_input() -> void:
 	if input:
@@ -70,8 +79,14 @@ func _append_output(line: String) -> void:
 #endregion
 
 #region Display overrides
+func _resolve_icons(text: String) -> String:
+	var result := text
+	for key in ICON_MAP:
+		result = result.replace("{" + "icon:" + key + "}", ICON_MAP[key])
+	return result
+
 func show_message(_msg: String) -> void:
-	_append_output(_msg)
+	_append_output(_resolve_icons(_msg))
 	
 func show_enemy_intents(_intents: Array[EnemyIntent]) -> void:
 	@warning_ignore("static_called_on_instance")
@@ -126,7 +141,8 @@ func show_hand_and_resources(_state: GameState) -> void:
 	_append_output("Actions: %d  |  Merges: %d  |  Deck: %d  |  Discard: %d" % [
 		_state.actions_left, _state.merges_left, _state.deck.size(), _state.discard.size()
 	])
-	
+#endregion
+
 #region Player Input overrides
 func get_player_action(_state: GameState) -> Dictionary:
 	while true:

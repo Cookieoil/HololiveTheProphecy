@@ -20,6 +20,7 @@ var is_double_merged: bool = false
 var value_buff: int = 0
 var value_debuff: int = 0
 
+const ColorUtils = preload("res://Managers/ColorUtils.gd")
 
 ## Reset the card id (e.g card#1 -> card#0)
 static func reset_id_counter() -> void:
