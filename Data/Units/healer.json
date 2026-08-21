@@ -1,0 +1,53 @@
+{
+  "display_name": "Healer",
+  "max_hp": 16,
+  "is_enemy": false,
+  "skills": {
+	"skill_1": {
+	  "display_name": "Skill 1 (odd)",
+	  "description": "Deal [Value] damage to 1 enemy.",
+	  "merged_description": "And if Merged: Decrease that enemy's value by ([Value] / 2) for the next enemy turn (max 5).",
+	  "merged_mode": "and_base_first",
+	  "condition_threshold": 0,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "deal_damage",
+		  "target_mode": "pick_n_enemy",
+		  "target_count": 1,
+		  "value_source": "card_value"
+		},
+		{
+		  "trigger": "merged",
+		  "action": "apply_modifier",
+		  "target_mode": "cached",
+		  "value_source": "card_value",
+		  "value_divisor": 2,
+		  "value_cap": 5
+		}
+	  ]
+	},
+	"skill_2": {
+	  "display_name": "Skill 2 (even)",
+	  "description": "Shield all allies for [Value].",
+	  "merged_description": "And if Merged: Heal any ally for [Value].",
+	  "merged_mode": "and_base_first",
+	  "condition_threshold": 0,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "gain_shield",
+		  "target_mode": "all_allies",
+		  "value_source": "card_value"
+		},
+		{
+		  "trigger": "merged",
+		  "action": "heal",
+		  "target_mode": "pick_n_ally",
+		  "target_count": 1,
+		  "value_source": "card_value"
+		}
+	  ]
+	}
+  }
+}

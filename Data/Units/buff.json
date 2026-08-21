@@ -1,0 +1,56 @@
+{
+  "display_name": "Buff",
+  "max_hp": 18,
+  "is_enemy": false,
+  "skills": {
+	"skill_1": {
+	  "display_name": "Skill 1 (odd)",
+	  "description": "Deal [Value] damage to 1 enemy.",
+	  "merged_description": "And if Merged: Reduce that target's shield by [Value × 2] before attacking.",
+	  "merged_mode": "and_merged_first",
+	  "condition_threshold": 0,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "deal_damage",
+		  "target_mode": "pick_n_enemy",
+		  "target_count": 1,
+		  "value_source": "card_value"
+		},
+		{
+		  "trigger": "merged",
+		  "action": "reduce_shield",
+		  "target_mode": "pick_n_enemy",
+		  "target_count": 1,
+		  "value_source": "card_value",
+		  "value_multiplier": 2
+		}
+	  ]
+	},
+	"skill_2": {
+	  "display_name": "Skill 2 (even)",
+	  "description": "Increase any card in hand by ([Value] / 2) value.",
+	  "merged_description": "Next ally skill played this turn gains ([Value] / 2) value.",
+	  "merged_mode": "and_base_first",
+	  "condition_threshold": 0,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "modify_card",
+		  "card_select_mode": "pick_n_card",
+		  "card_mod_type": "buff",
+		  "target_count": 1,
+		  "card_count": 1,
+		  "value_source": "card_value",
+		  "value_divisor": 2
+		},
+		{
+		  "trigger": "merged",
+		  "action": "set_next_skill_bonus",
+		  "value_source": "card_value",
+		  "value_divisor": 2
+		}
+	  ]
+	}
+  }
+}

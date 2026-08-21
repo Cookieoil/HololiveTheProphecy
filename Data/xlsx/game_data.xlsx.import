@@ -1,0 +1,14 @@
+[remap]
+
+importer="game.xlsx"
+type="Resource"
+uid="uid://c641mavnmqvcq"
+path="res://.godot/imported/game_data.xlsx-6c069a5764b3ac5dc02c5ae55c9a3bdd.res"
+
+[deps]
+
+source_file="res://Data/xlsx/game_data.xlsx"
+dest_files=["res://.godot/imported/game_data.xlsx-6c069a5764b3ac5dc02c5ae55c9a3bdd.res"]
+
+[params]
+

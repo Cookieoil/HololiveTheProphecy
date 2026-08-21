@@ -1,0 +1,64 @@
+{
+  "display_name": "Striker",
+  "max_hp": 14,
+  "is_enemy": false,
+  "skills": {
+	"skill_1": {
+	  "display_name": "Skill 1 (odd)",
+	  "description": "Deal {icon:damage} [Value] damage to 1 enemy.",
+	  "merged_description": "And if Merged: Discard a card in hand to draw another card. Gain bonus damage equal to that discarded card's value.",
+	  "merged_mode": "and_merged_first",
+	  "condition_threshold": 0,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "deal_damage",
+		  "target_mode": "pick_n_enemy",
+		  "target_count": 1,
+		  "value_source": "card_value"
+		},
+		{
+		  "trigger": "merged",
+		  "action": "discard_card",
+		  "card_select_mode": "pick_n_card",
+		  "target_count": 1,
+		  "store_resolved_value": true
+		},
+		{
+		  "trigger": "merged",
+		  "action": "draw_card",
+		  "card_count": 1
+		},
+		{
+		  "trigger": "merged",
+		  "action": "add_bonus",
+		  "value_source": "stored_value"
+		}
+	  ]
+	},
+	"skill_2": {
+	  "display_name": "Skill 2 (even)",
+	  "description": "Deal [Value - 1] damage to 2 enemies.",
+	  "merged_description": "Or if Merged: Instead, deal [Value - 2] damage to all 3 enemies.",
+	  "merged_mode": "or",
+	  "condition_threshold": 0,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "deal_damage",
+		  "target_mode": "pick_n_enemy",
+		  "target_count": 2,
+		  "value_source": "card_value",
+		  "value_offset": -1
+		},
+		{
+		  "trigger": "merged",
+		  "action": "deal_damage",
+		  "target_mode": "all_enemies",
+		  "value_source": "card_value",
+		  "value_offset": -2
+		}
+	  ]
+	}
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "display_name": "Boss Enemy",
+  "max_hp": 30,
+  "is_enemy": true,
+  "skills": {
+	"skill_1": {
+	  "display_name": "Skill 1 (odd)",
+	  "description": "Boss loses 1 Health. Deal [Value + 1] damage to 1 ally.",
+	  "merged_description": "And if [Value] ≥ 6: Attack gains bonus damage equal to the highest value card in the player's hand.",
+	  "merged_mode": "and_merged_first",
+	  "condition_threshold": 6,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "deal_true_damage",
+		  "target_mode": "caster",
+		  "value_source": "fixed",
+		  "fixed_amount": 1
+		},
+		{
+		  "trigger": "base",
+		  "action": "deal_damage",
+		  "target_mode": "pick_n_enemy",
+		  "target_count": 1,
+		  "value_source": "card_value",
+		  "value_offset": 1
+		},
+		{
+		  "trigger": "merged",
+		  "action": "add_bonus",
+		  "value_source": "highest_card_in_hand"
+		}
+	  ]
+	},
+	"skill_2": {
+	  "display_name": "Skill 2 (even)",
+	  "description": "Boss loses 2 Health. Deal [Value] damage to all allies.",
+	  "merged_description": "Shield all enemies for [Value].",
+	  "merged_mode": "and_base_first",
+	  "condition_threshold": 6,
+	  "effects": [
+		{
+		  "trigger": "base",
+		  "action": "deal_true_damage",
+		  "target_mode": "caster",
+		  "value_source": "fixed",
+		  "fixed_amount": 2
+		},
+		{
+		  "trigger": "base",
+		  "action": "deal_damage",
+		  "target_mode": "all_enemies",
+		  "value_source": "card_value"
+		},
+		{
+		  "trigger": "merged",
+		  "action": "gain_shield",
+		  "target_mode": "all_allies",
+		  "value_source": "card_value"
+		}
+	  ]
+	}
+  }
+}
