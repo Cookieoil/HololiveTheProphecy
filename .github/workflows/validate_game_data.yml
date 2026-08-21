@@ -16,9 +16,14 @@ jobs:
       - name: Get Godot Version
         id: godot-version
         run: |
-          VERSION=$(grep -oE 'config/features=PackedStringArray\([^)]*\)' project.godot | grep -oE '[0-4]\.[0-9]+(\.[0-9]+)?(\.[a-z0-9]+)?' | head -n 1)
-          echo "FOUND_VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION=$(grep -oE 'features=PackedStringArray\([^)]*\)' project.godot \
+                    | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1)
+          # "4.7" -> "4.7.0", "4.6" -> "4.6.0"; leave "4.6.1" as-is
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="${VERSION}.0"
+          fi
           echo "Using Godot Version: $VERSION"
+          echo "FOUND_VERSION=$VERSION" >> $GITHUB_ENV
 
       # 2. Feed the new version into the setup tool
       - uses: chickensoft-games/setup-godot@v2
