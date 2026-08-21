@@ -1,0 +1,34 @@
+# .github/workflows/validate_game_data.yml
+name: Validate Game Data
+on:
+  pull_request:
+    paths: ["Data/xlsx/**", "addons/xlsx_importPlugin/**"]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # 1. Automatically extract the Godot version from project.godot file
+      - name: Get Godot Version
+        id: godot-version
+        run: |
+          VERSION=$(grep -oE 'config/features=PackedStringArray\([^)]*\)' project.godot | grep -oE '[0-4]\.[0-9]+(\.[0-9]+)?(\.[a-z0-9]+)?' | head -n 1)
+          echo "FOUND_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Using Godot Version: $VERSION"
+
+      # 2. Feed the new version into the setup tool
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.FOUND_VERSION }}
+          use-dotnet: false
+
+      # 3. Run it
+      - name: Import project
+        run: godot --headless --path . --import
+      - name: Validate xlsx
+        timeout-minutes: 3
+        run: godot --headless --path . --script res://tools/validate_game_data.gd
