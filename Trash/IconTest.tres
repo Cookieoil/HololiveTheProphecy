@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="IconCatalog" format=3 uid="uid://bdor57tkqj1yu"]
+
+[ext_resource type="Script" uid="uid://dr1qocwn8exl1" path="res://Scenes/GameUI/GraphicalUI/Cards/IconCatalog.gd" id="1_7vwa5"]
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_mlk6x"]
+load_path = "res://.godot/imported/AttackSkillMark.png-97983fc8fb3d1dd64814feea452cc7b4.ctex"
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_gcelt"]
+load_path = "res://.godot/imported/AttackSkillMark.png-97983fc8fb3d1dd64814feea452cc7b4.ctex"
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_j2crg"]
+load_path = "res://.godot/imported/AttackSkillMark.png-97983fc8fb3d1dd64814feea452cc7b4.ctex"
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_6u13e"]
+load_path = "res://.godot/imported/AttackSkillMark.png-97983fc8fb3d1dd64814feea452cc7b4.ctex"
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_hcqdr"]
+load_path = "res://.godot/imported/AttackSkillMark.png-97983fc8fb3d1dd64814feea452cc7b4.ctex"
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_8jjrr"]
+load_path = "res://.godot/imported/AttackSkillMark.png-97983fc8fb3d1dd64814feea452cc7b4.ctex"
+
+[resource]
+script = ExtResource("1_7vwa5")
+icons = {
+"buff": SubResource("CompressedTexture2D_mlk6x"),
+"damage": SubResource("CompressedTexture2D_gcelt"),
+"debuff": SubResource("CompressedTexture2D_j2crg"),
+"draw": SubResource("CompressedTexture2D_6u13e"),
+"heal": SubResource("CompressedTexture2D_hcqdr"),
+"shield": SubResource("CompressedTexture2D_8jjrr")
+}
+metadata/_custom_type_script = "uid://dr1qocwn8exl1"

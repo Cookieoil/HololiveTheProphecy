@@ -1,0 +1,8 @@
+[gd_resource type="SpineSkeletonDataResource" load_steps=3 format=3]
+
+[ext_resource type="SpineSkeletonFileResource" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue/300101_zhujue.spine-json" id="1_skeleton"]
+[ext_resource type="SpineAtlasResource" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue/300101_zhujue.atlas" id="2_atlas"]
+
+[resource]
+skeleton_file_res = ExtResource("1_skeleton")
+atlas_res = ExtResource("2_atlas")

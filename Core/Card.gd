@@ -16,6 +16,9 @@ var current_value: int
 var is_merged: bool = false
 var is_double_merged: bool = false
 
+# Original cards that were merged to produce this card.
+var constituents: Array[Card] = []
+
 #Temporary values added. These are cleared when discarded.
 var value_buff: int = 0
 var value_debuff: int = 0
@@ -47,7 +50,27 @@ func _init(value: int = 2) -> void:
 	id = _next_id
 	_next_id += 1
 
+## Recursively breaks this card down into its original unmerged base cards.
+## Returns an array of clean base cards ready for discard/draw.
+func decompose() -> Array[Card]:
+	if constituents.is_empty():
+		reset_to_base()
+		return [self]
 
+	var base_cards: Array[Card] = []
+	for child in constituents:
+		base_cards.append_array(child.decompose())
+	return base_cards
+
+
+## Restores this card to its pristine starting state (unmerged, original value).
+func reset_to_base() -> void:
+	clear_temp_buffs()
+	current_value = base_value
+	is_merged = false
+	is_double_merged = false
+	constituents.clear()
+	
 ## get the actual effective value (included buff/debuff)
 ## @return - effective value
 func get_effective_value() -> int:

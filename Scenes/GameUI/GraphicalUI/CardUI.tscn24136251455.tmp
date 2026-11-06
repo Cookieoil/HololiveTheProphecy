@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://bgrmdnif7pwib"]
+
+[ext_resource type="Script" uid="uid://82ye07w3sq8i" path="res://Scenes/GameUI/GraphicalUI/CardUI.gd" id="1_ewp3y"]
+
+[node name="CardUI" type="PanelContainer" unique_id=923601516]
+custom_minimum_size = Vector2(140, 200)
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_ewp3y")
+
+[node name="IconRow" type="HBoxContainer" parent="." unique_id=1247714777]
+layout_mode = 2
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Art" type="TextureRect" parent="." unique_id=1537593244]
+layout_mode = 2
+stretch_mode = 5
+
+[node name="ValueLabel" type="Label" parent="." unique_id=2117229250]
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="MergeGlow" type="Panel" parent="." unique_id=2005014346]
+visible = false
+layout_mode = 2

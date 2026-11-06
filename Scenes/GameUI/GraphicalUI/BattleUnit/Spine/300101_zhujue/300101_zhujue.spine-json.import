@@ -1,0 +1,14 @@
+[remap]
+
+importer="spine.json"
+type="SpineSkeletonFileResource"
+uid="uid://bmjummp4gr48y"
+path="res://.godot/imported/300101_zhujue.spine-json-2e26b8088aba8784b40fbf2eb8fe303c.spjson"
+
+[deps]
+
+source_file="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue/300101_zhujue.spine-json"
+dest_files=["res://.godot/imported/300101_zhujue.spine-json-2e26b8088aba8784b40fbf2eb8fe303c.spjson"]
+
+[params]
+

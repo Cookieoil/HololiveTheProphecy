@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://xrgb5yj2rrj0"]
+
+[ext_resource type="PackedScene" uid="uid://bgrmdnif7pwib" path="res://Scenes/GameUI/GraphicalUI/CardUI.tscn" id="1_mkxx4"]
+
+[node name="Main" type="Node" unique_id=1435685324]
+
+[node name="Background" type="SubViewportContainer" parent="." unique_id=1940180318]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SubViewport" type="SubViewport" parent="Background" unique_id=1000736228]
+handle_input_locally = false
+render_target_update_mode = 4
+
+[node name="WorldStage" type="Node2D" parent="." unique_id=64283008]
+
+[node name="EntityOverlay" type="CanvasLayer" parent="." unique_id=1023033553]
+
+[node name="QueueUI" type="CanvasLayer" parent="." unique_id=498608002]
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1053837717]
+
+[node name="HandBar" type="PanelContainer" parent="HUD" unique_id=1402878065]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="HUD/HandBar" unique_id=1891528557]
+layout_mode = 2
+
+[node name="CardsRow" type="HBoxContainer" parent="HUD/HandBar/MarginContainer" unique_id=1493646601]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="CardUI" parent="HUD/HandBar/MarginContainer/CardsRow" unique_id=923601516 instance=ExtResource("1_mkxx4")]
+layout_mode = 2
+
+[node name="CardUI2" parent="HUD/HandBar/MarginContainer/CardsRow" unique_id=1182524522 instance=ExtResource("1_mkxx4")]
+layout_mode = 2
+
+[node name="CardUI3" parent="HUD/HandBar/MarginContainer/CardsRow" unique_id=1548831358 instance=ExtResource("1_mkxx4")]
+layout_mode = 2
+
+[node name="CardUI4" parent="HUD/HandBar/MarginContainer/CardsRow" unique_id=128238450 instance=ExtResource("1_mkxx4")]
+layout_mode = 2
+
+[node name="CardUI5" parent="HUD/HandBar/MarginContainer/CardsRow" unique_id=743857960 instance=ExtResource("1_mkxx4")]
+layout_mode = 2
+
+[node name="CardUI6" parent="HUD/HandBar/MarginContainer/CardsRow" unique_id=1303020185 instance=ExtResource("1_mkxx4")]
+layout_mode = 2

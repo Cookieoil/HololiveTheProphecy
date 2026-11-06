@@ -209,6 +209,7 @@ func _coerce(raw: String, spec: Dictionary, enums: Dictionary, sheet: String, ro
 	var v := raw
 	if v == "" and spec.has_default:
 		v = spec.default
+		
 	match spec.type:
 		"int":
 			if v.is_valid_int():
@@ -234,6 +235,20 @@ func _coerce(raw: String, spec: Dictionary, enums: Dictionary, sheet: String, ro
 			return false
 		"string", "ref":
 			return v
+		"list", "array":
+			var out := PackedStringArray()
+			if v.is_empty():
+				return out
+			var sep := ";" if v.find(";") >= 0 else ","
+			for item in v.split(sep):
+				var tag := item.strip_edges().to_lower()
+				if tag.is_empty():
+					continue
+				if not spec.target.is_empty() and enums.has(spec.target):
+					if not tag in enums[spec.target]:
+						errors.append("%s '%s' is not a valid %s (see enums sheet)" % [loc, tag, spec.target])
+				out.append(tag)
+			return out
 		_:
 			if enums.has(spec.type):
 				if v != "" and not v in enums[spec.type]:
@@ -253,6 +268,9 @@ func _read_skills(grid: Array, enums: Dictionary) -> Dictionary:
 		sd.merged_description = row.get("merged_description", "")
 		sd.merged_mode = MERGED_MODE_MAP.get(row.get("merged_mode", "and_merged_first"), SkillData.MergedMode.AND_MERGED_FIRST)
 		sd.condition_threshold = row.get("condition_threshold", 0)
+		sd.base_categories = row.get("base_categories", PackedStringArray())
+		sd.merged_categories = row.get("merged_categories", PackedStringArray())
+		
 		out[row.get("skill_id", "")] = sd
 	return out
 

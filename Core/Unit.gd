@@ -2,6 +2,7 @@ class_name Unit
 extends RefCounted
 ## Runtime instance of a unit on the board. Mutable HP/Shield state.
 ## This is all just data
+signal damaged(hp_lost: int, shield_lost: int)
 
 var data: UnitData
 var current_hp: int
@@ -26,15 +27,27 @@ var missing_hp: int: #return the unit missing HP from max HP
 	get:
 		return max_hp - current_hp
 		
-## Absores via shield, the returns actual hp lose
-func take_damage(amount: int) -> int:
-	if amount <= 0:
+## Absorbs via shield, then applies the remainder to HP. Emits `damaged`
+## after both values have been updated so UnitUI can react (flinch + bar drop).
+## Also fires when the shield fully absorbed the hit.
+## @param amount        the incoming damage
+## @param ignore_shield true to bypass the shield (e.g. true damage)
+## @return the HP actually lost
+func take_damage(amount: int, ignore_shield: bool = false) -> int:
+	if is_dead or amount <= 0:
 		return 0
-	var absorbed := mini(shield, amount) # no negative shields
-	shield -= absorbed # minus shield by damage
-	var remaining := amount - absorbed # leak damage to unit hp
-	var hp_lost := mini(current_hp, remaining) # minus leak damage
+
+	var shield_lost := 0
+	if not ignore_shield:
+		shield_lost = mini(shield, amount)
+		shield -= shield_lost
+
+	var hp_lost := mini(current_hp, amount - shield_lost)
 	current_hp -= hp_lost
+
+	if hp_lost > 0 or shield_lost > 0:
+		damaged.emit(hp_lost, shield_lost)
+
 	return hp_lost
 	
 ## Capped at max_hp. Returns actual HP restored.

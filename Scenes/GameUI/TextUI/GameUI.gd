@@ -13,17 +13,29 @@ extends Node
 #region Display (fire-and-forget)
 ## Print a single message line to the player.
 func show_message(_msg: String) -> void:
-		push_warning("GameUI.show_message() not overridden.")
-		
+	push_warning("GameUI.show_message() not overridden.")
+	
 ## Display enemy intent previews for the coming turn.
 func show_enemy_intents(_intents: Array[EnemyIntent]) -> void:
-		push_warning("GameUI.show_enemy_intents() not overridden.")
-		
+	push_warning("GameUI.show_enemy_intents() not overridden.")
+	
 ## Refresh the full board / hand / resource display.
 func show_game_state(_state: GameState) -> void:
 	push_warning("GameUI.show_game_state() not overridden.")
 	
 func focus_input() -> void:
+	pass
+	
+func play_unit_skill(_unit: Unit, _skill_index: int, _rank: int = 0) -> void:
+	push_warning("GameUI.play_unit_skill() not overridden.")
+	
+## Presentation cue: an enemy is about to act (or is skipped because it's dead),
+## so its intent preview should disappear. 
+func clear_unit_intent(_unit: Unit) -> void:
+	pass
+	
+## Presentation cue: a card was accepted and left the hand.
+func on_card_played(_card: Card, _state: GameState) -> void:
 	pass
 #endregion
 
@@ -50,4 +62,8 @@ func ask_pick_targets(_units: Array[Unit], _count: int) -> Array[Unit]:
 func ask_pick_cards(_cards: Array[Card], _count: int) -> Array[Card]:
 	push_warning("GameUI.ask_pick_cards() not overridden.")
 	return []
+	
+## Refresh hand and resource counters (Actions, Merges, Deck, Discard).
+func show_hand_and_resources(_state: GameState) -> void:
+	push_warning("GameUI.show_hand_and_resources() not overridden.")
 #endregion

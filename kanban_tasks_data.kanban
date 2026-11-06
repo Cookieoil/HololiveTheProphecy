@@ -1,0 +1,221 @@
+{
+	"categories": [
+		{
+			"uuid": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"title": "Task",
+			"color": "569eff"
+		}
+	],
+	"stages": [
+		{
+			"uuid": "9bf5da1f-f556-41fb-a370-5326a0a8ac0c",
+			"title": "Heavy tasks",
+			"tasks": [
+				"e7c47974-081d-491d-87f3-0bffd7e1f02a",
+				"ebba78a7-806b-432c-bbac-ccd618c780cd",
+				"8a66d4e0-9bfa-4b5b-8d76-9298796f8698",
+				"79f83019-950f-40b1-bd82-043422f4c9ea",
+				"6307d856-42e9-4321-a133-698b920e7b88",
+				"690b4a52-3fbb-46c0-9b7c-039851f4241f"
+			]
+		},
+		{
+			"uuid": "15f5c248-18c5-463e-b70f-1111190e3510",
+			"title": "Light tasks",
+			"tasks": [
+				"edec03dc-fe42-41a6-a27d-8c586679be38",
+				"bade1e60-fe4b-4d94-bc4a-307a88c52d09",
+				"1123dfaa-782d-4cfc-8237-d490a01e159d",
+				"591fc37c-7d63-4f48-a283-d9feabaa7cdd"
+			]
+		},
+		{
+			"uuid": "d24f122b-fb36-49ec-a4ba-566c7a28681c",
+			"title": "In progress",
+			"tasks": []
+		},
+		{
+			"uuid": "ad808fe2-5756-455e-8508-c095cfae22a0",
+			"title": "Done",
+			"tasks": [
+				"258ca0ab-7514-4d3e-b7ba-ad11dc4ad6ba",
+				"dcefedab-d114-4a7e-a713-d6593ec93b26",
+				"31c2f2a9-5bd2-4359-be65-5572811e98eb"
+			]
+		}
+	],
+	"tasks": [
+		{
+			"uuid": "e7c47974-081d-491d-87f3-0bffd7e1f02a",
+			"title": "fix status icons",
+			"description": "Fix the status icon catalogs to be suitable for the current data in excel",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "ebba78a7-806b-432c-bbac-ccd618c780cd",
+			"title": "Design the UI for the cards",
+			"description": "",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "edec03dc-fe42-41a6-a27d-8c586679be38",
+			"title": "Rename icon catalog",
+			"description": "rename the icon catalog to card icon catalog",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "31c2f2a9-5bd2-4359-be65-5572811e98eb",
+			"title": "Reverse 1999 portraits",
+			"description": "Replace the old static character portrait with Reverse 1999 animated portrait",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": [
+				{
+					"details": "2D skeletal animations",
+					"done": false
+				},
+				{
+					"details": "shading",
+					"done": false
+				}
+			]
+		},
+		{
+			"uuid": "8a66d4e0-9bfa-4b5b-8d76-9298796f8698",
+			"title": "handrawn icons",
+			"description": "Replace the placeholder icons with handrawn icons",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "79f83019-950f-40b1-bd82-043422f4c9ea",
+			"title": "Implement the moxie system.",
+			"description": "",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "bade1e60-fe4b-4d94-bc4a-307a88c52d09",
+			"title": "moxie UI",
+			"description": "Add moxie UI to battle scene",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "dcefedab-d114-4a7e-a713-d6593ec93b26",
+			"title": "Dragging improve",
+			"description": "similar like balatro, make the card moveable when dragging them, and center them to the mouse cursor",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": [
+				{
+					"details": "card moveable when dragged",
+					"done": false
+				},
+				{
+					"details": "center card to mouse cursor",
+					"done": false
+				},
+				{
+					"details": "card return to its original position if not dropped to characters",
+					"done": false
+				}
+			]
+		},
+		{
+			"uuid": "6307d856-42e9-4321-a133-698b920e7b88",
+			"title": "customized engine",
+			"description": "customize godot engine for 2D bone animation and ultra-fast 2D texture decompression",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "1123dfaa-782d-4cfc-8237-d490a01e159d",
+			"title": "add background",
+			"description": " the sense of depth is achieved via classic 2D multi-plane parallax scrolling (foreground, midground, and background 2D layers moving at different speeds) and 2D camera zoom cuts.",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": [
+				{
+					"details": "2D multi-plane parallax scrolling",
+					"done": false
+				},
+				{
+					"details": "2D camera zoom cuts",
+					"done": false
+				}
+			]
+		},
+		{
+			"uuid": "690b4a52-3fbb-46c0-9b7c-039851f4241f",
+			"title": "hand card animation",
+			"description": "add various animations for handcard, but different from R1999",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": [
+				{
+					"details": "entrance animation",
+					"done": false
+				},
+				{
+					"details": "merge animation",
+					"done": false
+				},
+				{
+					"details": "cancel animation",
+					"done": false
+				},
+				{
+					"details": "destroyed animation",
+					"done": false
+				},
+				{
+					"details": "reduce / increase animation",
+					"done": false
+				}
+			]
+		},
+		{
+			"uuid": "258ca0ab-7514-4d3e-b7ba-ad11dc4ad6ba",
+			"title": "card hovered animation",
+			"description": "make the card scale up, and offset up slightly when hovering on it. similar to legend of runeterra. Its collision should not overlapped with other cards.",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": [
+				{
+					"details": "scale up",
+					"done": true
+				},
+				{
+					"details": "offset upward",
+					"done": false
+				},
+				{
+					"details": "collision not overlapped with other cards",
+					"done": false
+				}
+			]
+		},
+		{
+			"uuid": "591fc37c-7d63-4f48-a283-d9feabaa7cdd",
+			"title": "X2 ",
+			"description": "add QOL button to speed up the game X2",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		}
+	],
+	"layout": {
+		"columns": [
+			[
+				"9bf5da1f-f556-41fb-a370-5326a0a8ac0c"
+			],
+			[
+				"15f5c248-18c5-463e-b70f-1111190e3510"
+			],
+			[
+				"d24f122b-fb36-49ec-a4ba-566c7a28681c"
+			],
+			[
+				"ad808fe2-5756-455e-8508-c095cfae22a0"
+			]
+		]
+	}
+}

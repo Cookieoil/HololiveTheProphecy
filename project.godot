@@ -15,8 +15,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Hololive: The Prophecy"
-run/main_scene="uid://c5pflgb6taide"
-config/features=PackedStringArray("4.7", "GL Compatibility")
+run/main_scene="uid://cpq72wwlumlsu"
+config/features=PackedStringArray("4.6", "GL Compatibility")
 run/max_fps=60
 config/icon="res://Trash/icon.svg"
 
@@ -33,7 +33,7 @@ window/stretch/mode="canvas_items"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/godotsize/plugin.cfg", "res://addons/xlsx_importPlugin/plugin.cfg")
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/godotsize/plugin.cfg", "res://addons/kanban_tasks/plugin.cfg", "res://addons/xlsx_importPlugin/plugin.cfg")
 
 [file_customization]
 
@@ -44,6 +44,8 @@ folder_colors={
 "res://Managers/": "orange",
 "res://Scenes/": "purple",
 "res://Shaders/": "pink",
+"res://Skills/": "orange",
+"res://Tools/": "yellow",
 "res://Trash/": "gray",
 "res://addons/": "red",
 "res://reports/": "blue"
@@ -51,5 +53,4 @@ folder_colors={
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+viewport/hdr_2d=true

@@ -1,0 +1,154 @@
+[gd_scene format=3 uid="uid://b8vfkexhyrw12"]
+
+[ext_resource type="Script" uid="uid://caug6cpi1etta" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/UnitUI.gd" id="1_puusj"]
+[ext_resource type="Resource" uid="uid://bdor57tkqj1yu" path="res://Trash/IconTest.tres" id="2_xphb7"]
+[ext_resource type="SpineSkeletonDataResource" uid="uid://dhqyvdtiyet45" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300402_hongnujian/300402_hongnujian.tres" id="3_gtx1d"]
+[ext_resource type="Script" uid="uid://cr21464l32xdu" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/SpinePortrait.gd" id="4_spine"]
+[ext_resource type="SpineSkeletonDataResource" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue/300101_zhujue.tres" id="5_spine"]
+
+[node name="UnitUI" type="PanelContainer" unique_id=2063243115]
+custom_minimum_size = Vector2(136, 240)
+offset_right = 136.0
+offset_bottom = 240.0
+size_flags_vertical = 4
+script = ExtResource("1_puusj")
+icon_catalog = ExtResource("2_xphb7")
+use_override_spine = true
+override_spine_data = ExtResource("3_gtx1d")
+hit_flash_delay = 1.0
+intro_extra_delay = -0.75
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1859264589]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+alignment = 1
+
+[node name="IntentLabel" type="Label" parent="VBox" unique_id=2062040852]
+modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.45, 0.45, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 11
+text = "Roll 6: Attack"
+horizontal_alignment = 1
+
+[node name="StatusSection" type="VBoxContainer" parent="VBox" unique_id=26678976]
+custom_minimum_size = Vector2(114, 26)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 2
+
+[node name="StatusIconsGrid" type="GridContainer" parent="VBox/StatusSection" unique_id=26678977]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_constants/h_separation = 3
+theme_override_constants/v_separation = 3
+columns = 4
+
+[node name="SkillPreview" type="VBoxContainer" parent="VBox/StatusSection" unique_id=26678978]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Skill1Row" type="HBoxContainer" parent="VBox/StatusSection/SkillPreview" unique_id=392932518]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="Icons" type="HBoxContainer" parent="VBox/StatusSection/SkillPreview/Skill1Row" unique_id=1688626642]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Skill2Row" type="HBoxContainer" parent="VBox/StatusSection/SkillPreview" unique_id=1843434710]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="Icons" type="HBoxContainer" parent="VBox/StatusSection/SkillPreview/Skill2Row" unique_id=946530359]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="HealthShieldContainer" type="Control" parent="VBox" unique_id=1034319930]
+custom_minimum_size = Vector2(114, 13)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="LoLBarCanvas" type="Control" parent="VBox/HealthShieldContainer" unique_id=1034319933]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HpBar" type="ProgressBar" parent="VBox/HealthShieldContainer" unique_id=1034319931]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+value = 100.0
+show_percentage = false
+
+[node name="ShieldBar" type="ProgressBar" parent="VBox/HealthShieldContainer" unique_id=1034319932]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+show_percentage = false
+
+[node name="OvalBody" type="PanelContainer" parent="VBox" unique_id=2068840906]
+custom_minimum_size = Vector2(120, 145)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="BodyVBox" type="VBoxContainer" parent="VBox/OvalBody" unique_id=2068840908]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="CharacterSprite" type="Control" parent="VBox/OvalBody/BodyVBox" unique_id=1701317218]
+custom_minimum_size = Vector2(110, 135)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("4_spine")
+skeleton_data = ExtResource("5_spine")
+bloom_intensity = 0.8
+hdr_bloom = true
+hit_reaction_delay = 1.0
+death_animation_delay = 1.0
+
+[node name="NameLabel" type="Label" parent="VBox/OvalBody/BodyVBox" unique_id=1641473938]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Unit 1"
+horizontal_alignment = 1
+
+[node name="HoverGlow" type="Panel" parent="." unique_id=807081110]
+visible = false
+layout_mode = 2
+mouse_filter = 2

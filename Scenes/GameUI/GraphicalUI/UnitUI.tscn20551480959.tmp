@@ -1,0 +1,106 @@
+[gd_scene format=3 uid="uid://b8vfkexhyrw12"]
+
+[ext_resource type="Script" uid="uid://caug6cpi1etta" path="res://Scenes/GameUI/GraphicalUI/Cards/UnitUI.gd" id="1_puusj"]
+[ext_resource type="Resource" uid="uid://bdor57tkqj1yu" path="res://Trash/IconTest.tres" id="2_xphb7"]
+[ext_resource type="Texture2D" uid="uid://b0t7bq0e1y1gk" path="res://Scenes/GameUI/Textures/sampleUnits/samepleBoss.png" id="3_ynwjl"]
+
+[node name="UnitUI" type="PanelContainer" unique_id=2063243115]
+self_modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(160, 220)
+offset_right = 160.0
+offset_bottom = 220.0
+size_flags_vertical = 8
+script = ExtResource("1_puusj")
+icon_catalog = ExtResource("2_xphb7")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1859264589]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="NameLabel" type="Label" parent="VBox" unique_id=1641473938]
+layout_mode = 2
+text = "Unit Name"
+horizontal_alignment = 1
+
+[node name="IntentLabel" type="Label" parent="VBox" unique_id=102593546]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+text = "Intent: Roll d6"
+horizontal_alignment = 1
+
+[node name="ShieldLabel" type="Label" parent="VBox" unique_id=653468113]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.7, 1, 1)
+text = "Shield: 0"
+horizontal_alignment = 1
+
+[node name="HpBar" type="ProgressBar" parent="VBox" unique_id=1034319931]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="CharacterSprite" type="TextureRect" parent="VBox" unique_id=2068840907]
+layout_mode = 2
+texture = ExtResource("3_ynwjl")
+expand_mode = 5
+stretch_mode = 5
+
+[node name="Skills" type="VBoxContainer" parent="VBox" unique_id=26678976]
+layout_mode = 2
+size_flags_vertical = 10
+
+[node name="Skill1Row" type="HBoxContainer" parent="VBox/Skills" unique_id=392932518]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBox/Skills/Skill1Row" unique_id=2064737266]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "ODD: "
+
+[node name="Icons" type="HBoxContainer" parent="VBox/Skills/Skill1Row" unique_id=1688626642]
+layout_mode = 2
+
+[node name="Skill2Row" type="HBoxContainer" parent="VBox/Skills" unique_id=1843434710]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBox/Skills/Skill2Row" unique_id=1358282063]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "EVEN: "
+
+[node name="Icons" type="HBoxContainer" parent="VBox/Skills/Skill2Row" unique_id=946530359]
+layout_mode = 2
+
+[node name="HoverGlow" type="Panel" parent="." unique_id=807081110]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+
+[node name="EffectIcons" type="Control" parent="." unique_id=1435387301]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="IntentLabel" type="Label" parent="EffectIcons" unique_id=2062040852]
+visible = false
+layout_mode = 0
+offset_top = -54.0
+offset_right = 160.0
+offset_bottom = -31.0
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+text = "Intent: Roll d6"
+horizontal_alignment = 1
+
+[node name="ShieldLabel" type="Label" parent="EffectIcons" unique_id=1053308259]
+visible = false
+layout_mode = 0
+offset_top = -27.0
+offset_right = 160.0
+offset_bottom = -4.0
+theme_override_colors/font_color = Color(0.3, 0.7, 1, 1)
+text = "Shield: 0"
+horizontal_alignment = 1

@@ -1,0 +1,249 @@
+[gd_scene format=3 uid="uid://cpq72wwlumlsu"]
+
+[ext_resource type="Script" uid="uid://38y8iydpwyb8" path="res://Scenes/GameUI/GraphicalUI/BattleScene/BattleScene.gd" id="1_cb2vx"]
+[ext_resource type="Resource" uid="uid://bdor57tkqj1yu" path="res://Trash/IconTest.tres" id="2_hqvvd"]
+[ext_resource type="Script" uid="uid://d31cx2a0p2aw3" path="res://Scenes/GameUI/GraphicalUI/Cards/HandBar.gd" id="3_m4kqq"]
+[ext_resource type="Texture2D" uid="uid://c3oo6wx54hb7m" path="res://Trash/icon.svg" id="4_phsvg"]
+
+[node name="Main" type="Node" unique_id=311251633]
+script = ExtResource("1_cb2vx")
+icon_catalog = ExtResource("2_hqvvd")
+
+[node name="Background" type="CanvasLayer" parent="." unique_id=1362181667]
+layer = -1
+
+[node name="ColorRect" type="ColorRect" parent="Background" unique_id=1256777604]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.11, 0.12, 0.14, 1)
+
+[node name="EntityOverlay" type="CanvasLayer" parent="." unique_id=438619693]
+
+[node name="EnemiesRow" type="HBoxContainer" parent="EntityOverlay" unique_id=687367978]
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 90.0
+offset_top = -185.0
+offset_right = 560.0
+offset_bottom = 140.0
+grow_vertical = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="AlliesRow" type="HBoxContainer" parent="EntityOverlay" unique_id=1392865348]
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -560.0
+offset_top = -185.0
+offset_right = -90.0
+offset_bottom = 140.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1641599053]
+
+[node name="TopBar" type="PanelContainer" parent="HUD" unique_id=863329898]
+self_modulate = Color(1, 1, 1, 0)
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 64.0
+grow_horizontal = 2
+
+[node name="Margin" type="MarginContainer" parent="HUD/TopBar" unique_id=863329899]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 8
+
+[node name="HBox" type="HBoxContainer" parent="HUD/TopBar/Margin" unique_id=863329900]
+layout_mode = 2
+alignment = 1
+
+[node name="LeftGroup" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox" unique_id=863329901]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 24
+
+[node name="WaveStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/LeftGroup" unique_id=863329902]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/LeftGroup/WaveStat" unique_id=863329903]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/LeftGroup/WaveStat" unique_id=863329904]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "2"
+
+[node name="DiceStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/LeftGroup" unique_id=863329905]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/LeftGroup/DiceStat" unique_id=863329906]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/LeftGroup/DiceStat" unique_id=863329907]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "6"
+
+[node name="CenterGroup" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox" unique_id=863329908]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="ActionsStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/CenterGroup" unique_id=863329909]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/CenterGroup/ActionsStat" unique_id=863329910]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/CenterGroup/ActionsStat" unique_id=863329911]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "2"
+
+[node name="MergesStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/CenterGroup" unique_id=863329912]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/CenterGroup/MergesStat" unique_id=863329913]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/CenterGroup/MergesStat" unique_id=863329914]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "2"
+
+[node name="RightGroup" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox" unique_id=863329915]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="ResourceLabel" type="Label" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=681888237]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Deck: 12 | Discard: 0"
+
+[node name="ConvertButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=197317561]
+custom_minimum_size = Vector2(110, 34)
+layout_mode = 2
+text = "Convert"
+icon = ExtResource("4_phsvg")
+expand_icon = true
+
+[node name="EndTurnButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=1980702320]
+custom_minimum_size = Vector2(110, 34)
+layout_mode = 2
+text = "End Turn"
+icon = ExtResource("4_phsvg")
+expand_icon = true
+
+[node name="MessageLog" type="Label" parent="HUD" unique_id=1043898199]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 68.0
+offset_right = 300.0
+offset_bottom = 100.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="HandBar" type="PanelContainer" parent="HUD" unique_id=632580964]
+self_modulate = Color(1, 1, 1, 0)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -195.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("3_m4kqq")
+
+[node name="MarginContainer" type="MarginContainer" parent="HUD/HandBar" unique_id=595629882]
+layout_mode = 2
+theme_override_constants/margin_left = 140
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="HUD/HandBar/MarginContainer" unique_id=595629883]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="CardsBracketHeader" type="HBoxContainer" parent="HUD/HandBar/MarginContainer/VBox" unique_id=595629884]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="LeftLine" type="ColorRect" parent="HUD/HandBar/MarginContainer/VBox/CardsBracketHeader" unique_id=595629885]
+custom_minimum_size = Vector2(220, 2)
+layout_mode = 2
+size_flags_vertical = 4
+color = Color(0.7, 0.72, 0.78, 0.6)
+
+[node name="CardsTitle" type="Label" parent="HUD/HandBar/MarginContainer/VBox/CardsBracketHeader" unique_id=595629886]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 0.9)
+theme_override_font_sizes/font_size = 15
+text = "Cards"
+horizontal_alignment = 1
+
+[node name="RightLine" type="ColorRect" parent="HUD/HandBar/MarginContainer/VBox/CardsBracketHeader" unique_id=595629887]
+custom_minimum_size = Vector2(220, 2)
+layout_mode = 2
+size_flags_vertical = 4
+color = Color(0.7, 0.72, 0.78, 0.6)
+
+[node name="CardsRow" type="HBoxContainer" parent="HUD/HandBar/MarginContainer/VBox" unique_id=1503537041]
+custom_minimum_size = Vector2(0, 145)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="QueueUI" type="CanvasLayer" parent="." unique_id=200497709]
+
+[node name="DebugCardSpawn" type="Button" parent="QueueUI" unique_id=1712277854]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = -50.0
+offset_right = 132.0
+offset_bottom = -15.0
+grow_vertical = 0
+text = "+ Debug Card"
+
+[connection signal="pressed" from="QueueUI/DebugCardSpawn" to="HUD/HandBar" method="spawn_debug_card"]

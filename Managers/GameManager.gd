@@ -53,6 +53,7 @@ func setup_game(
 ) -> void:
 	state = GameState.new()
 	ui = p_ui
+	_apply_config(config)
 
 	state.wave_definitions = wave_defs
 	# Initialize allies
@@ -68,11 +69,14 @@ func _apply_config(config: Dictionary) -> void:
 	if config.has("decklist"):
 		state.CURRENT_DECKLIST = config["decklist"]
 	if config.has("dice_progression"):
-		state.set_dice_progression(config["dice_progression"])
+		var prog: Array[int] = []
+		for v in config["dice_progression"]:
+			prog.append(int(v))
+		state.set_dice_progression(prog)
 	if config.has("wave_transition_mode"):
 		var mode_str: String = config["wave_transition_mode"]
 		state.wave_transition_mode = _WAVE_MODE_MAP.get(mode_str, GameState.WaveTransition.FULL_TURN)
-
+		
 func _spawn_wave(wave_index: int) -> void:
 	state.current_wave = wave_index
 	if wave_index < state.wave_definitions.size():
@@ -134,7 +138,7 @@ func _run_game_loop() -> void:
 				enemy.reset_shield()
 
 		# ── Step 7: Enemy turn  (async — skills may log) ──
-		_resolve_enemy_turns()
+		await _resolve_enemy_turns()
 		
 		# Post-turn checks
 		if state.all_allies_dead():
@@ -184,27 +188,26 @@ func _player_action_phase() -> void:
 		match action.get("type", ""):
 			"play":
 				await _handle_play(action["card"], action["target_ally"])
-				await ui.show_hand_and_resources(state)
 				
 			"merge":
-				await _handle_merge(action["card_a"], action["card_b"])
-				ui.show_hand_and_resources(state)
+				_handle_merge(action["card_a"], action["card_b"])
 				
 			"convert":
-				await _handle_convert()
+				_handle_convert()
 				
 			"stats":
-				await ui.show_game_state(state)
+				ui.show_game_state(state)
 				
 			"hand":
-				await ui.show_hand_and_resources(state)
+				pass
 				
 			"end_turn":
-				await ui.show_message("Ending player turn.")
+				ui.show_message("Ending player turn.")
 				break
 			_:
-				await ui.show_message("Unknown action.")
+				ui.show_message("Unknown action.")
 				
+		ui.show_hand_and_resources(state)
 
 func _handle_play(card: Card, ally: Unit) -> void:
 	if ally.is_dead:
@@ -213,7 +216,8 @@ func _handle_play(card: Card, ally: Unit) -> void:
 	if not state.play_card_on_ally(card, ally):
 		ui.show_message("Can't play that card (no actions)")
 		return
-	
+
+	ui.on_card_played(card, state)
 	EventBus.card_played.emit(card, ally)
 	
 	# Determine skill
@@ -242,8 +246,20 @@ func _handle_play(card: Card, ally: Unit) -> void:
 	# Build context
 	var ctx := _build_ally_context(ally, card)
 	
-	# Resolve
+	# Resolve gameplay first, then submit the dramatic presentation cue.
 	await _resolve_skill(skill, ctx)
+
+	var rank: int = 0
+	if card.is_double_merged:
+		rank = 2
+	elif card.is_merged:
+		rank = 1
+
+	await ui.play_unit_skill(
+		ally,
+		1 if card.is_odd() else 2,
+		rank
+	)
 
 
 func _handle_merge(a: Card, b: Card) -> void:
@@ -385,8 +401,12 @@ func _roll_enemy_intents() -> void:
 
 func _resolve_enemy_turns() -> void:
 	for intent in current_intents:
+		# Hide this enemy's intent the moment its action begins.
+		ui.clear_unit_intent(intent.enemy)
+	
 		if intent.enemy.is_dead:
 			continue
+			
 		var enemy_name = _color_unit(intent.enemy)
 		var dice_value = ColorUtils.colorize(str(intent.effective_value) + " V", ColorUtils.COLOR_CARD)
 		var skill_name = ColorUtils.colorize(intent.skill.skill_name, ColorUtils.COLOR_HEADER)
@@ -403,7 +423,13 @@ func _resolve_enemy_turns() -> void:
 			ui.show_message(ColorUtils.colorize("> " + intent.enemy.data.skill_2.description, ColorUtils.COLOR_DEAD))
 			
 		var ctx := _build_enemy_context(intent.enemy, intent)
-		_resolve_skill(intent.skill, ctx)
+		await _resolve_skill(intent.skill, ctx)
+	
+		# Use effective_value, matching EnemyIntent's odd/even skill selection.
+		var skill_index: int = 1 if intent.effective_value % 2 == 1 else 2
+		var rank: int = 1 if intent.condition_met else 0
+	
+		await ui.play_unit_skill(intent.enemy, skill_index, rank)
 	
 		# Clear value modifiers after this enemy's action resolves
 		intent.enemy.clear_value_modifier()

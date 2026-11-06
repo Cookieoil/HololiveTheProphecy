@@ -1,0 +1,14 @@
+[remap]
+
+importer="spine.skel"
+type="SpineSkeletonFileResource"
+uid="uid://b32a8ycv81goy"
+path="res://.godot/imported/300402_hongnujian.skel-9bbf41ccb86fd51af94bf5e402f34a42.spskel"
+
+[deps]
+
+source_file="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300402_hongnujian/300402_hongnujian.skel"
+dest_files=["res://.godot/imported/300402_hongnujian.skel-9bbf41ccb86fd51af94bf5e402f34a42.spskel"]
+
+[params]
+

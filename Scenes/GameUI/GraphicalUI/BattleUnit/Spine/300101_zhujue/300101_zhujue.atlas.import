@@ -1,0 +1,16 @@
+[remap]
+
+importer="spine.atlas"
+type="SpineAtlasResource"
+uid="uid://ctq35guqs2a5o"
+path="res://.godot/imported/300101_zhujue.atlas-82cc76c99a860c943dd3b979fbaacb31.spatlas"
+
+[deps]
+
+source_file="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue/300101_zhujue.atlas"
+dest_files=["res://.godot/imported/300101_zhujue.atlas-82cc76c99a860c943dd3b979fbaacb31.spatlas"]
+
+[params]
+
+normal_map_prefix="n"
+specular_map_prefix="s"
