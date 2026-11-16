@@ -27,11 +27,10 @@ ColorUtils="*uid://s4v00fmpp2le"
 
 [debug]
 
-gdscript/warnings/enable=true
-gdscript/warnings/exclude_addons=true
 gdscript/warnings/directory_rules={
-"res://addons/": 0,
-"res://": 1
+"res://": 1,
+"res://addons": 0,
+"res://addons/": 0
 }
 gdscript/warnings/untyped_declaration=2
 gdscript/warnings/unsafe_property_access=2
