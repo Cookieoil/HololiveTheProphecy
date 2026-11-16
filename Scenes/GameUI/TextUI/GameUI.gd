@@ -29,6 +29,9 @@ func focus_input() -> void:
 func play_unit_skill(_unit: Unit, _skill_index: int, _rank: int = 0) -> void:
 	push_warning("GameUI.play_unit_skill() not overridden.")
 	
+func play_unit_ultimate(_unit: Unit) -> void:
+	push_warning("GameUI.play_unit_ultimate() not overridden.")
+	
 ## Presentation cue: an enemy is about to act (or is skipped because it's dead),
 ## so its intent preview should disappear. 
 func clear_unit_intent(_unit: Unit) -> void:

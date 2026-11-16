@@ -4,7 +4,7 @@ extends Resource
 ## Catalog for character buff/debuff status icons (separate from card IconCatalog).
 ## Provides lookup and automatic inspection of Unit buff/debuff state.
 
-const PLACEHOLDER_ICON: Texture2D = preload("res://Trash/icon.svg")
+const PLACEHOLDER_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
 
 @export var default_icon: Texture2D = PLACEHOLDER_ICON
 @export var buff_icons: Dictionary = {}   # status_id (String) -> Texture2D

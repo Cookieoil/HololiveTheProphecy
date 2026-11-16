@@ -11,7 +11,7 @@ const DRAG_PREVIEW_SCALE: float = 1.04
 const DRAG_SOURCE_ALPHA: float = 0.0 # Hide the source card
 const RETURN_TWEEN_TIME: float = 0.18
 const RETURN_CANVAS_LAYER: int = 100
-const PLACEHOLDER_ICON: Texture2D = preload("res://Trash/icon.svg")
+const PLACEHOLDER_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
 
 const HOVER_SCALE: float = 1.12
 const HOVER_LIFT: float = 18.0
@@ -25,16 +25,20 @@ var hand_bar: HandBar
 
 var _hover_tween: Tween
 var _is_hovered: bool = false
+var _pick_selectable: bool = false
 
 var _drag_in_progress: bool = false
+var _is_consumed: bool = false
 var _return_tween: Tween
 var _return_layer: CanvasLayer
+var _glow: OutlineGlow
 
 @onready var hover_visual: PanelContainer = $Bounds/HoverVisual
 @onready var icon_row: HBoxContainer = $Bounds/HoverVisual/Margin/VBox/IconRow
 @onready var art: TextureRect = $Bounds/HoverVisual/Margin/VBox/Art
 @onready var value_label: Label = $Bounds/HoverVisual/Margin/VBox/ValueLabel
 @onready var merge_glow: Panel = $Bounds/HoverVisual/MergeGlow
+@onready var bounds: Control = $Bounds
 
 
 func _ready() -> void:
@@ -48,6 +52,13 @@ func _ready() -> void:
 	_style_card_panel()
 	_style_merge_glow()
 
+	if merge_glow != null:
+		merge_glow.self_modulate.a = 0.0
+		_glow = OutlineGlow.attach_to(bounds, 6.0, 13.0)
+
+	# None of the visual children should participate in GUI hit-testing.
+	_set_mouse_filter_recursive(hover_visual)
+	
 	# None of the visual children should participate in GUI hit-testing.
 	# Consequently, the enlarged drawing cannot obstruct neighboring cards.
 	_set_mouse_filter_recursive(hover_visual)
@@ -61,12 +72,46 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	# Immediately clear merge highlight if the cursor leaves this card while dragging.
-	if merge_glow and merge_glow.visible:
+	if not _pick_selectable and merge_glow and merge_glow.visible:
 		if not get_viewport().gui_is_dragging() \
 				or not get_global_rect().has_point(get_global_mouse_position()):
 			merge_glow.visible = false
+		
+	if _glow != null and merge_glow != null:
+		var preset := OutlineGlow.Preset.RUNETERRA_BLUE if _pick_selectable \
+			else OutlineGlow.Preset.ARCANE_GOLD
+		_glow.set_active(merge_glow.visible, preset)
+		
+func set_pick_selectable(active: bool) -> void:
+	_pick_selectable = active
+	if merge_glow:
+		merge_glow.visible = active
 
 
+#region Consumed guard
+
+## Permanently locks this card against further interaction. Called by HandBar
+## immediately before the removal tween starts, so nothing (drag start, drop
+## target, hover restore, return animation) can revive a dying card.
+func mark_consumed() -> void:
+	_is_consumed = true
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cancel_return_animation(false)
+	modulate.a = 0.0
+
+
+func is_consumed() -> bool:
+	return _is_consumed
+
+
+func _gui_input(event: InputEvent) -> void:
+	if _pick_selectable and event is InputEventMouseButton \
+			and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		var hb := _find_hand_bar()
+		if hb != null:
+			hb.card_clicked.emit(card)
+		accept_event()
+		
 func _exit_tree() -> void:
 	if _hover_tween != null and _hover_tween.is_valid():
 		_hover_tween.kill()
@@ -109,8 +154,9 @@ func _style_merge_glow() -> void:
 	glow_box.corner_radius_bottom_left = 6
 	glow_box.corner_radius_bottom_right = 6
 	merge_glow.add_theme_stylebox_override("panel", glow_box)
+#endregion
 
-# --- Hover animation ---------------------------------------------------------
+#region Hover Animation
 
 func _update_hover_pivot() -> void:
 	if not is_instance_valid(hover_visual):
@@ -122,6 +168,9 @@ func _update_hover_pivot() -> void:
 		hover_visual.size.x * 0.5,
 		hover_visual.size.y
 	)
+	if is_instance_valid(_glow):
+		var b := _glow.glow_bleed
+		_glow.pivot_offset = hover_visual.pivot_offset + Vector2(b, b)
 
 
 func _on_card_mouse_entered() -> void:
@@ -141,14 +190,9 @@ func _on_card_mouse_exited() -> void:
 func _animate_hover(active: bool) -> void:
 	_is_hovered = active
 
-	# Kill only this card's previous hover tween. Starting a new tween from
-	# the current values avoids jumps and additive-position bugs when the
-	# player moves quickly between cards.
 	if _hover_tween != null and _hover_tween.is_valid():
 		_hover_tween.kill()
 
-	# Draw the hovered card above its siblings. This changes drawing order,
-	# not the fixed GUI hit areas.
 	z_index = HOVER_Z_INDEX if active else 0
 
 	var target_scale := Vector2.ONE * HOVER_SCALE if active else Vector2.ONE
@@ -170,6 +214,20 @@ func _animate_hover(active: bool) -> void:
 		target_y,
 		HOVER_TWEEN_TIME
 	)
+	if is_instance_valid(_glow):
+		var b := _glow.glow_bleed
+		_hover_tween.parallel().tween_property(
+			_glow,
+			"scale",
+			target_scale,
+			HOVER_TWEEN_TIME
+		)
+		_hover_tween.parallel().tween_property(
+			_glow,
+			"position:y",
+			-b + target_y,
+			HOVER_TWEEN_TIME
+		)
 
 
 func _reset_hover_immediate() -> void:
@@ -184,6 +242,10 @@ func _reset_hover_immediate() -> void:
 	if is_instance_valid(hover_visual):
 		hover_visual.scale = Vector2.ONE
 		hover_visual.position = Vector2.ZERO
+	if is_instance_valid(_glow):
+		var b := _glow.glow_bleed
+		_glow.scale = Vector2.ONE
+		_glow.position = Vector2(-b, -b)
 		
 func setup(p_card: Card, p_hand_bar: HandBar = null) -> void:
 	card = p_card
@@ -229,12 +291,12 @@ func _build_stars_and_indicators() -> void:
 	parity_label.add_theme_font_size_override("font_size", 11)
 	parity_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon_row.add_child(parity_label)
+#endregion
 
-
-# --- Drag source -------------------------------------------------------------
+#region Drag source
 
 func _get_drag_data(_at_position: Vector2) -> Variant:
-	if card == null or _drag_in_progress:
+	if card == null or _is_consumed or _drag_in_progress or _pick_selectable:
 		return null
 
 	var hb := _find_hand_bar()
@@ -299,13 +361,17 @@ func _make_visual_copy() -> PanelContainer:
 			DRAG_PREVIEW_SIZE.x * 0.5,
 			DRAG_PREVIEW_SIZE.y
 		)
-
+	
 	var copied_glow := visual.get_node_or_null(
 		"Bounds/HoverVisual/MergeGlow"
 	) as Control
 	if copied_glow != null:
 		copied_glow.hide()
-
+	
+	var copied_outline := visual.get_node_or_null("Bounds/OutlineGlow") as Control
+	if copied_outline != null:
+		copied_outline.hide()
+	
 	_set_mouse_filter_recursive(visual)
 	return visual
 
@@ -316,9 +382,9 @@ func _set_mouse_filter_recursive(control: Control) -> void:
 	for child: Node in control.get_children():
 		if child is Control:
 			_set_mouse_filter_recursive(child as Control)
+#endregion
 
-
-# --- Drag completion and cancellation ---------------------------------------
+#region Drag completion and cancellation
 
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_DRAG_END:
@@ -346,11 +412,11 @@ func _notification(what: int) -> void:
 
 
 func _restore_if_unconsumed() -> void:
-	if not is_inside_tree() or is_queued_for_deletion():
+	if _is_consumed or not is_inside_tree() or is_queued_for_deletion():
 		return
 	var hb := _find_hand_bar()
 	var st: GameState = hb._get_game_state() if hb != null else null
-	if st == null or st.hand.has(card):
+	if st != null and st.hand.has(card):
 		modulate.a = 1.0
 
 
@@ -424,8 +490,9 @@ func _on_return_finished(layer: CanvasLayer) -> void:
 
 	if is_instance_valid(layer):
 		layer.queue_free()
+#endregion
 
-# --- Merge drop target -------------------------------------------------------
+#region Merge drop target
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var drag: CardDrag = data as CardDrag
@@ -476,3 +543,4 @@ func _find_hand_bar() -> HandBar:
 		curr = curr.get_parent()
 
 	return null
+#endregion

@@ -15,15 +15,23 @@ var condition_met: bool          ## effective_value >= skill.condition_threshold
 func _init(p_enemy: Unit, p_dice: int) -> void:
 	enemy = p_enemy
 	raw_dice_value = p_dice
-	effective_value = maxi(1, p_dice + p_enemy.value_modifier)
+	recalculate()
 
-	# Odd → skill 1, Even → skill 2
-	skill = p_enemy.data.skill_1 if effective_value % 2 == 1 else p_enemy.data.skill_2
-	condition_met = skill.condition_threshold > 0 and effective_value >= skill.condition_threshold
+func recalculate() -> void:
+	effective_value = maxi(1, raw_dice_value + enemy.value_modifier)
+	skill = enemy.data.skill_1 if effective_value % 2 == 1 else enemy.data.skill_2
+	condition_met = skill != null and skill.condition_threshold > 0 and effective_value >= skill.condition_threshold
+
+func will_trigger_ultimate() -> bool:
+	return enemy != null \
+		and not enemy.is_dead \
+		and enemy.data.ultimate != null \
+		and (enemy.moxie + effective_value) >= enemy.max_moxie
 
 func _to_string() -> String:
 	var skill_label := "Skill1(odd)" if effective_value % 2 == 1 else "Skill2(even)"
 	var cond := " [COND MET]" if condition_met else ""
-	return "%s rolls %d (eff:%d) → %s%s" % [
-		enemy.data.display_name, raw_dice_value, effective_value, skill_label, cond
+	var ult := " [ULT READY]" if will_trigger_ultimate() else ""
+	return "%s rolls %d (eff:%d) → %s%s%s" % [
+		enemy.data.display_name, raw_dice_value, effective_value, skill_label, cond, ult
 	]

@@ -4,7 +4,7 @@ extends Control
 signal action_finished(anim_name: StringName)
 signal action_started(anim_name: StringName)
 
-const FALLBACK_ICON: Texture2D = preload("res://Trash/icon.svg")
+const FALLBACK_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
 const PORTRAIT_SHADER: Shader = preload("res://Scenes/GameUI/GraphicalUI/BattleUnit/SpinePortrait.gdshader")
 const BASE_TRACK: int = 0
 const ACTION_COMPLETION_GRACE: float = 0.25
@@ -48,6 +48,7 @@ const FALLBACK_ACTION_DURATION: float = 2.0
 @export_range(0.0, 3.0, 0.05) var hit_reaction_delay: float = 0.35
 @export_range(0.0, 3.0, 0.05) var death_animation_delay: float = 0.35
 
+var _canvas_group: CanvasGroup
 var _spine: Node2D
 var _animation_state: Object
 var _material: ShaderMaterial
@@ -183,7 +184,19 @@ func play_skill_and_wait(skill_index: int, rank: int = 0) -> void:
 	while (await action_finished) != anim:
 		pass
 
+func _get_ultimate_anim() -> StringName:
+	for candidate: StringName in [anim_unique_1, anim_unique, anim_skill1_2, anim_skill1]:
+		if has_animation(candidate):
+			return candidate
+	return &""
 
+func play_ultimate_and_wait() -> void:
+	var anim := _get_ultimate_anim()
+	if anim.is_empty() or not request_action(anim, ActionBeat.ATTACK):
+		return
+	while (await action_finished) != anim:
+		pass
+		
 func _schedule_action_pump() -> void:
 	if _action_pump_scheduled:
 		return
@@ -368,44 +381,41 @@ func _create_spine_sprite() -> void:
 	if skeleton_data == null:
 		_show_fallback("SpinePortrait: skeleton_data is not assigned")
 		return
-	
+
 	if not ClassDB.class_exists("SpineSprite"):
 		_show_fallback("SpinePortrait: SpineSprite is unavailable.")
 		return
-	
+
 	_spine = ClassDB.instantiate("SpineSprite") as Node2D
 	if _spine == null:
 		_show_fallback("SpinePortrait: failed to construct SpineSprite")
 		return
-	
+
+	if _fallback != null:
+		_fallback.queue_free()
+		_fallback = null
+
 	_spine.set("skeleton_data_res", skeleton_data)
-	add_child(_spine)
-	
+	_ensure_canvas_group().add_child(_spine)
+
 	if _spine.has_signal("animation_completed"):
 		_spine.connect(
 			"animation_completed",
 			_on_spine_animation_completed
 		)
-	
+
 	_create_material()
 	_spine.set("normal_material", _material)
-	
-	for property_info: Dictionary in _spine.get_property_list():
-		var property_name: String = property_info.get("name", "")
-		if property_name in ["normal_material", "additive_material", "multiply_material"]:
-			_spine.set(property_name, _material)
-	
+
 	_animation_state = _spine.call("get_animation_state")
-	
+
 	if _dead:
-		# Preserve the terminal state when skeleton data is reloaded.
 		_play_death_animation()
 	elif has_animation(anim_born):
-		# Born plays once, then the queued idle takes over.
 		_play_base_animation(anim_born)
 	else:
 		_play_base_animation(anim_idle, true)
-	
+
 	_fit_sprite()
 
 
@@ -421,31 +431,40 @@ func _create_material() -> void:
 	if skeleton_data != null and not skeleton_data.resource_path.is_empty():
 		var bloom_path := skeleton_data.resource_path.get_basename() + "_bloom.png"
 		if ResourceLoader.exists(bloom_path):
-			_material.set_shader_parameter("bloom_texture", load(bloom_path))
+			var bloom_tex := load(bloom_path) as Texture2D
+			_material.set_shader_parameter("bloom_texture", bloom_tex)
 		else:
-			# No mask means no glow at all, rather than glowing everywhere.
 			_material.set_shader_parameter("bloom_intensity", 0.0)
 
+
 func _fit_sprite() -> void:
-	if _spine == null or source_art_bounds.x <= 0.0 or source_art_bounds.y <= 0.0: return
-	if size.x <= 0.0 or size.y <= 0.0: return
+	if _fallback != null:
+		_fallback.position = Vector2.ZERO
+		_fallback.size = size
+	if _spine == null or source_art_bounds.x <= 0.0 or source_art_bounds.y <= 0.0:
+		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
 
 	var fit_scale: float = minf(size.x / source_art_bounds.x, size.y / source_art_bounds.y) * viewport_fill
 	var direction: float = -1.0 if _facing_left else 1.0
 	_spine.scale = Vector2(fit_scale * direction, fit_scale)
 	_spine.position = Vector2(size.x * 0.5 + horizontal_offset, size.y - bottom_padding)
 
+
 func _show_fallback(reason: String) -> void:
 	push_error(reason)
-	if _fallback != null: return
+	if _fallback != null:
+		return
 
 	_fallback = TextureRect.new()
 	_fallback.texture = FALLBACK_ICON
 	_fallback.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_fallback.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_fallback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(_fallback)
+	_fallback.position = Vector2.ZERO
+	_fallback.size = size
+	_ensure_canvas_group().add_child(_fallback)
 	
 func _get_animation_duration(anim_name: StringName) -> float:
 	if _spine == null:
@@ -489,3 +508,18 @@ func get_intro_duration() -> float:
 	if _dead or not has_animation(anim_born):
 		return 0.0
 	return _get_animation_duration(anim_born)
+
+#region Helper methods
+func get_canvas_group() -> CanvasGroup:
+	return _ensure_canvas_group()
+
+
+func _ensure_canvas_group() -> CanvasGroup:
+	if _canvas_group == null:
+		_canvas_group = CanvasGroup.new()
+		_canvas_group.name = "SilhouetteGroup"
+		_canvas_group.fit_margin = 2.0
+		_canvas_group.clear_margin = 4.0
+		add_child(_canvas_group)
+	return _canvas_group
+#endregion

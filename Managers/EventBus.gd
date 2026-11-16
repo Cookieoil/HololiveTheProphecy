@@ -29,3 +29,8 @@ signal unit_died(target: Unit)
 #region Skill Events
 signal skill_resolved(caster: Unit, skill_name: String)
 #endregion
+
+#region Moxie
+signal moxie_changed(unit: Unit, current: int, maximum: int)
+signal ultimate_cast(caster: Unit, skill_name: String)
+#endregion

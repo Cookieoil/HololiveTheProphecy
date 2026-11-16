@@ -22,6 +22,7 @@ enum TargetMode {
 	PICK_N_ALLY, # Pick N allies (no duplicate)
 	ALL_ENEMIES, # Quick pick all enemies
 	ALL_ALLIES, # Quick pick all allies
+	CACHED_OR_PICK_ENEMY, # Prevent double target prompts
 }
 
 ## Pre_condition check:
@@ -166,6 +167,14 @@ func _resolve_targets(ctx: SkillContext) -> Array[Unit]:
 			ctx.targets = arr
 			return arr
 				
+		TargetMode.CACHED_OR_PICK_ENEMY:
+			if not ctx.targets.is_empty():
+				return ctx.targets
+			var is_ally := ctx.caster.is_ally
+			var filter := func(u: Unit) -> bool:
+				return u.is_ally != is_ally and not u.is_dead
+			ctx.targets = await ctx.pick_n_target.call(target_count, filter)
+			return ctx.targets
 	return []
 				
 #endregion
@@ -191,40 +200,55 @@ func _check_condition(ctx: SkillContext) -> bool:
 #endregion 
 
 #region Phase 3: Resolve Values
-func _resolve_value(ctx: SkillContext) -> int:
+#region Phase 3: Resolve Values
+func compute_value_from_inputs(
+	card_val: int,
+	stored_val: int,
+	state: GameState,
+	sample_target: Unit = null
+) -> int:
 	var base: int = 0
-	
 	match value_source:
 		ValueSource.CARD_VALUE:
-			base = ctx.card_value
-			
+			base = card_val
+		ValueSource.CARD_VALUE_HALF:
+			@warning_ignore("integer_division")
+			base = maxi(1, card_val / 2) if card_val > 0 else 0
+		ValueSource.CARD_VALUE_DOUBLE:
+			base = card_val * 2
 		ValueSource.FIXED:
 			base = fixed_amount
-			
 		ValueSource.TARGET_MISSING_HP:
-			if not ctx.targets.is_empty():
-				base = ctx.targets[0].missing_hp
-				
+			if sample_target != null:
+				base = sample_target.missing_hp
 		ValueSource.HIGHEST_CARD_IN_HAND:
-			var c:= ctx.game_state.get_highest_card_in_hand()
-			if c:
-				base = c.get_effective_value()
-				
+			if state != null:
+				var c := state.get_highest_card_in_hand()
+				if c:
+					base = c.get_effective_value()
+		ValueSource.LOWEST_CARD_IN_HAND:
+			if state != null:
+				var low := state.get_lowest_card_in_hand()
+				if low:
+					base = low.get_effective_value()
 		ValueSource.STORED_VALUE:
-			base = ctx.stored_value
-			
+			base = stored_val
+	
 	## Method: (base x multiplier / divisor) + offset, capped
 	var divisor := maxi(1, value_divisor)
 	@warning_ignore("integer_division")
 	var result := (base * value_multiplier) / divisor
-	result = maxi(1, result) # Division can't go below 1 
+	if base > 0:
+		result = maxi(1, result)
 	result += value_offset
-	
 	if value_cap >= 0:
 		result = mini(result, value_cap)
-		
 	return maxi(0, result)
-#endregion 
+
+func _resolve_value(ctx: SkillContext) -> int:
+	var first_target: Unit = ctx.targets[0] if not ctx.targets.is_empty() else null
+	return compute_value_from_inputs(ctx.card_value, ctx.stored_value, ctx.game_state, first_target)
+#endregion
 
 #region Phase 4: Execute Action
 func execute(ctx: SkillContext) -> void:
@@ -386,7 +410,8 @@ func _deal_true_damage(ctx: SkillContext, targets: Array[Unit], amount: int) -> 
 		
 		ctx.log(log_msg)
 		if target.is_dead:
-			ctx.log(ColorUtils.colorize("%s is defeated by self-damage!" % target.data.display_name, ColorUtils.COLOR_DEAD))
+			var suffix := " by self-damage!" if target == ctx.caster else "!"
+			ctx.log(ColorUtils.colorize("%s is defeated%s" % [target.data.display_name, suffix], ColorUtils.COLOR_DEAD))
 			EventBus.unit_died.emit(target)
 
 

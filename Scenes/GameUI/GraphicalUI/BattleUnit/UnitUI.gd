@@ -3,8 +3,12 @@ extends PanelContainer
 
 signal card_dropped_on_unit(card: Card, unit: Unit)
 signal unit_clicked(unit: Unit)
+signal card_hover_started(unit: Unit, card: Card, anchor_rect: Rect2)
+signal card_hover_ended(unit: Unit)
+signal intent_hover_started(unit: Unit, anchor_rect: Rect2)
+signal intent_hover_ended(unit: Unit)
 
-const PLACEHOLDER_ICON: Texture2D = preload("res://Trash/icon.svg")
+const PLACEHOLDER_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
 const STAGGER_OFFSET_Y: float = 65.0
 const SPINE_BASE_DIR = "res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/"
 
@@ -54,7 +58,7 @@ var unit: Unit
 @onready var skill_2_row: HBoxContainer = $VBox/StatusSection/SkillPreview/Skill2Row
 @onready var skill_2_icons: HBoxContainer = $VBox/StatusSection/SkillPreview/Skill2Row/Icons
 
-@onready var health_bar_canvas: Control = $VBox/HealthShieldContainer/LoLBarCanvas
+@onready var health_bar_canvas: Control = $VBox/HealthShieldContainer/BarCanvas
 @onready var health_shield_container: Control = $VBox/HealthShieldContainer
 @onready var hp_bar: ProgressBar = $VBox/HealthShieldContainer/HpBar
 @onready var shield_bar: ProgressBar = $VBox/HealthShieldContainer/ShieldBar
@@ -67,6 +71,11 @@ var unit: Unit
 var _stagger_style: StyleBoxEmpty
 var _is_target_highlighted: bool = false
 var _is_drag_hovering: bool = false
+var _is_orb_linked_highlighted: bool = false
+var _hovered_drag_card: Card = null
+var _intent_style: StyleBoxEmpty
+var _glow: OutlineGlow
+var _ult_warning_active: bool = false
 
 #region Health Bar State
 const HIT_FLASH_TIME: float = 0.4
@@ -114,10 +123,23 @@ var _last_status_signature: String = ""
 var _manual_statuses: Array[Dictionary] = []
 #endregion
 
+
+#region Lifecycle
+
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	clip_contents = false
+	if is_instance_valid(sprite):
+		sprite.clip_contents = false
+		_glow = OutlineGlow.attach_to(sprite, 8.0, 15.0)
+	else:
+		_glow = OutlineGlow.attach_to(self, 8.0, 15.0)
+	
 	_ignore_mouse_recursively(self)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	intent_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	intent_label.mouse_entered.connect(_on_intent_mouse_entered)
+	intent_label.mouse_exited.connect(_on_intent_mouse_exited)
+	_setup_intent_badge_style(false)
 
 	if status_icon_catalog == null:
 		status_icon_catalog = StatusIconCatalog.new()
@@ -144,30 +166,21 @@ func _ready() -> void:
 		
 	_set_hud_hidden(true, true)
 
-func _setup_glow_style() -> void:
-	var glow_style := StyleBoxFlat.new()
-	glow_style.bg_color = Color(1.0, 1.0, 1.0, 0.05)
-	glow_style.border_width_left = 2
-	glow_style.border_width_top = 2
-	glow_style.border_width_right = 2
-	glow_style.border_width_bottom = 2
-	glow_style.border_color = Color(1.0, 0.9, 0.4, 0.95)
-	glow_style.corner_radius_top_left = 8
-	glow_style.corner_radius_top_right = 8
-	glow_style.corner_radius_bottom_left = 8
-	glow_style.corner_radius_bottom_right = 8
-	hover_glow.add_theme_stylebox_override("panel", glow_style)
 
-func set_staggered(is_lower: bool) -> void:
-	if _stagger_style == null:
-		_stagger_style = StyleBoxEmpty.new()
-		add_theme_stylebox_override("panel", _stagger_style)
-	if is_lower:
-		_stagger_style.content_margin_top = STAGGER_OFFSET_Y
-		_stagger_style.content_margin_bottom = 0.0
-	else:
-		_stagger_style.content_margin_top = 0.0
-		_stagger_style.content_margin_bottom = STAGGER_OFFSET_Y
+func _process(delta: float) -> void:
+	if _is_drag_hovering:
+		if not get_viewport().gui_is_dragging() or not get_global_rect().has_point(get_global_mouse_position()):
+			_reset_preview()
+
+	if unit == null or unit.data == null: return
+
+	_refresh_status_icons()
+	_refresh_display(delta)
+
+#endregion
+
+
+#region Setup & Binding
 
 func setup(p_unit: Unit, p_card_catalog: IconCatalog, p_status_catalog: StatusIconCatalog = null) -> void:
 	_bind_unit(p_unit)
@@ -200,15 +213,492 @@ func setup(p_unit: Unit, p_card_catalog: IconCatalog, p_status_catalog: StatusIc
 	_skill_hud_active = false
 	play_intro()
 
-func _process(delta: float) -> void:
-	if _is_drag_hovering:
-		if not get_viewport().gui_is_dragging() or not get_global_rect().has_point(get_global_mouse_position()):
+
+func _bind_unit(p_unit: Unit) -> void:
+	if unit != null and unit.damaged.is_connected(_on_unit_damaged):
+		unit.damaged.disconnect(_on_unit_damaged)
+	unit = p_unit
+	if unit != null and not unit.damaged.is_connected(_on_unit_damaged):
+		unit.damaged.connect(_on_unit_damaged)
+
+
+func set_staggered(is_lower: bool) -> void:
+	if _stagger_style == null:
+		_stagger_style = StyleBoxEmpty.new()
+		add_theme_stylebox_override("panel", _stagger_style)
+	if is_lower:
+		_stagger_style.content_margin_top = STAGGER_OFFSET_Y
+		_stagger_style.content_margin_bottom = 0.0
+	else:
+		_stagger_style.content_margin_top = 0.0
+		_stagger_style.content_margin_bottom = STAGGER_OFFSET_Y
+
+#endregion
+
+
+#region Intent Label
+
+func _setup_intent_badge_style(ult_warning: bool) -> void:
+	if _intent_style == null:
+		_intent_style = StyleBoxEmpty.new()
+
+	intent_label.add_theme_stylebox_override("normal", _intent_style)
+	intent_label.add_theme_color_override(
+		"font_color",
+		Color(1.0, 0.82, 0.40, 1.0) if ult_warning else Color(1.0, 0.55, 0.55, 1.0)
+	)
+	intent_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+	intent_label.add_theme_constant_override("outline_size", 3)
+
+
+func set_intent_ult_warning(warn: bool) -> void:
+	_setup_intent_badge_style(warn)
+	_ult_warning_active = warn
+	_refresh_outline_glow()
+
+
+func _on_intent_mouse_entered() -> void:
+	if _intent_visible and unit != null and not unit.is_dead and not get_viewport().gui_is_dragging():
+		intent_hover_started.emit(unit, intent_label.get_global_rect())
+
+
+func _on_intent_mouse_exited() -> void:
+	if unit != null:
+		intent_hover_ended.emit(unit)
+
+
+## delay: seconds to wait before fading in (used to stagger enemies).
+func show_intent(text: String, _categories: PackedStringArray, delay: float = 0.0) -> void:
+	# During the intro, save the request. _finish_intro() replays it.
+	if _intro_active:
+		_pending_intent = {"text": text, "categories": _categories, "delay": delay}
+		return
+		
+	# Already showing (or fading in) this exact text, so don't restart and flicker.
+	if _intent_visible and intent_label.text == text:
+		return
+
+	_kill_intent_tween()
+	_intent_visible = true
+
+	# Different text is still on screen: fade the old text out before swapping.
+	var needs_swap := intent_label.text != text and intent_label.modulate.a > 0.01
+
+	_intent_tween = create_tween()
+	if delay > 0.0:
+		_intent_tween.tween_interval(delay)
+
+	if needs_swap:
+		_intent_tween.tween_property(intent_label, "modulate:a", 0.0, intent_fade_out_time * 0.5) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		_intent_tween.tween_callback(func() -> void: intent_label.text = text)
+	else:
+		intent_label.text = text
+
+	# Fades from the current alpha, so an interrupted fade-out turns back smoothly.
+	_intent_tween.tween_property(intent_label, "modulate:a", 1.0, intent_fade_in_time) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+## animated = true fades out; false hides instantly.
+func clear_intent(animated: bool = false) -> void:
+	_pending_intent = {}
+	_intent_visible = false
+	_kill_intent_tween()
+
+	if not animated or intent_label.modulate.a <= 0.01:
+		intent_label.text = ""
+		intent_label.modulate.a = 0.0
+		return
+
+	# Text stays (invisible) so the layout doesn't jump mid-attack.
+	_intent_tween = create_tween()
+	_intent_tween.tween_property(intent_label, "modulate:a", 0.0, intent_fade_out_time) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+
+
+func _kill_intent_tween() -> void:
+	if _intent_tween and _intent_tween.is_valid():
+		_intent_tween.kill()
+	_intent_tween = null
+
+#endregion
+
+
+#region Outline Glow & Highlights
+
+func _setup_glow_style() -> void:
+	var glow_style := StyleBoxFlat.new()
+	glow_style.bg_color = Color(1.0, 1.0, 1.0, 0.05)
+	glow_style.border_width_left = 2
+	glow_style.border_width_top = 2
+	glow_style.border_width_right = 2
+	glow_style.border_width_bottom = 2
+	glow_style.border_color = Color(1.0, 0.9, 0.4, 0.95)
+	glow_style.corner_radius_top_left = 8
+	glow_style.corner_radius_top_right = 8
+	glow_style.corner_radius_bottom_left = 8
+	glow_style.corner_radius_bottom_right = 8
+	hover_glow.add_theme_stylebox_override("panel", glow_style)
+
+
+func set_target_highlight(highlight: bool) -> void:
+	_is_target_highlighted = highlight
+	_update_glow_visibility()
+
+
+func set_orb_linked_highlight(highlight: bool) -> void:
+	_is_orb_linked_highlighted = highlight
+	_update_glow_visibility()
+
+
+func _refresh_outline_glow() -> void:
+	if _glow == null:
+		return
+	if unit != null and unit.is_dead:
+		_glow.set_active(false)
+		return
+	if _is_orb_linked_highlighted or _is_drag_hovering or _is_target_highlighted:
+		_glow.set_active(true, OutlineGlow.Preset.RUNETERRA_BLUE)
+	elif _ult_warning_active:
+		_glow.set_active(true, OutlineGlow.Preset.THREAT_CRIMSON)
+	else:
+		_glow.set_active(false)
+		
+
+func _update_glow_visibility() -> void:
+	_refresh_outline_glow()
+	
+	if _glow != null:
+		hover_glow.visible = false
+		return
+	
+	if _is_target_highlighted:
+		hover_glow.visible = true
+		hover_glow.modulate = Color(1.0, 0.35, 0.35, 1.0)
+	elif _is_drag_hovering:
+		hover_glow.visible = true
+		hover_glow.modulate = Color.WHITE
+	elif _is_orb_linked_highlighted:
+		hover_glow.visible = true
+		hover_glow.modulate = Color(0.75, 0.88, 1.0, 0.85)
+	else:
+		hover_glow.visible = false
+		hover_glow.modulate = Color.WHITE
+
+#endregion
+
+
+#region Drag & Drop
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		unit_clicked.emit(unit)
+
+
+func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
+	var drag: CardDrag = data as CardDrag
+	if drag == null or unit == null or unit.is_dead or not unit.is_ally:
+		if _is_drag_hovering:
 			_reset_preview()
+		return false
+	
+	var changed_card := (not _is_drag_hovering) or (_hovered_drag_card != drag.card)
+	_is_drag_hovering = true
+	_hovered_drag_card = drag.card
+	_update_glow_visibility()
+	skill_preview_box.visible = true
+	
+	var is_merged: bool = drag.card.is_merged or drag.card.is_double_merged
+	if drag.card.is_odd():
+		skill_1_row.modulate = Color(1.3, 1.3, 1.0, 1.0)
+		skill_2_row.modulate = Color(0.5, 0.5, 0.5, 0.5)
+		_render_skill_preview_icons(skill_1_icons, unit.data.skill_1, is_merged)
+	else:
+		skill_2_row.modulate = Color(1.3, 1.3, 1.0, 1.0)
+		skill_1_row.modulate = Color(0.5, 0.5, 0.5, 0.5)
+		_render_skill_preview_icons(skill_2_icons, unit.data.skill_2, is_merged)
+	
+	if changed_card:
+		var anchor := oval_body.get_global_rect() if is_instance_valid(oval_body) else get_global_rect()
+		card_hover_started.emit(unit, drag.card, anchor)
+	
+	return true
 
-	if unit == null or unit.data == null: return
 
+func _drop_data(_pos: Vector2, data: Variant) -> void:
+	var drag: CardDrag = data as CardDrag
+	_reset_preview()
+	if drag != null:
+		card_dropped_on_unit.emit(drag.card, unit)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END or what == NOTIFICATION_MOUSE_EXIT:
+		if _is_drag_hovering: _reset_preview()
+
+
+func _reset_preview() -> void:
+	var was_hovering := _is_drag_hovering
+	_is_drag_hovering = false
+	_hovered_drag_card = null
+	_update_glow_visibility()
+	skill_preview_box.visible = false
+	skill_1_row.modulate = Color.WHITE
+	skill_2_row.modulate = Color.WHITE
+	if unit and unit.data:
+		_render_skill_preview_icons(skill_1_icons, unit.data.skill_1, false)
+		_render_skill_preview_icons(skill_2_icons, unit.data.skill_2, false)
+	if was_hovering and unit != null:
+		card_hover_ended.emit(unit)
+
+#endregion
+
+
+#region Character Animation
+
+## skill_index: 1 for odd, 2 for even.
+## rank: 0 normal, 1 merged/condition met, 2 double merged.
+func play_skill_animation(skill_index: int, rank: int = 0) -> void:
+	if sprite == null:
+		return
+	if sprite.has_method("play_skill_and_wait"):
+		await sprite.play_skill_and_wait(skill_index, rank)
+	elif sprite.has_method("play_skill"):
+		sprite.play_skill(skill_index, rank)
+		
+
+func play_ultimate_animation() -> void:
+	if sprite == null:
+		return
+	if sprite.has_method("play_ultimate_and_wait"):
+		await sprite.play_ultimate_and_wait()
+	elif sprite.has_method("play_animation"):
+		sprite.play_animation(&"unique")
+
+
+func _play_skill_animation_for_card(card: Card) -> void:
+	if not sprite or not sprite.has_method("play_animation"): return
+
+	if card.is_odd():
+		if card.is_double_merged:
+			sprite.play_animation(&"skill1_2")
+		elif card.is_merged:
+			sprite.play_animation(&"skill1_1")
+		else:
+			sprite.play_animation(&"skill1")
+	else:
+		sprite.play_animation(&"skill2_1")
+
+
+func play_character_animation(anim_name: StringName) -> void:
+	if sprite and sprite.has_method("play_animation"):
+		sprite.play_animation(anim_name)
+
+#endregion
+
+
+#region Skill HUD fade
+
+func _is_skill_anim(anim: StringName) -> bool:
+	return sprite != null \
+		and sprite.has_method("is_skill_animation") \
+		and bool(sprite.call("is_skill_animation", anim))
+
+
+func _on_sprite_action_started(anim: StringName) -> void:
+	if _is_skill_anim(anim):
+		_skill_hud_active = true
+		_update_hud_visibility()
+
+
+func _on_sprite_action_finished(anim: StringName) -> void:
+	if _is_skill_anim(anim):
+		_skill_hud_active = false
+		_update_hud_visibility()
+
+
+func _get_hud_nodes() -> Array[Control]:
+	var nodes: Array[Control] = []
+	if is_instance_valid(health_shield_container):
+		nodes.append(health_shield_container)
+	if is_instance_valid(status_icons_grid):
+		nodes.append(status_icons_grid)
+	return nodes
+
+
+## Single source of truth: hidden while the intro OR a skill is running.
+func _update_hud_visibility(instant: bool = false, duration: float = -1.0) -> void:
+	_set_hud_hidden(_intro_active or _skill_hud_active, instant, duration)
+
+
+## Fades the health bar and status icons. Uses modulate (not visible)
+## so the VBox layout, and therefore the character, never shifts.
+func _set_hud_hidden(hidden: bool, instant: bool = false, duration_override: float = -1.0) -> void:
+	if _hud_hidden == hidden and not instant:
+		return
+	_hud_hidden = hidden
+
+	if _hud_tween != null and _hud_tween.is_valid():
+		_hud_tween.kill()
+	_hud_tween = null
+
+	var nodes := _get_hud_nodes()
+	if nodes.is_empty():
+		return
+
+	var target_alpha: float = 0.0 if hidden else 1.0
+	if instant:
+		for n in nodes:
+			n.modulate.a = target_alpha
+		return
+
+	var duration: float = duration_override if duration_override >= 0.0 \
+		else (hud_fade_out_time if hidden else hud_fade_in_time)
+	_hud_tween = create_tween().set_parallel(true)
+	_hud_tween.set_trans(Tween.TRANS_SINE)
+	_hud_tween.set_ease(Tween.EASE_IN if hidden else Tween.EASE_OUT)
+	for n in nodes:
+		_hud_tween.tween_property(n, "modulate:a", target_alpha, duration)
+
+#endregion
+
+
+#region Intro fade
+
+## Hides HUD + intent, then fades them in once the born animation ends.
+## Called automatically by setup(). Call again with extra_delay to stagger units.
+func play_intro(extra_delay: float = 0.0) -> void:
+	_kill_intro_tween()
+
+	# If an intent is already on screen (replayed intro), save it so it fades back in.
+	if _intent_visible and not _intro_active and intent_label.text != "":
+		_pending_intent = {
+			"text": intent_label.text,
+			"categories": PackedStringArray(),
+			"delay": 0.0,
+		}
+	_intro_active = true
+
+	_kill_intent_tween()
+	_intent_visible = false
+	intent_label.modulate.a = 0.0
+	_update_hud_visibility(true)
+
+	var delay: float = maxf(0.0, _get_intro_duration() + intro_extra_delay + extra_delay)
+	_intro_tween = create_tween()
+	_intro_tween.tween_interval(delay)
+	_intro_tween.tween_callback(_finish_intro)
+
+
+func _finish_intro() -> void:
+	_intro_tween = null
+	if not _intro_active:
+		return
+	_intro_active = false
+	_update_hud_visibility(false, intro_fade_in_time)
+
+	if not _pending_intent.is_empty():
+		var p: Dictionary = _pending_intent
+		_pending_intent = {}
+		# The original stagger delay still applies, so intents cascade in.
+		show_intent(p["text"], p["categories"], float(p["delay"]))
+
+
+func _cancel_intro() -> void:
+	_kill_intro_tween()
+	_intro_active = false
+	_pending_intent = {}
+
+
+func _kill_intro_tween() -> void:
+	if _intro_tween != null and _intro_tween.is_valid():
+		_intro_tween.kill()
+	_intro_tween = null
+
+
+func _get_intro_duration() -> float:
+	if sprite != null and sprite.has_method("get_intro_duration"):
+		return float(sprite.call("get_intro_duration"))
+	return 0.0  # Fallback TextureRect: fade in right away.
+
+#endregion
+
+
+#region Status Icons
+
+func set_manual_statuses(statuses: Array[Dictionary]) -> void:
+	_manual_statuses = statuses
+	_last_status_signature = ""
 	_refresh_status_icons()
-	_refresh_display(delta)
+
+
+func _refresh_status_icons() -> void:
+	if status_icons_grid == null or unit == null: return
+
+	var statuses: Array[Dictionary] = _manual_statuses.duplicate()
+	if statuses.is_empty() and status_icon_catalog != null:
+		statuses = status_icon_catalog.extract_unit_statuses(unit)
+
+	var sig := str(statuses)
+	if sig == _last_status_signature: return
+	_last_status_signature = sig
+
+	for child in status_icons_grid.get_children():
+		child.queue_free()
+
+	for st in statuses:
+		var badge := _create_e7_status_badge(st.get("icon", PLACEHOLDER_ICON), int(st.get("count", 1)), bool(st.get("is_debuff", false)))
+		status_icons_grid.add_child(badge)
+
+
+func _create_e7_status_badge(tex: Texture2D, count: int, is_debuff: bool) -> Control:
+	var box := Panel.new()
+	box.custom_minimum_size = Vector2(24, 24)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.08, 0.10, 0.14, 0.94)
+	bg.border_width_left = 1
+	bg.border_width_top = 1
+	bg.border_width_right = 1
+	bg.border_width_bottom = 1
+	bg.border_color = Color(0.85, 0.25, 0.25, 0.9) if is_debuff else Color(0.20, 0.72, 1.0, 0.9)
+	bg.corner_radius_top_left = 4
+	bg.corner_radius_top_right = 4
+	bg.corner_radius_bottom_left = 4
+	bg.corner_radius_bottom_right = 4
+	box.add_theme_stylebox_override("panel", bg)
+
+	var icon_rect := TextureRect.new()
+	icon_rect.texture = tex if tex != null else PLACEHOLDER_ICON
+	icon_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	icon_rect.offset_left = 3
+	icon_rect.offset_top = 3
+	icon_rect.offset_right = -3
+	icon_rect.offset_bottom = -3
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.modulate = Color(1.0, 0.38, 0.38) if is_debuff else Color(0.22, 0.78, 1.0)
+	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(icon_rect)
+
+	var count_lbl := Label.new()
+	count_lbl.text = str(maxi(1, count))
+	count_lbl.position = Vector2(1, -3)
+	count_lbl.add_theme_font_size_override("font_size", 11)
+	count_lbl.add_theme_color_override("font_color", Color.WHITE)
+	count_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	count_lbl.add_theme_constant_override("outline_size", 4)
+	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(count_lbl)
+
+	return box
+
+#endregion
+
+
+#region Health Bar
 
 func _refresh_display(delta: float) -> void:
 	var max_hp := maxf(1.0, float(unit.max_hp))
@@ -232,6 +722,7 @@ func _refresh_display(delta: float) -> void:
 			_skill_hud_active = false
 			_set_hud_hidden(false, true)
 			_trigger_death_shatter()
+			_refresh_outline_glow()
 			clear_intent(true)
 
 	# --- Revival: refill from empty ------------------------------------------
@@ -336,6 +827,7 @@ func _refresh_display(delta: float) -> void:
 	if health_bar_canvas:
 		health_bar_canvas.queue_redraw()
 
+
 func _trigger_death_shatter() -> void:
 	_shatter_shards.clear()
 	_shatter_timer = SHATTER_DURATION
@@ -374,6 +866,7 @@ func _trigger_death_shatter() -> void:
 					"ang_vel": randf_range(-11.0, 11.0), "delay": clampf(dist_norm * SHATTER_WAVE_TIME + randf_range(-0.012, 0.012), 0.0, SHATTER_WAVE_TIME),
 					"life": SHATTER_SHARD_LIFE * randf_range(0.85, 1.15)
 				})
+
 
 func _draw_health_bar() -> void:
 	if unit == null or health_bar_canvas == null: return
@@ -505,341 +998,76 @@ func _bar_rect(inner: Rect2, px: float, from_hp: float, to_hp: float, grow_y: fl
 	var x2 := clampf(inner.position.x + to_hp * px, inner.position.x, inner.end.x)
 	return Rect2(x1, inner.position.y - grow_y * 0.5, maxf(0.0, x2 - x1), inner.size.y + grow_y)
 
+
 func _get_tick_step(effective_max: float) -> float:
 	if effective_max <= 30.0: return 5.0
 	elif effective_max <= 150.0: return 10.0
 	elif effective_max <= 400.0: return 25.0
 	else: return 100.0
 
-## skill_index: 1 for odd, 2 for even.
-## rank: 0 normal, 1 merged/condition met, 2 double merged.
-func play_skill_animation(skill_index: int, rank: int = 0) -> void:
-	if sprite == null:
-		return
-	if sprite.has_method("play_skill_and_wait"):
-		await sprite.play_skill_and_wait(skill_index, rank)
-	elif sprite.has_method("play_skill"):
-		sprite.play_skill(skill_index, rank)
-		
-# --- Skill HUD fade ----------------------------------------------------------
 
-func _is_skill_anim(anim: StringName) -> bool:
-	return sprite != null \
-		and sprite.has_method("is_skill_animation") \
-		and bool(sprite.call("is_skill_animation", anim))
+func _reset_bar_state() -> void:
+	_display_hp = clampf(float(unit.current_hp), 0.0, float(unit.max_hp))
+	_display_shield = maxf(0.0, float(unit.shield))
+	_target_hp = _display_hp
+	_target_shield = _display_shield
+	_prev_target_shield = _display_shield
+	_chip_total = _display_hp + _display_shield
+	_chip_hold_timer = 0.0
+	_display_max_cap = maxf(float(unit.max_hp), _chip_total)
+	_hit_flash_timer = 0.0
+	_shield_flash_timer = 0.0
+	_clear_pending_hits()
 
 
-func _on_sprite_action_started(anim: StringName) -> void:
-	if _is_skill_anim(anim):
-		_set_hud_hidden(true)
+func _clear_pending_hits() -> void:
+	_pending_hits.clear()
+	_withheld_hp = 0.0
+	_withheld_shield = 0.0
 
 
-func _on_sprite_action_finished(anim: StringName) -> void:
-	if _is_skill_anim(anim):
-		_set_hud_hidden(false)
-
-
-func _get_hud_nodes() -> Array[Control]:
-	var nodes: Array[Control] = []
-	if is_instance_valid(health_shield_container):
-		nodes.append(health_shield_container)
-	if is_instance_valid(status_icons_grid):
-		nodes.append(status_icons_grid)
-	return nodes
-
-
-## Single source of truth: hidden while the intro OR a skill is running.
-func _update_hud_visibility(instant: bool = false, duration: float = -1.0) -> void:
-	_set_hud_hidden(_intro_active or _skill_hud_active, instant, duration)
-
-
-## Fades the health bar and status icons. Uses modulate (not visible)
-## so the VBox layout, and therefore the character, never shifts.
-func _set_hud_hidden(hidden: bool, instant: bool = false, duration_override: float = -1.0) -> void:
-	if _hud_hidden == hidden and not instant:
-		return
-	_hud_hidden = hidden
-
-	if _hud_tween != null and _hud_tween.is_valid():
-		_hud_tween.kill()
-	_hud_tween = null
-
-	var nodes := _get_hud_nodes()
-	if nodes.is_empty():
+## The model already changed. Hold the bar at its pre-hit values until the
+## hit animation connects, then drop everything in one go.
+func _on_unit_damaged(hp_lost: int, shield_lost: int) -> void:
+	if _was_dead or (hp_lost <= 0 and shield_lost <= 0):
 		return
 
-	var target_alpha: float = 0.0 if hidden else 1.0
-	if instant:
-		for n in nodes:
-			n.modulate.a = target_alpha
-		return
+	_pending_hits.append({
+		"delay": _get_effective_hit_flash_delay(),
+		"hp": float(hp_lost),
+		"shield": float(shield_lost),
+	})
+	_withheld_hp += float(hp_lost)
+	_withheld_shield += float(shield_lost)
 
-	var duration: float = duration_override if duration_override >= 0.0 \
-		else (hud_fade_out_time if hidden else hud_fade_in_time)
-	_hud_tween = create_tween().set_parallel(true)
-	_hud_tween.set_trans(Tween.TRANS_SINE)
-	_hud_tween.set_ease(Tween.EASE_IN if hidden else Tween.EASE_OUT)
-	for n in nodes:
-		_hud_tween.tween_property(n, "modulate:a", target_alpha, duration)
-
-#region Intro fade
-
-## Hides HUD + intent, then fades them in once the born animation ends.
-## Called automatically by setup(). Call again with extra_delay to stagger units.
-func play_intro(extra_delay: float = 0.0) -> void:
-	_kill_intro_tween()
-
-	# If an intent is already on screen (replayed intro), save it so it fades back in.
-	if _intent_visible and not _intro_active and intent_label.text != "":
-		_pending_intent = {
-			"text": intent_label.text,
-			"categories": PackedStringArray(),
-			"delay": 0.0,
-		}
-	_intro_active = true
-
-	_kill_intent_tween()
-	_intent_visible = false
-	intent_label.modulate.a = 0.0
-	_update_hud_visibility(true)
-
-	var delay: float = maxf(0.0, _get_intro_duration() + intro_extra_delay + extra_delay)
-	_intro_tween = create_tween()
-	_intro_tween.tween_interval(delay)
-	_intro_tween.tween_callback(_finish_intro)
+	# Fires for shield-only hits too.
+	if sprite.has_method("play_hit"):
+		sprite.play_hit()
+	elif sprite.has_method("play_animation"):
+		sprite.play_animation(&"hit", false)
 
 
-func _finish_intro() -> void:
-	_intro_tween = null
-	if not _intro_active:
-		return
-	_intro_active = false
-	_update_hud_visibility(false, intro_fade_in_time)
-
-	if not _pending_intent.is_empty():
-		var p: Dictionary = _pending_intent
-		_pending_intent = {}
-		# The original stagger delay still applies, so intents cascade in.
-		show_intent(p["text"], p["categories"], float(p["delay"]))
+func _get_effective_hit_flash_delay() -> float:
+	if hit_flash_delay > 0.0:
+		return hit_flash_delay
+	if sprite != null:
+		var v: Variant = sprite.get("hit_reaction_delay")
+		if v != null:
+			return float(v)
+	return 0.0
 
 
-func _cancel_intro() -> void:
-	_kill_intro_tween()
-	_intro_active = false
-	_pending_intent = {}
+func _get_effective_death_delay() -> float:
+	if sprite != null:
+		var v: Variant = sprite.get("death_animation_delay")
+		if v != null:
+			return float(v)
+	return 0.0
 
-
-func _kill_intro_tween() -> void:
-	if _intro_tween != null and _intro_tween.is_valid():
-		_intro_tween.kill()
-	_intro_tween = null
-
-
-func _get_intro_duration() -> float:
-	if sprite != null and sprite.has_method("get_intro_duration"):
-		return float(sprite.call("get_intro_duration"))
-	return 0.0  # Fallback TextureRect: fade in right away.
-	
 #endregion
 
-func set_manual_statuses(statuses: Array[Dictionary]) -> void:
-	_manual_statuses = statuses
-	_last_status_signature = ""
-	_refresh_status_icons()
 
-func _refresh_status_icons() -> void:
-	if status_icons_grid == null or unit == null: return
-
-	var statuses: Array[Dictionary] = _manual_statuses.duplicate()
-	if statuses.is_empty() and status_icon_catalog != null:
-		statuses = status_icon_catalog.extract_unit_statuses(unit)
-
-	var sig := str(statuses)
-	if sig == _last_status_signature: return
-	_last_status_signature = sig
-
-	for child in status_icons_grid.get_children():
-		child.queue_free()
-
-	for st in statuses:
-		var badge := _create_e7_status_badge(st.get("icon", PLACEHOLDER_ICON), int(st.get("count", 1)), bool(st.get("is_debuff", false)))
-		status_icons_grid.add_child(badge)
-
-func _create_e7_status_badge(tex: Texture2D, count: int, is_debuff: bool) -> Control:
-	var box := Panel.new()
-	box.custom_minimum_size = Vector2(24, 24)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.10, 0.14, 0.94)
-	bg.border_width_left = 1
-	bg.border_width_top = 1
-	bg.border_width_right = 1
-	bg.border_width_bottom = 1
-	bg.border_color = Color(0.85, 0.25, 0.25, 0.9) if is_debuff else Color(0.20, 0.72, 1.0, 0.9)
-	bg.corner_radius_top_left = 4
-	bg.corner_radius_top_right = 4
-	bg.corner_radius_bottom_left = 4
-	bg.corner_radius_bottom_right = 4
-	box.add_theme_stylebox_override("panel", bg)
-
-	var icon_rect := TextureRect.new()
-	icon_rect.texture = tex if tex != null else PLACEHOLDER_ICON
-	icon_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	icon_rect.offset_left = 3
-	icon_rect.offset_top = 3
-	icon_rect.offset_right = -3
-	icon_rect.offset_bottom = -3
-	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon_rect.modulate = Color(1.0, 0.38, 0.38) if is_debuff else Color(0.22, 0.78, 1.0)
-	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(icon_rect)
-
-	var count_lbl := Label.new()
-	count_lbl.text = str(maxi(1, count))
-	count_lbl.position = Vector2(1, -3)
-	count_lbl.add_theme_font_size_override("font_size", 11)
-	count_lbl.add_theme_color_override("font_color", Color.WHITE)
-	count_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-	count_lbl.add_theme_constant_override("outline_size", 4)
-	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(count_lbl)
-
-	return box
-
-## delay: seconds to wait before fading in (used to stagger enemies).
-func show_intent(text: String, _categories: PackedStringArray, delay: float = 0.0) -> void:
-	# During the intro, save the request. _finish_intro() replays it.
-	if _intro_active:
-		_pending_intent = {"text": text, "categories": _categories, "delay": delay}
-		return
-		
-	# Already showing (or fading in) this exact text, so don't restart and flicker.
-	if _intent_visible and intent_label.text == text:
-		return
-
-	_kill_intent_tween()
-	_intent_visible = true
-
-	# Different text is still on screen: fade the old text out before swapping.
-	var needs_swap := intent_label.text != text and intent_label.modulate.a > 0.01
-
-	_intent_tween = create_tween()
-	if delay > 0.0:
-		_intent_tween.tween_interval(delay)
-
-	if needs_swap:
-		_intent_tween.tween_property(intent_label, "modulate:a", 0.0, intent_fade_out_time * 0.5) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-		_intent_tween.tween_callback(func() -> void: intent_label.text = text)
-	else:
-		intent_label.text = text
-
-	# Fades from the current alpha, so an interrupted fade-out turns back smoothly.
-	_intent_tween.tween_property(intent_label, "modulate:a", 1.0, intent_fade_in_time) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-
-
-## animated = true fades out; false hides instantly.
-func clear_intent(animated: bool = false) -> void:
-	_pending_intent = {}
-	_intent_visible = false
-	_kill_intent_tween()
-
-	if not animated or intent_label.modulate.a <= 0.01:
-		intent_label.text = ""
-		intent_label.modulate.a = 0.0
-		return
-
-	# Text stays (invisible) so the layout doesn't jump mid-attack.
-	_intent_tween = create_tween()
-	_intent_tween.tween_property(intent_label, "modulate:a", 0.0, intent_fade_out_time) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-
-
-func _kill_intent_tween() -> void:
-	if _intent_tween and _intent_tween.is_valid():
-		_intent_tween.kill()
-	_intent_tween = null
-
-func set_target_highlight(highlight: bool) -> void:
-	_is_target_highlighted = highlight
-	_update_glow_visibility()
-
-func _update_glow_visibility() -> void:
-	if _is_target_highlighted:
-		hover_glow.visible = true
-		hover_glow.modulate = Color(1.0, 0.35, 0.35, 1.0)
-	elif _is_drag_hovering:
-		hover_glow.visible = true
-		hover_glow.modulate = Color.WHITE
-	else:
-		hover_glow.visible = false
-		hover_glow.modulate = Color.WHITE
-
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		unit_clicked.emit(unit)
-
-func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
-	var drag: CardDrag = data as CardDrag
-	if drag == null or unit == null or unit.is_dead or not unit.is_ally:
-		if _is_drag_hovering: _reset_preview()
-		return false
-
-	_is_drag_hovering = true
-	_update_glow_visibility()
-	skill_preview_box.visible = true
-
-	var is_merged: bool = drag.card.is_merged or drag.card.is_double_merged
-	if drag.card.is_odd():
-		skill_1_row.modulate = Color(1.3, 1.3, 1.0, 1.0)
-		skill_2_row.modulate = Color(0.5, 0.5, 0.5, 0.5)
-		_render_skill_preview_icons(skill_1_icons, unit.data.skill_1, is_merged)
-	else:
-		skill_2_row.modulate = Color(1.3, 1.3, 1.0, 1.0)
-		skill_1_row.modulate = Color(0.5, 0.5, 0.5, 0.5)
-		_render_skill_preview_icons(skill_2_icons, unit.data.skill_2, is_merged)
-
-	return true
-
-func _drop_data(_pos: Vector2, data: Variant) -> void:
-	var drag: CardDrag = data as CardDrag
-	_reset_preview()
-	if drag != null:
-		card_dropped_on_unit.emit(drag.card, unit)
-
-func _play_skill_animation_for_card(card: Card) -> void:
-	if not sprite or not sprite.has_method("play_animation"): return
-
-	if card.is_odd():
-		if card.is_double_merged:
-			sprite.play_animation(&"skill1_2")
-		elif card.is_merged:
-			sprite.play_animation(&"skill1_1")
-		else:
-			sprite.play_animation(&"skill1")
-	else:
-		sprite.play_animation(&"skill2_1")
-
-func play_character_animation(anim_name: StringName) -> void:
-	if sprite and sprite.has_method("play_animation"):
-		sprite.play_animation(anim_name)
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_DRAG_END or what == NOTIFICATION_MOUSE_EXIT:
-		if _is_drag_hovering: _reset_preview()
-
-func _reset_preview() -> void:
-	_is_drag_hovering = false
-	_update_glow_visibility()
-	skill_preview_box.visible = false
-	skill_1_row.modulate = Color.WHITE
-	skill_2_row.modulate = Color.WHITE
-	if unit and unit.data:
-		_render_skill_preview_icons(skill_1_icons, unit.data.skill_1, false)
-		_render_skill_preview_icons(skill_2_icons, unit.data.skill_2, false)
+#region Helpers
 
 func _render_skill_preview_icons(container: HBoxContainer, skill: SkillData, is_merged: bool) -> void:
 	for child in container.get_children():
@@ -857,6 +1085,7 @@ func _render_skill_preview_icons(container: HBoxContainer, skill: SkillData, is_
 		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		container.add_child(rect)
+
 
 func _load_unit_texture(target_sprite: Control, unit_display_name: String) -> void:
 	if target_sprite.has_method("configure_from_unit"):
@@ -916,72 +1145,11 @@ func _load_unit_texture(target_sprite: Control, unit_display_name: String) -> vo
 		file_name = dir.get_next()
 	dir.list_dir_end()
 
+
 func _ignore_mouse_recursively(node: Node) -> void:
 	for child in node.get_children():
 		if child is Control:
 			(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_ignore_mouse_recursively(child)
-		
-func _get_effective_hit_flash_delay() -> float:
-	if hit_flash_delay > 0.0:
-		return hit_flash_delay
-	if sprite != null:
-		var v: Variant = sprite.get("hit_reaction_delay")
-		if v != null:
-			return float(v)
-	return 0.0
-	
-func _get_effective_death_delay() -> float:
-	if sprite != null:
-		var v: Variant = sprite.get("death_animation_delay")
-		if v != null:
-			return float(v)
-	return 0.0
-	
-func _bind_unit(p_unit: Unit) -> void:
-	if unit != null and unit.damaged.is_connected(_on_unit_damaged):
-		unit.damaged.disconnect(_on_unit_damaged)
-	unit = p_unit
-	if unit != null and not unit.damaged.is_connected(_on_unit_damaged):
-		unit.damaged.connect(_on_unit_damaged)
 
-
-func _reset_bar_state() -> void:
-	_display_hp = clampf(float(unit.current_hp), 0.0, float(unit.max_hp))
-	_display_shield = maxf(0.0, float(unit.shield))
-	_target_hp = _display_hp
-	_target_shield = _display_shield
-	_prev_target_shield = _display_shield
-	_chip_total = _display_hp + _display_shield
-	_chip_hold_timer = 0.0
-	_display_max_cap = maxf(float(unit.max_hp), _chip_total)
-	_hit_flash_timer = 0.0
-	_shield_flash_timer = 0.0
-	_clear_pending_hits()
-
-
-func _clear_pending_hits() -> void:
-	_pending_hits.clear()
-	_withheld_hp = 0.0
-	_withheld_shield = 0.0
-
-
-## The model already changed. Hold the bar at its pre-hit values until the
-## hit animation connects, then drop everything in one go.
-func _on_unit_damaged(hp_lost: int, shield_lost: int) -> void:
-	if _was_dead or (hp_lost <= 0 and shield_lost <= 0):
-		return
-
-	_pending_hits.append({
-		"delay": _get_effective_hit_flash_delay(),
-		"hp": float(hp_lost),
-		"shield": float(shield_lost),
-	})
-	_withheld_hp += float(hp_lost)
-	_withheld_shield += float(shield_lost)
-
-	# Fires for shield-only hits too.
-	if sprite.has_method("play_hit"):
-		sprite.play_hit()
-	elif sprite.has_method("play_animation"):
-		sprite.play_animation(&"hit", false)
+#endregion

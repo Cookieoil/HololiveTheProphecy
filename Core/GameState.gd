@@ -30,13 +30,20 @@ var deck: Array[Card] = []
 var hand: Array[Card] = []
 var discard: Array[Card] = []
 var played_this_turn: Array[Card] = []
-var wave_definitions: Array = []
+## Maps a temporary merged/double-merged Card -> Array[Card] of original base deck cards.
+var _merged_sources: Dictionary = {}
+
+## Draw cards
+var max_hand_size: int = MAX_HAND_SIZE
+var actions_per_turn: int = ACTIONS_PER_TURN
+var merges_per_turn: int = MERGES_PER_TURN
 
 enum WaveTransition { 
 	FULL_TURN, 
 	IMMEDIATE_SKIP
 }
 
+var wave_definitions: Array = []
 var wave_transition_mode: int = WaveTransition.FULL_TURN
 var actions_left: int = 0
 var merges_left: int = 0
@@ -73,6 +80,7 @@ func build_deck(decklist: Array = CURRENT_DECKLIST) -> void:
 	hand.clear()
 	discard.clear()
 	played_this_turn.clear()
+	_merged_sources.clear()
 	for entry in decklist:
 		var value: int = entry[0]
 		var count: int = entry[1]
@@ -112,19 +120,45 @@ func draw_n_cards(count: int) -> Array[Card]:
 ## Draw until hand reaches hand_limit. Returns drawn cards.
 ## @param int - the hand limit
 ## @return Array[Card] - call draw_n_cards to returns an array of cards
-func draw_cards_to_limit(hand_limit: int = MAX_HAND_SIZE) -> Array[Card]:
-	var to_draw := hand_limit - hand.size()
+func draw_cards_to_limit(hand_limit: int = -1) -> Array[Card]:
+	var limit := max_hand_size if hand_limit < 0 else hand_limit
+	var to_draw := limit - hand.size()
 	if to_draw <= 0:
 		return []
 	return draw_n_cards(to_draw)
 	
-## Removes the card from the hand
-## Clears its buff/debuff, then it into the discard pile
+## Recursively unpacks a merged card into its original base deck cards.
+## Clears the source mapping for the given card.
+## @param card - the (possibly merged) card to unpack
+## @return Array[Card] - the base cards that compose it
+func _extract_base_cards(card: Card) -> Array[Card]:
+	if _merged_sources.has(card):
+		var sources: Array[Card] = []
+		for sub in _merged_sources[card]:
+			sources.append_array(_extract_base_cards(sub))
+		_merged_sources.erase(card)
+		return sources
+	return [card]
+
+## Resets a (possibly merged) card back to its base cards, clears their
+## temporary buffs, and pushes the base cards onto the discard pile.
+## @param card - the card to discard
+func _reset_and_discard(card: Card) -> void:
+	if card == null:
+		return
+	for base_card in _extract_base_cards(card):
+		base_card.clear_temp_buffs()
+		base_card.current_value = base_card.base_value
+		base_card.is_merged = false
+		base_card.is_double_merged = false
+		if not discard.has(base_card):
+			discard.append(base_card)
+
+## Removes the card from the hand and discards its underlying base cards.
 ## @param card - the card to discard
 func discard_card(card: Card) -> void:
 	hand.erase(card)
-	card.clear_temp_buffs()
-	discard.append(card)
+	_reset_and_discard(card)
 	
 ## Removes card from hand, deducts action if needed.
 ## Returns false if the play is illegal (not allowed).
@@ -142,11 +176,11 @@ func play_card_on_ally(card: Card, _ally: Unit) -> bool:
 	played_this_turn.append(card)
 	return true
 	
-## Move played cards to discard pile, clear temporary buffs.
+## Move played cards to discard pile, clearing temporary buffs and
+## unpacking any merged cards back into their base components.
 func end_player_turn_cleanup() -> void:
 	for card in played_this_turn:
-		card.clear_temp_buffs()
-		discard.append(card)
+		_reset_and_discard(card)
 	played_this_turn.clear()
 	
 #endregion
@@ -196,6 +230,7 @@ func can_merge_pair(a: Card, b: Card) -> bool:
 ## Two unmerged (a,b) → one merged (c). Returns the new card.
 ## The new card set as a merged card
 ## The two cards used for merging are removed from hand.
+## Source base cards are recorded so they can be restored on discard.
 ## @param a - the first unmerged card
 ## @param b - the second unmerged card
 ## @return Card - the merged card from cross merging
@@ -204,6 +239,12 @@ func cross_merge(a: Card, b: Card) -> Card:
 	c.current_value = a.get_effective_value() + b.get_effective_value()
 	c.base_value = c.current_value
 	c.is_merged = true
+
+	var sources: Array[Card] = []
+	sources.append_array(_extract_base_cards(a))
+	sources.append_array(_extract_base_cards(b))
+	_merged_sources[c] = sources
+
 	hand.erase(a)
 	hand.erase(b)
 	hand.append(c)
@@ -214,16 +255,23 @@ func cross_merge(a: Card, b: Card) -> Card:
 ## Returns the new card.
 ## The new card set as a merged card
 ## The two cards used for merging are removed from hand.
+## Source base cards are recorded so they can be restored on discard.
 ## @param merged_card - the first merged card
 ## @param other_card - the second same-value card (merged or unmerged)
 ## @return Card - the merged card from double merging (value + 1, free play).
 func double_merge(merged_card: Card, other_card: Card) -> Card:
-	var c:= Card.new(0)
+	var c := Card.new(0)
 	c.current_value = merged_card.get_effective_value() \
 		+ other_card.get_effective_value() + 1
 	c.base_value = c.current_value
 	c.is_merged = true
 	c.is_double_merged = true
+
+	var sources: Array[Card] = []
+	sources.append_array(_extract_base_cards(merged_card))
+	sources.append_array(_extract_base_cards(other_card))
+	_merged_sources[c] = sources
+
 	hand.erase(merged_card)
 	hand.erase(other_card)
 	hand.append(c)

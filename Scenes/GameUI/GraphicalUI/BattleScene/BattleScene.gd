@@ -11,6 +11,8 @@ extends GameUI
 @onready var allies_container: HBoxContainer = $EntityOverlay/AlliesRow
 @onready var enemies_container: HBoxContainer = $EntityOverlay/EnemiesRow
 
+@onready var battle_overlay: BattleOverlayController = $BattleOverlay
+
 @onready var wave_value_label: Label = $HUD/TopBar/Margin/HBox/LeftGroup/WaveStat/Value
 @onready var dice_value_label: Label = $HUD/TopBar/Margin/HBox/LeftGroup/DiceStat/Value
 @onready var actions_value_label: Label = $HUD/TopBar/Margin/HBox/CenterGroup/ActionsStat/Value
@@ -40,6 +42,11 @@ func _ready() -> void:
 	game_manager = GameManager.new()
 	add_child(game_manager)
 
+	# wire overlay right after game_manager exists, before setup_game
+	# so that show_game_state() -> _sync_overlay_units() has a valid overlay
+	battle_overlay.setup(game_manager, icon_catalog)
+	battle_overlay.ally_ultimate_requested.connect(_on_ally_ultimate_requested)
+
 	var db = DataLoader.db()
 	var ally_ids: Array = db.config.get("allies", ["striker", "healer", "buff"])
 	var ally_data: Array[UnitData] = []
@@ -59,14 +66,20 @@ func _ready() -> void:
 func on_card_played(card: Card, state: GameState) -> void:
 	hand_bar.remove_card(card)   # animated collapse
 	_update_top_bar(state)       # Actions counter updates immediately too
-	
+
 func play_unit_skill(unit: Unit, skill_index: int, rank: int = 0) -> void:
 	var unit_ui := _get_unit_ui(unit)
 	if unit_ui == null:
 		push_warning("BattleScene.play_unit_skill(): no UnitUI found for %s" % unit)
 		return
 	await unit_ui.play_skill_animation(skill_index, rank)
-	
+
+# GameUI ultimate override
+func play_unit_ultimate(unit: Unit) -> void:
+	var uui := _get_unit_ui(unit)  # existing Unit -> UnitUI lookup
+	if uui != null:
+		await uui.play_ultimate_animation()
+
 func show_message(msg: String) -> void:
 	print(msg)
 	log_label.text = msg
@@ -82,6 +95,7 @@ func show_game_state(state: GameState) -> void:
 	_update_top_bar(state)
 	_sync_unit_row(enemies_container, state.enemies, false)
 	_sync_unit_row(allies_container, state.allies, true)
+	_sync_overlay_units()   # refresh A1/A2/A3 & E1/E2/E3 rails
 
 
 func show_hand_and_resources(state: GameState) -> void:
@@ -119,6 +133,10 @@ func show_enemy_intents(intents: Array[EnemyIntent]) -> void:
 		}
 	_apply_cached_intents()
 
+	# mirror the same intents onto the overlay E1–E3 previews
+	battle_overlay.sync_enemy_intent_previews()
+
+
 func clear_unit_intent(unit: Unit) -> void:
 	_intent_cache.erase(unit)  # so a later row rebuild can't bring it back
 	var u_ui := _get_unit_ui(unit)
@@ -144,12 +162,19 @@ func _apply_intent_to(u_ui: UnitUI) -> void:
 			int(entry["order"]) * INTENT_STAGGER
 		)
 
+
+# NOTE: GameUI calls this `ask_player_action` in the wiring brief;
+# in this file it is already named `get_player_action`. Behaviour is unchanged.
 func get_player_action(_state: GameState) -> Dictionary:
 	end_turn_button.disabled = false
 	convert_button.disabled = false
 
+	# enable A1/A2/A3 orbs while awaiting player input
+	battle_overlay.set_player_turn_interactive(true)
+
 	var action: Dictionary = await action_decided
 
+	battle_overlay.set_player_turn_interactive(false)
 	end_turn_button.disabled = true
 	convert_button.disabled = true
 	return action
@@ -182,13 +207,28 @@ func ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]:
 
 
 func ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]:
+	if cards.is_empty():
+		return []
+	if cards.size() <= count:
+		return cards.duplicate()
+
+	show_message("Click %d card(s) in hand!" % count)
 	var chosen: Array[Card] = []
-	for i in mini(count, cards.size()):
-		chosen.append(cards[i])
+	var available: Array[Card] = cards.duplicate()
+	hand_bar.set_pick_candidates(available, true)
+
+	while chosen.size() < count and not available.is_empty():
+		var picked: Card = await hand_bar.card_clicked
+		if available.has(picked):
+			chosen.append(picked)
+			available.erase(picked)
+			hand_bar.set_pick_candidates(available, true)
+
+	hand_bar.set_pick_candidates([], false)
 	return chosen
 
 
-# --- Helpers & Interaction Handlers -------------------------------------------
+#region Helpers & Interaction Handlers
 
 func _on_merge_requested(card_a: Card, card_b: Card) -> void:
 	action_decided.emit({
@@ -208,6 +248,26 @@ func _on_card_dropped_on_unit(card: Card, unit: Unit) -> void:
 
 func _on_unit_clicked(unit: Unit) -> void:
 	unit_selected_for_target.emit(unit)
+
+
+# overlay A1/A2/A3 orb clicked → submit as a normal action
+# This scene has no `_submit_player_action`; the existing resolution signal is
+# `action_decided`, so we emit through that (same path as Convert / End Turn).
+func _on_ally_ultimate_requested(ally: Unit) -> void:
+	action_decided.emit({"type": "ultimate", "caster": ally})
+
+
+# push current UnitUI children into the overlay rails
+func _sync_overlay_units() -> void:
+	var ally_uis: Array[UnitUI] = []
+	for child in allies_container.get_children():
+		if child is UnitUI:
+			ally_uis.append(child)
+	var enemy_uis: Array[UnitUI] = []
+	for child in enemies_container.get_children():
+		if child is UnitUI:
+			enemy_uis.append(child)
+	battle_overlay.rebuild_for_units(ally_uis, enemy_uis)
 
 
 func _highlight_target_candidates(units: Array[Unit], active: bool) -> void:
@@ -258,5 +318,5 @@ func _sync_unit_row(container: HBoxContainer, units: Array, is_ally: bool) -> vo
 		else:
 			_apply_intent_to(card_ui)
 		card_ui.unit_clicked.connect(_on_unit_clicked)
-		
+
 #endregion

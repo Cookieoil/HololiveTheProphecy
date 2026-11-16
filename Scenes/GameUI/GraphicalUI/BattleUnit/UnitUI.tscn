@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b8vfkexhyrw12"]
 
 [ext_resource type="Script" uid="uid://caug6cpi1etta" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/UnitUI.gd" id="1_puusj"]
-[ext_resource type="Resource" uid="uid://bdor57tkqj1yu" path="res://Trash/IconTest.tres" id="2_xphb7"]
+[ext_resource type="Resource" uid="uid://bdor57tkqj1yu" path="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/IconTest.tres" id="2_xphb7"]
 [ext_resource type="SpineSkeletonDataResource" uid="uid://dhqyvdtiyet45" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300402_hongnujian/300402_hongnujian.tres" id="3_gtx1d"]
 [ext_resource type="Script" uid="uid://cr21464l32xdu" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/SpinePortrait.gd" id="4_spine"]
 [ext_resource type="SpineSkeletonDataResource" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue/300101_zhujue.tres" id="5_spine"]
@@ -85,7 +85,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 
-[node name="LoLBarCanvas" type="Control" parent="VBox/HealthShieldContainer" unique_id=1034319933]
+[node name="BarCanvas" type="Control" parent="VBox/HealthShieldContainer" unique_id=1034319933]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

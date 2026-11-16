@@ -18,7 +18,7 @@ config/name="Hololive: The Prophecy"
 run/main_scene="uid://cpq72wwlumlsu"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 run/max_fps=60
-config/icon="res://Trash/icon.svg"
+config/icon="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg"
 
 [autoload]
 
@@ -53,4 +53,6 @@ folder_colors={
 
 [rendering]
 
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 viewport/hdr_2d=true

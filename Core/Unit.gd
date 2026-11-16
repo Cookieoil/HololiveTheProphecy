@@ -3,22 +3,26 @@ extends RefCounted
 ## Runtime instance of a unit on the board. Mutable HP/Shield state.
 ## This is all just data
 signal damaged(hp_lost: int, shield_lost: int)
+signal moxie_changed(current: int, maximum: int)
 
 var data: UnitData
 var current_hp: int
 var max_hp: int
 var shield: int = 0
+var moxie: int = 0
+var max_moxie: int = 20
+var ult_used_this_turn: bool = false
 var value_modifier: int = 0 ## Added to dice rolls; negative = debuff
 var slot_index: int = -1 ## Board position (0,1,2)
 var is_ally: bool = true
 
-func _init(unit_data: UnitData, slot: int = 0) -> void:
-	data = unit_data
-	max_hp = unit_data.max_hp
-	current_hp = max_hp
-	is_ally = not unit_data.is_enemy
-	slot_index = slot
-	
+var can_cast_ultimate: bool:
+	get:
+		return not is_dead \
+			and data != null \
+			and data.ultimate != null \
+			and moxie >= max_moxie \
+			and not ult_used_this_turn
 var is_dead: bool: #true if hp <= 0, false otherwise
 	get:
 		return current_hp <= 0
@@ -27,6 +31,32 @@ var missing_hp: int: #return the unit missing HP from max HP
 	get:
 		return max_hp - current_hp
 		
+		
+		
+func _init(unit_data: UnitData, slot: int = 0) -> void:
+	data = unit_data
+	max_hp = unit_data.max_hp
+	current_hp = max_hp
+	max_moxie = unit_data.max_moxie if unit_data.max_moxie > 0 else 20
+	moxie = 0
+	is_ally = not unit_data.is_enemy
+	slot_index = slot
+	
+func gain_moxie(amount: int) -> int:
+	if is_dead or amount <= 0:
+		return 0
+	var old := moxie
+	moxie = mini(max_moxie, moxie + amount)
+	var gained := moxie - old
+	if gained > 0:
+		moxie_changed.emit(moxie, max_moxie)
+	return gained
+
+func consume_moxie() -> void:
+	moxie = 0
+	ult_used_this_turn = true
+	moxie_changed.emit(moxie, max_moxie)
+	
 ## Absorbs via shield, then applies the remainder to HP. Emits `damaged`
 ## after both values have been updated so UnitUI can react (flinch + bar drop).
 ## Also fires when the shield fully absorbed the hit.
@@ -81,10 +111,7 @@ func reduce_shield(amount: int) -> int:
 ## @param amount	 the int true damage amount unit received
 ## @return lost		 return the int amount of hp lost from that damage.
 func deal_true_damage(amount: int) -> int:
-	# Maxi pick the largest num, Mini pick the smallest num
-	var lost := mini(current_hp, maxi(0, amount))
-	current_hp -= lost
-	return lost
+	return take_damage(amount, true)
 	
 ## Modify the value based on the amount
 ## @param amount	the int amount to modify the value

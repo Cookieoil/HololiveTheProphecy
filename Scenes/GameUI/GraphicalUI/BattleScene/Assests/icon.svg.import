@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c3oo6wx54hb7m"
-path="res://.godot/imported/icon.svg-4b3a514e4d4b4ec679d1482de5a4fb1e.ctex"
+path="res://.godot/imported/icon.svg-63c0c6b8c97a0d1d85b2b32b1ad43b7c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Trash/icon.svg"
-dest_files=["res://.godot/imported/icon.svg-4b3a514e4d4b4ec679d1482de5a4fb1e.ctex"]
+source_file="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg"
+dest_files=["res://.godot/imported/icon.svg-63c0c6b8c97a0d1d85b2b32b1ad43b7c.ctex"]
 
 [params]
 

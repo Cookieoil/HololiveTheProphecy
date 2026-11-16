@@ -68,11 +68,22 @@ func setup_game(
 func _apply_config(config: Dictionary) -> void:
 	if config.has("decklist"):
 		state.CURRENT_DECKLIST = config["decklist"]
+		
+	if config.has("hand_size"):
+		state.max_hand_size = int(config["hand_size"])
+		
+	if config.has("actions_per_turn"):
+		state.actions_per_turn = int(config["actions_per_turn"])
+		
+	if config.has("merges_per_turn"):
+		state.merges_per_turn = int(config["merges_per_turn"])
+		
 	if config.has("dice_progression"):
 		var prog: Array[int] = []
 		for v in config["dice_progression"]:
 			prog.append(int(v))
 		state.set_dice_progression(prog)
+		
 	if config.has("wave_transition_mode"):
 		var mode_str: String = config["wave_transition_mode"]
 		state.wave_transition_mode = _WAVE_MODE_MAP.get(mode_str, GameState.WaveTransition.FULL_TURN)
@@ -108,8 +119,11 @@ func _run_game_loop() -> void:
 
 		# ── Step 2: Reset ally shields & temp effects ──
 		for ally in state.allies:
+			ally.ult_used_this_turn = false
 			if not ally.is_dead:
 				ally.reset_shield()
+		for enemy in state.enemies:
+			enemy.ult_used_this_turn = false
 
 		# ── Step 3: Draw to hand limit ──
 		var drawn := state.draw_cards_to_limit()
@@ -118,8 +132,8 @@ func _run_game_loop() -> void:
 			ui.show_message("Drew %s card(s)." % count_str)
 
 		# ── Step 4: Player action phase (async) ──
-		state.actions_left = GameState.ACTIONS_PER_TURN
-		state.merges_left = GameState.MERGES_PER_TURN
+		state.actions_left = state.actions_per_turn
+		state.merges_left = state.merges_per_turn
 		state.next_skill_bonus = 0
 		await _player_action_phase()
 
@@ -188,12 +202,23 @@ func _player_action_phase() -> void:
 		match action.get("type", ""):
 			"play":
 				await _handle_play(action["card"], action["target_ally"])
+				if state.all_enemies_dead():
+					if state.wave_transition_mode == GameState.WaveTransition.IMMEDIATE_SKIP \
+							and _try_advance_wave():
+						current_intents.clear() # New wave skips acting this turn
+						ui.show_game_state(state)
+						ui.show_enemy_intents(current_intents)
+					else:
+						break # FULL_TURN / FINAL_WAVE: exit player phase immediately
 				
 			"merge":
 				_handle_merge(action["card_a"], action["card_b"])
 				
 			"convert":
 				_handle_convert()
+				
+			"ultimate":
+				await _handle_ally_ultimate(action["caster"])
 				
 			"stats":
 				ui.show_game_state(state)
@@ -248,6 +273,9 @@ func _handle_play(card: Card, ally: Unit) -> void:
 	
 	# Resolve gameplay first, then submit the dramatic presentation cue.
 	await _resolve_skill(skill, ctx)
+	for intent in current_intents:
+		intent.recalculate()
+	ui.show_enemy_intents(current_intents)
 
 	var rank: int = 0
 	if card.is_double_merged:
@@ -260,8 +288,52 @@ func _handle_play(card: Card, ally: Unit) -> void:
 		1 if card.is_odd() else 2,
 		rank
 	)
+	
+	var moxie_gained := ally.gain_moxie(card.get_effective_value())
+	if moxie_gained > 0:
+		EventBus.moxie_changed.emit(ally, ally.moxie, ally.max_moxie)
+		var moxie_str := ColorUtils.colorize(
+			"+%d Moxie (%d/%d)" % [moxie_gained, ally.moxie, ally.max_moxie],
+			ColorUtils.COLOR_CARD
+		)
+		ui.show_message("  %s → %s" % [_color_unit(ally), moxie_str])
+	_refresh_enemy_intents()
 
+func _handle_ally_ultimate(ally: Unit) -> void:
+	if ally == null or ally.is_dead:
+		ui.show_message(ColorUtils.colorize("That ally is defeated.", ColorUtils.COLOR_DEAD))
+		return
+	if not ally.can_cast_ultimate:
+		ui.show_message("Ultimate not ready (%d/%d Moxie)." % [ally.moxie, ally.max_moxie])
+		return
 
+	var ult: SkillData = ally.data.ultimate
+	ally.consume_moxie()
+	EventBus.moxie_changed.emit(ally, ally.moxie, ally.max_moxie)
+	EventBus.ultimate_cast.emit(ally, ult.skill_name)
+
+	var ally_str := _color_unit(ally)
+	var ult_str := ColorUtils.colorize("★ ULTIMATE: %s ★" % ult.skill_name, ColorUtils.COLOR_CARD)
+	ui.show_message("%s unleashes %s!" % [ally_str, ult_str])
+	if ult.description != "":
+		ui.show_message(ColorUtils.colorize("> " + ult.description, ColorUtils.COLOR_DEAD))
+
+	# Preserve next_skill_bonus unless this Ultimate itself adds to it (e.g. buff_ult)
+	var saved_bonus := state.next_skill_bonus
+	state.next_skill_bonus = 0
+	var ctx := _build_ally_context(ally, null)
+
+	await _resolve_skill(ult, ctx)
+	state.next_skill_bonus += saved_bonus
+
+	await ui.play_unit_ultimate(ally)
+	_refresh_enemy_intents()
+
+func _refresh_enemy_intents() -> void:
+	for intent in current_intents:
+		intent.recalculate()
+	ui.show_enemy_intents(current_intents)
+	
 func _handle_merge(a: Card, b: Card) -> void:
 	if state.merges_left <= 0:
 		ui.show_message("No merges left this turn.")
@@ -417,10 +489,9 @@ func _resolve_enemy_turns() -> void:
 			intent.enemy.slot_index, enemy_name, dice_value, condition_met, skill_name
 		])
 	
-		if intent.skill.skill_name == "Skill 1 (odd)":
-			ui.show_message(ColorUtils.colorize("> " + intent.enemy.data.skill_1.description, ColorUtils.COLOR_DEAD))
-		else:
-			ui.show_message(ColorUtils.colorize("> " + intent.enemy.data.skill_2.description, ColorUtils.COLOR_DEAD))
+		ui.show_message(ColorUtils.colorize("> " + intent.skill.description, ColorUtils.COLOR_DEAD))
+		if intent.condition_met and not intent.skill.merged_description.is_empty():
+			ui.show_message(ColorUtils.colorize("> " + intent.skill.merged_description, ColorUtils.COLOR_DEAD))
 			
 		var ctx := _build_enemy_context(intent.enemy, intent)
 		await _resolve_skill(intent.skill, ctx)
@@ -433,10 +504,41 @@ func _resolve_enemy_turns() -> void:
 	
 		# Clear value modifiers after this enemy's action resolves
 		intent.enemy.clear_value_modifier()
-	
+		if state.all_allies_dead():
+			break
+			
+		if not intent.enemy.is_dead:
+			var gained := intent.enemy.gain_moxie(intent.effective_value)
+			if gained > 0:
+				EventBus.moxie_changed.emit(intent.enemy, intent.enemy.moxie, intent.enemy.max_moxie)
+			if intent.enemy.can_cast_ultimate:
+				await _execute_enemy_ultimate(intent.enemy)
+				if state.all_allies_dead():
+					break
+					
 		# Check ally deaths
 		if state.all_allies_dead():
 			break
+			
+func _execute_enemy_ultimate(enemy: Unit) -> void:
+	var ult: SkillData = enemy.data.ultimate
+	enemy.consume_moxie()
+	EventBus.moxie_changed.emit(enemy, enemy.moxie, enemy.max_moxie)
+	EventBus.ultimate_cast.emit(enemy, ult.skill_name)
+	
+	var enemy_name := _color_unit(enemy)
+	var ult_str := ColorUtils.colorize("ULTIMATE: %s" % ult.skill_name, ColorUtils.COLOR_ENEMY)
+	ui.show_message("\n%s unleashes %s!" % [enemy_name, ult_str])
+	if ult.description != "":
+		ui.show_message(ColorUtils.colorize("> " + ult.description, ColorUtils.COLOR_DEAD))
+	
+	var dummy_intent := EnemyIntent.new(enemy, 0)
+	var ctx := _build_enemy_context(enemy, dummy_intent)
+	ctx.card_value = 0
+	ctx.is_merged = false
+	
+	await _resolve_skill(ult, ctx)
+	await ui.play_unit_ultimate(enemy)
 #endregion
 
 #region Wave Management

@@ -27,6 +27,7 @@ const TARGET_MODE_MAP := {
 	"pick_n_ally": EffectBlock.TargetMode.PICK_N_ALLY,
 	"all_enemies": EffectBlock.TargetMode.ALL_ENEMIES,
 	"all_allies": EffectBlock.TargetMode.ALL_ALLIES,
+	"cached_or_pick_enemy": EffectBlock.TargetMode.CACHED_OR_PICK_ENEMY,
 }
 const VALUE_SOURCE_MAP := {
 	"card_value": EffectBlock.ValueSource.CARD_VALUE,
@@ -305,7 +306,9 @@ func _read_units(grid: Array, enums: Dictionary, skills: Dictionary) -> Dictiona
 		ud.display_name = row.get("display_name", "Unnamed")
 		ud.max_hp = row.get("max_hp", 10)
 		ud.is_enemy = row.get("is_enemy", false)
-		for key in ["skill_1", "skill_2"]:
+		var raw_moxie := int(row.get("max_moxie", 20))
+		ud.max_moxie = raw_moxie if raw_moxie > 0 else 20
+		for key in ["skill_1", "skill_2", "ultimate"]:
 			var sid: String = row.get(key, "")
 			if sid == "":
 				ud.set(key, null)
@@ -366,7 +369,10 @@ func _read_config(grid: Array) -> Dictionary:
 		var key := str(row[1]).strip_edges()
 		if key.is_empty():
 			continue
-		out[key] = _parse_config_value(str(row[2]).strip_edges())
+		var val: Variant = _parse_config_value(str(row[2]).strip_edges())
+		if key == "allies" and not (val is Array):
+			val = [val] if str(val) != "" else []
+		out[key] = val
 	return out
 
 
@@ -382,6 +388,11 @@ func _parse_config_value(text: String) -> Variant:
 		for part in t.split(":"):
 			pair.append(_scalar(part))
 		return pair
+	if t.find(",") >= 0:
+		var list: Array = []
+		for part in t.split(","):
+			list.append(_scalar(part))
+		return list
 	return _scalar(t)
 
 func _scalar(text: String) -> Variant:
@@ -404,4 +415,6 @@ func _clone_unit(original: UnitData) -> UnitData:
 	clone.is_enemy = original.is_enemy
 	clone.skill_1 = original.skill_1
 	clone.skill_2 = original.skill_2
+	clone.ultimate = original.ultimate
+	clone.max_moxie = original.max_moxie
 	return clone
