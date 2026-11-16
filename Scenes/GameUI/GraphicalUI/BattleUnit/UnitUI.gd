@@ -51,6 +51,7 @@ var _skill_hud_active: bool = false
 var unit: Unit
 
 @onready var intent_label: Label = $VBox/IntentLabel
+@onready var status_section: VBoxContainer = $VBox/StatusSection
 @onready var status_icons_grid: GridContainer = $VBox/StatusSection/StatusIconsGrid
 @onready var skill_preview_box: VBoxContainer = $VBox/StatusSection/SkillPreview
 @onready var skill_1_row: HBoxContainer = $VBox/StatusSection/SkillPreview/Skill1Row
@@ -150,6 +151,9 @@ func _ready() -> void:
 	oval_body.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	name_label.visible = false
 	skill_preview_box.visible = false
+	status_icons_grid.visible = SHOW_STATUS_STRIP
+	# Hidden Controls are skipped by the VBox, so the strip leaves no empty gap.
+	status_section.visible = SHOW_STATUS_STRIP
 
 	_setup_glow_style()
 	if health_bar_canvas:
@@ -410,7 +414,7 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 	_is_drag_hovering = true
 	_hovered_drag_card = drag.card
 	_update_glow_visibility()
-	skill_preview_box.visible = true
+	skill_preview_box.visible = SHOW_STATUS_STRIP
 	
 	var is_merged: bool = drag.card.is_merged or drag.card.is_double_merged
 	if drag.card.is_odd():
@@ -642,6 +646,8 @@ func _get_intro_duration() -> float:
 
 
 #region Status Icons
+## Temporary toggle: the status badge / skill preview strip above the portrait.
+const SHOW_STATUS_STRIP: bool = false
 
 func set_manual_statuses(statuses: Array[Dictionary]) -> void:
 	_manual_statuses = statuses
@@ -650,7 +656,12 @@ func set_manual_statuses(statuses: Array[Dictionary]) -> void:
 
 
 func _refresh_status_icons() -> void:
-	if status_icons_grid == null or unit == null: return
+	if status_icons_grid == null: return
+	if not SHOW_STATUS_STRIP:
+		status_icons_grid.visible = false
+		return
+	status_icons_grid.visible = true
+	if unit == null: return
 
 	var statuses: Array[Dictionary] = _manual_statuses.duplicate()
 	if statuses.is_empty() and status_icon_catalog != null:
@@ -1114,6 +1125,8 @@ func _get_effective_death_delay() -> float:
 func _render_skill_preview_icons(container: HBoxContainer, skill: SkillData, is_merged: bool) -> void:
 	for child in container.get_children():
 		child.queue_free()
+	if not SHOW_STATUS_STRIP:
+		return
 	if skill == null or icon_catalog == null: return
 
 	var categories: PackedStringArray = skill.get_active_categories(is_merged)

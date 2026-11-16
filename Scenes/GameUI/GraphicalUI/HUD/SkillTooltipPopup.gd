@@ -8,6 +8,8 @@ const ARROW_SIZE: float = 11.0
 const PAD_X: int = 14
 const PAD_Y: int = 11
 const SCREEN_MARGIN: float = 12.0
+## Temporary toggle: category icon row in the tooltip header.
+const SHOW_CATEGORY_ICONS: bool = false
 
 var icon_catalog: IconCatalog
 
@@ -62,6 +64,7 @@ func _build_ui() -> void:
 	_icons_box = HBoxContainer.new()
 	_icons_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_icons_box.add_theme_constant_override("separation", 4)
+	_icons_box.visible = SHOW_CATEGORY_ICONS
 	top_row.add_child(_icons_box)
 
 	# Subtitle: Skill Display Name + Effective Value
@@ -210,6 +213,8 @@ func _rebuild_category_icons(categories: PackedStringArray) -> void:
 	for c in _icons_box.get_children():
 		_icons_box.remove_child(c)
 		c.queue_free()
+	if not SHOW_CATEGORY_ICONS:
+		return
 	if icon_catalog == null:
 		return
 	for cat in categories:

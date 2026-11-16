@@ -1,0 +1,20 @@
+{
+	"normal_enemy": {
+		"display_name": "Normal Enemy",
+		"max_hp": 10,
+		"max_moxie": 20,
+		"is_enemy": true,
+		"skill_1": "normal_enemy_1",
+		"skill_2": "normal_enemy_2",
+		"ultimate": "normal_enemy_ult"
+	},
+	"boss_enemy": {
+		"display_name": "Boss Enemy",
+		"max_hp": 30,
+		"max_moxie": 20,
+		"is_enemy": true,
+		"skill_1": "boss_enemy_1",
+		"skill_2": "boss_enemy_2",
+		"ultimate": "boss_enemy_ult"
+	}
+}

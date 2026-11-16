@@ -1,0 +1,28 @@
+{
+	"waves": [
+		{
+			"wave_index": 0,
+			"enemies": [
+				{
+					"unit_id": "normal_enemy"
+				},
+				{
+					"unit_id": "normal_enemy"
+				},
+				{
+					"unit_id": "normal_enemy"
+				}
+			]
+		},
+		{
+			"wave_index": 1,
+			"enemies": [
+				{
+					"unit_id": "boss_enemy",
+					"max_hp_override": 40,
+					"display_name_override": "Sample Boss"
+				}
+			]
+		}
+	]
+}

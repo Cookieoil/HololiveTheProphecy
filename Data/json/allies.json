@@ -1,0 +1,29 @@
+{
+	"striker": {
+		"display_name": "Striker",
+		"max_hp": 14,
+		"max_moxie": 20,
+		"is_enemy": false,
+		"skill_1": "striker_1",
+		"skill_2": "striker_2",
+		"ultimate": "striker_ult"
+	},
+	"healer": {
+		"display_name": "Healer",
+		"max_hp": 16,
+		"max_moxie": 20,
+		"is_enemy": false,
+		"skill_1": "healer_1",
+		"skill_2": "healer_2",
+		"ultimate": "healer_ult"
+	},
+	"buff": {
+		"display_name": "Buff",
+		"max_hp": 18,
+		"max_moxie": 20,
+		"is_enemy": false,
+		"skill_1": "buff_1",
+		"skill_2": "buff_2",
+		"ultimate": "buff_ult"
+	}
+}

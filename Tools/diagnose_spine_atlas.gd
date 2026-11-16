@@ -14,13 +14,13 @@ func _initialize() -> void:
 	print("PNG Image size: ", image.get_size())
 
 	# Test Godot's imported Texture2D.
-	var texture := ResourceLoader.load(
+	var texture: Texture2D = ResourceLoader.load(
 		PNG_PATH,
 		"Texture2D",
 		ResourceLoader.CACHE_MODE_IGNORE
-	)
+	) as Texture2D
 	print("Imported Texture2D: ", texture)
-	if texture is Texture2D:
+	if texture != null:
 		print("Imported Texture2D size: ", texture.get_size())
 
 	# Bypass the .spatlas and parse the original .atlas directly.
@@ -33,16 +33,17 @@ func _initialize() -> void:
 
 	# Load through the .atlas.import -> .spatlas remap.
 	print("=== BEGIN IMPORTED ATLAS TEST ===")
-	var imported_atlas := ResourceLoader.load(
+	var imported_atlas: SpineAtlasResource = ResourceLoader.load(
 		ATLAS_PATH,
 		"SpineAtlasResource",
 		ResourceLoader.CACHE_MODE_IGNORE
-	)
+	) as SpineAtlasResource
 	print("Imported atlas: ", imported_atlas)
 
-	if imported_atlas is SpineAtlasResource:
+	if imported_atlas != null:
 		print("Imported source path: ", imported_atlas.get_source_path())
-		print("Imported atlas textures: ", imported_atlas.get_textures().size())
+		var atlas_textures: Array = imported_atlas.get_textures()
+		print("Imported atlas textures: ", atlas_textures.size())
 
 	print("=== END IMPORTED ATLAS TEST ===")
 	quit()

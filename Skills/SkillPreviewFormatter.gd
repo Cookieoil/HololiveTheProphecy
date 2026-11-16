@@ -125,7 +125,7 @@ static func build_orb_ultimate_data(unit: Unit, badge_code: String, state: GameS
 			"header": header,
 			"subtitle": "Moxie %d / %d" % [unit.moxie, unit.max_moxie],
 			"categories": PackedStringArray(),
-			"body": "[color=%s]No Ultimate configured in game_data.xlsx.[/color]" % COL_MUTED,
+			"body": "[color=%s]No Ultimate configured in res://Data/json/skills.json.[/color]" % COL_MUTED,
 			"footer": "",
 			"accent": Color(0.6, 0.65, 0.75),
 		}

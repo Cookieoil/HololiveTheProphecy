@@ -11,14 +11,15 @@ const MAX_HAND_SIZE: int = 7
 const ACTIONS_PER_TURN: int = 3
 const MERGES_PER_TURN: int = 2
 
-## Deck composition: [[value, count],...]
-@export var DEFAULT_DECKLIST: Array = [
+## Deck composition: [[value, count], ...]
+const DEFAULT_DECKLIST: Array = [
 	[2, 7],
 	[3, 5],
 	[5, 3],
 ]
 
-var CURRENT_DECKLIST: Array = DEFAULT_DECKLIST
+## Active deck composition; replaced from config.json by GameManager.
+var CURRENT_DECKLIST: Array = DEFAULT_DECKLIST.duplicate(true)
  ## Dice sides per turn index (0-based). Clamped at last entry.
 var turn_dice_progression: Array[int] = [6, 10, 14, 18]
 var dice_size_modifier: int = 0
@@ -73,6 +74,7 @@ func initialize_enemies(enemy_data: Array[UnitData]) -> void:
 
 ## Clear are current cards in game
 ## Create a new deck with new default cards
+## Numbers are coerced with int() because JSON parses every number as float.
 ## @param Array - an array contains all default cards (number count and value)
 func build_deck(decklist: Array = CURRENT_DECKLIST) -> void:
 	Card.reset_id_counter()
@@ -81,15 +83,21 @@ func build_deck(decklist: Array = CURRENT_DECKLIST) -> void:
 	discard.clear()
 	played_this_turn.clear()
 	_merged_sources.clear()
-	for entry: Array in decklist:
-		var value: int = entry[0]
-		var count: int = entry[1]
+	for entry: Variant in decklist:
+		if not (entry is Array):
+			continue
+		var pair: Array = entry
+		if pair.size() < 2:
+			continue
+		var value: int = _to_int(pair[0], 0)
+		var count: int = _to_int(pair[1], 0)
 		for i: int in count:
 			deck.append(Card.new(value))
 	deck.shuffle()
 	
 func set_dice_progression(prog: Array[int]) -> void:
 	if not prog.is_empty(): turn_dice_progression.assign(prog)
+
 #endregion
 
 #region Card Operations
@@ -327,12 +335,31 @@ func get_top_n_cards(n: int) -> Array[Card]:
 #endregion
 
 #region Helpers
+## Coerces a Variant into an int. JSON always parses numbers as floats, so this
+## is the safe way to feed JSON values into typed integer fields.
+static func _to_int(value: Variant, fallback: int = 0) -> int:
+	if value is int:
+		var int_value: int = value
+		return int_value
+	if value is float:
+		var float_value: float = value
+		return int(float_value)
+	if value is bool:
+		var bool_value: bool = value
+		return 1 if bool_value else 0
+	if value is String:
+		var text: String = value
+		if text.is_valid_int():
+			return text.to_int()
+		if text.is_valid_float():
+			return int(text.to_float())
+	return fallback
+
+
 ## Integer division, minimum 1
 static func scaled_value(value: int, divisor: int = 1) -> int:
-	if divisor <= 0:
-		divisor = 1
-	@warning_ignore("integer_division")
-	return maxi(1, value / divisor)
+	var safe_divisor: int = divisor if divisor > 0 else 1
+	return maxi(1, int(float(value) / float(safe_divisor)))
 
 func get_living_allies() -> Array[Unit]:
 	var result: Array[Unit] = []

@@ -41,5 +41,16 @@
   - Private variables/functions: prefix with `_` (e.g., `_internal_counter`)
 - **Godot Annotations:** Always use `@export` for inspector variables and `@onready` for node references. Place them under their respective regions.
 
+## Game Data Pipeline
+- **`res://Data/json/` is the single source of truth.** The game reads `skills.json`, `allies.json`, `enemies.json`, `waves.json`, and `config.json` at runtime through `Core/DataLoader.gd` (`FileAccess` + `JSON.parse_string`).
+- **Never read `.xlsx` at runtime.** `res://Data/xlsx/game_data.xlsx` is a bulk-entry authoring tool only; `Tools/xlsx_reader.gd` + `Tools/dataBuilder.gd` convert it to JSON.
+- **Quick balancing is a JSON edit.** Change numbers/strings in `res://Data/json/` directly; keep enum values as readable strings (`"deal_damage"`, `"pick_n_enemy"`, `"card_value"`, ...) — never numeric ordinals.
+- **Effects live inside their skill.** `skills.json` embeds an `effects` array per skill (base effects first, then merged). `skill_id` is not repeated inside the effect object.
+- **Regenerating JSON is explicit**, because the workbook is stale compared to hand/AI edits:
+  - Editor: `Project -> Tools -> Export game_data.xlsx to JSON`
+  - CLI: `godot --headless --path . --script res://Tools/export_xlsx_to_json.gd`
+  - Validate: `godot --headless --path . "res://Tools/validator.tscn"`
+- **JSON numbers parse as `float`.** Always coerce with the typed helpers (`_to_int` / `_get_int`, `int(float_value)`) instead of `int(dict["key"])`, which is a compile error under `unsafe_call_argument`.
+
 ## Verification
 - After editing any `.gd` file, check VS Code workspace diagnostics (Godot LSP) and fix all compiler/type errors at the root cause before finishing. Never suppress warnings with `@warning_ignore`.

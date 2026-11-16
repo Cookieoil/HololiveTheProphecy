@@ -5,7 +5,26 @@ func _init() -> void:
 	if Engine.is_editor_hint():
 		print("[GameDatabase] _init, script path = ", get_script().resource_path if get_script() else "NONE")
 		
+## Skill definitions keyed by skill_id (effects embedded).
+@export var skills: Dictionary = {}
+## Ally unit templates keyed by unit_id (from allies.json).
+@export var allies: Dictionary = {}
+## Enemy unit templates keyed by unit_id (from enemies.json).
+@export var enemies: Dictionary = {}
+## Union of allies and enemies, kept for unit lookups by id.
 @export var units: Dictionary = {}
 @export var waves: Array = []
 @export var config: Dictionary = {}
-func get_unit(id: String) -> UnitData: return units.get(id)
+## Returns the unit template for an id, or null when unknown.
+func get_unit(id: String) -> UnitData:
+	if not units.has(id):
+		return null
+	var unit: UnitData = units[id]
+	return unit
+
+## Returns the skill definition for an id, or null when unknown.
+func get_skill(id: String) -> SkillData:
+	if not skills.has(id):
+		return null
+	var skill: SkillData = skills[id]
+	return skill

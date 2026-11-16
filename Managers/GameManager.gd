@@ -12,10 +12,13 @@ var current_intents: Array[EnemyIntent] = []
 var game_running: bool = false
 var instructions_shown: bool = false
 
-const _WAVE_MODE_MAP: Dictionary[String, int] = {
+#region Constants
+## JSON/config string -> WaveTransition (config.json stores readable names).
+const WAVE_MODE_MAP: Dictionary = {
 	"full_turn": GameState.WaveTransition.FULL_TURN,
 	"immediate_skip": GameState.WaveTransition.IMMEDIATE_SKIP,
 }
+#endregion
 
 #region Helpers
 func _color_unit(unit: Unit) -> String:
@@ -66,33 +69,83 @@ func setup_game(
 	await _run_game_loop()
 
 func _apply_config(config: Dictionary) -> void:
-	if config.has("decklist"):
-		var decklist_val: Array = config["decklist"]
-		state.CURRENT_DECKLIST = decklist_val
-		
-	if config.has("hand_size"):
-		var hand_size_val: int = config["hand_size"]
-		state.max_hand_size = hand_size_val
-		
-	if config.has("actions_per_turn"):
-		var actions_val: int = config["actions_per_turn"]
-		state.actions_per_turn = actions_val
-		
-	if config.has("merges_per_turn"):
-		var merges_val: int = config["merges_per_turn"]
-		state.merges_per_turn = merges_val
-		
-	if config.has("dice_progression"):
-		var prog: Array[int] = []
-		var prog_raw: Array = config["dice_progression"]
-		for v: int in prog_raw:
-			prog.append(v)
-		state.set_dice_progression(prog)
-		
+	if config.is_empty():
+		return
+	state.max_hand_size = maxi(1, _config_int(config, "hand_size", GameState.MAX_HAND_SIZE))
+	state.actions_per_turn = maxi(0, _config_int(config, "actions_per_turn", GameState.ACTIONS_PER_TURN))
+	state.merges_per_turn = maxi(0, _config_int(config, "merges_per_turn", GameState.MERGES_PER_TURN))
+
+	var decklist: Array = _config_decklist(config)
+	if not decklist.is_empty():
+		state.CURRENT_DECKLIST = decklist
+
+	var progression: Array[int] = _config_int_list(config, "dice_progression")
+	if not progression.is_empty():
+		state.set_dice_progression(progression)
+
 	if config.has("wave_transition_mode"):
-		var mode_str: String = str(config["wave_transition_mode"])
-		var wave_mode: int = _WAVE_MODE_MAP.get(mode_str, GameState.WaveTransition.FULL_TURN)
+		var mode_key: String = str(config["wave_transition_mode"]).strip_edges().to_lower()
+		var wave_mode: int = WAVE_MODE_MAP.get(mode_key, GameState.WaveTransition.FULL_TURN)
 		state.wave_transition_mode = wave_mode
+
+
+## Reads an int config entry. JSON always parses numbers as float, so the value
+## is coerced instead of assigned straight into a typed int field.
+func _config_int(config: Dictionary, key: String, fallback: int) -> int:
+	return _coerce_int(config.get(key, fallback), fallback)
+
+
+## Coerces any JSON scalar (float, int, bool, String) into an int.
+func _coerce_int(value: Variant, fallback: int) -> int:
+	if value is int:
+		var int_value: int = value
+		return int_value
+	if value is float:
+		var float_value: float = value
+		return int(float_value)
+	if value is bool:
+		var bool_value: bool = value
+		return 1 if bool_value else 0
+	if value is String:
+		var text: String = value
+		if text.is_valid_int():
+			return text.to_int()
+		if text.is_valid_float():
+			return int(text.to_float())
+	return fallback
+
+
+## Coerces the JSON decklist ([[value, count], ...]) into typed int pairs.
+func _config_decklist(config: Dictionary) -> Array:
+	var parsed: Array = []
+	var raw_list: Variant = config.get("decklist", [])
+	if not (raw_list is Array):
+		return parsed
+	var entries: Array = raw_list
+	for entry: Variant in entries:
+		if not (entry is Array):
+			continue
+		var pair: Array = entry
+		if pair.size() < 2:
+			continue
+		var card_value: int = _coerce_int(pair[0], 0)
+		var card_count: int = _coerce_int(pair[1], 0)
+		if card_count <= 0:
+			continue
+		parsed.append([card_value, card_count])
+	return parsed
+
+
+## Coerces a JSON array of numbers into a typed int array.
+func _config_int_list(config: Dictionary, key: String) -> Array[int]:
+	var parsed: Array[int] = []
+	var raw_list: Variant = config.get(key, [])
+	if not (raw_list is Array):
+		return parsed
+	var entries: Array = raw_list
+	for entry: Variant in entries:
+		parsed.append(_coerce_int(entry, 0))
+	return parsed
 		
 func _spawn_wave(wave_index: int) -> void:
 	state.current_wave = wave_index
