@@ -130,9 +130,13 @@ func request_action(anim_name: StringName, beat: ActionBeat = ActionBeat.ATTACK)
 
 	_action_queue.sort_custom(
 		func(a: Dictionary, b: Dictionary) -> bool:
-			if int(a["beat"]) == int(b["beat"]):
-				return int(a["order"]) < int(b["order"])
-			return int(a["beat"]) < int(b["beat"])
+			var beat_a: int = a["beat"]
+			var beat_b: int = b["beat"]
+			if beat_a == beat_b:
+				var order_a: int = a["order"]
+				var order_b: int = b["order"]
+				return order_a < order_b
+			return beat_a < beat_b
 	)
 	
 	if not _action_running:
@@ -149,16 +153,17 @@ func play_hit(delay: float = -1.0) -> void:
 	_schedule_delayed_hit(d)
 
 func _schedule_delayed_hit(delay: float) -> void:
-	var token := _hit_cancel_token
-	await get_tree().create_timer(delay).timeout
-	
-	# Superseded by a death, skeleton reload, or explicit queue clear.
-	if token != _hit_cancel_token:
-		return
-	if _dead or _animation_state == null:
-		return
-	
-	request_action(anim_hit, ActionBeat.REACTION)
+	var token: int = _hit_cancel_token
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
+		if not is_inside_tree():
+			return
+		# Superseded by a death, skeleton reload, or explicit queue clear.
+		if token != _hit_cancel_token:
+			return
+		if _dead or _animation_state == null:
+			return
+		request_action(anim_hit, ActionBeat.REACTION)
+	)
 	
 ## skill_index: 1 or 2
 ## rank: 0 = normal, 1 = merged/condition met, 2 = double merged
@@ -216,7 +221,8 @@ func _pump_action_queue() -> void:
 		return
 
 	var next_action: Dictionary = _action_queue.pop_front()
-	_active_action = next_action["anim"] as StringName
+	var next_anim: StringName = next_action["anim"]
+	_active_action = next_anim
 	_action_running = true
 
 	_animation_state.call(
@@ -237,22 +243,25 @@ func _pump_action_queue() -> void:
 
 
 func _on_spine_animation_completed(
-	_sprite: Variant,
-	_state: Variant,
-	track_entry: Variant
+	_sprite: Object,
+	_state: Object,
+	track_entry: Object
 ) -> void:
 	if not _action_running or _dead or track_entry == null:
 		return
 
-	if int(track_entry.call("get_track_index")) != BASE_TRACK:
+	var track_idx: int = track_entry.call("get_track_index")
+	if track_idx != BASE_TRACK:
 		return
 
 	# Ignore completion notifications from older/interrupted track entries.
-	var animation: Variant = track_entry.call("get_animation")
-	if animation == null:
+	var raw_anim: Variant = track_entry.call("get_animation")
+	if not (raw_anim is Object):
 		return
+	var animation: Object = raw_anim
 
-	if StringName(animation.call("get_name")) != _active_action:
+	var raw_name: String = str(animation.call("get_name"))
+	if StringName(raw_name) != _active_action:
 		return
 
 	_finish_active_action()
@@ -262,23 +271,26 @@ func _clear_action_queue() -> void:
 	var cancelled: Array[StringName] = []
 	if _action_running:
 		cancelled.append(_active_action)
-	for a in _action_queue:
-		cancelled.append(a["anim"])
+	for a: Dictionary in _action_queue:
+		var q_anim: StringName = a["anim"]
+		cancelled.append(q_anim)
 	_action_queue.clear()
 	_action_running = false
 	_active_action = &""
 	_action_watchdog = 0.0
 	_hit_cancel_token += 1
-	for anim in cancelled:
+	for anim: StringName in cancelled:
 		action_finished.emit(anim)
 		
 ## Check if the current skeleton actually has the animation
 func has_animation(anim_name: StringName) -> bool:
 	if _spine == null: return false
-	var skeleton = _spine.call("get_skeleton")
-	if skeleton:
-		var data = skeleton.call("get_data")
-		if data:
+	var raw_skeleton: Variant = _spine.call("get_skeleton")
+	if raw_skeleton is Object:
+		var skeleton: Object = raw_skeleton
+		var raw_data: Variant = skeleton.call("get_data")
+		if raw_data is Object:
+			var data: Object = raw_data
 			# find_animation returns null if not found
 			return data.call("find_animation", anim_name) != null
 	return false
@@ -368,14 +380,15 @@ func set_dead(value: bool) -> void:
 		_play_base_animation(anim_idle, true)
 
 func _schedule_delayed_death(delay: float) -> void:
-	await get_tree().create_timer(delay).timeout
-
-	# Resurrection or skeleton reload cancelled it.
-	if not _dead:
-		return
-
-	_clear_action_queue()
-	_play_death_animation()
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
+		if not is_inside_tree():
+			return
+		# Resurrection or skeleton reload cancelled it.
+		if not _dead:
+			return
+		_clear_action_queue()
+		_play_death_animation()
+	)
 
 func _create_spine_sprite() -> void:
 	if skeleton_data == null:
@@ -386,7 +399,11 @@ func _create_spine_sprite() -> void:
 		_show_fallback("SpinePortrait: SpineSprite is unavailable.")
 		return
 
-	_spine = ClassDB.instantiate("SpineSprite") as Node2D
+	var raw_spine: Variant = ClassDB.instantiate("SpineSprite")
+	if raw_spine is Node2D:
+		_spine = raw_spine
+	else:
+		_spine = null
 	if _spine == null:
 		_show_fallback("SpinePortrait: failed to construct SpineSprite")
 		return
@@ -470,19 +487,23 @@ func _get_animation_duration(anim_name: StringName) -> float:
 	if _spine == null:
 		return FALLBACK_ACTION_DURATION
 
-	var skeleton: Variant = _spine.call("get_skeleton")
-	if skeleton == null:
+	var raw_skeleton: Variant = _spine.call("get_skeleton")
+	if not (raw_skeleton is Object):
 		return FALLBACK_ACTION_DURATION
+	var skeleton: Object = raw_skeleton
 
-	var data: Variant = skeleton.call("get_data")
-	if data == null:
+	var raw_data: Variant = skeleton.call("get_data")
+	if not (raw_data is Object):
 		return FALLBACK_ACTION_DURATION
+	var data: Object = raw_data
 
-	var animation: Variant = data.call("find_animation", anim_name)
-	if animation == null:
+	var raw_animation: Variant = data.call("find_animation", anim_name)
+	if not (raw_animation is Object):
 		return FALLBACK_ACTION_DURATION
+	var animation: Object = raw_animation
 
-	return maxf(0.05, float(animation.call("get_duration")))
+	var dur: float = animation.call("get_duration")
+	return maxf(0.05, dur)
 
 
 func _finish_active_action() -> void:

@@ -12,18 +12,18 @@ var current_intents: Array[EnemyIntent] = []
 var game_running: bool = false
 var instructions_shown: bool = false
 
-const _WAVE_MODE_MAP := {
+const _WAVE_MODE_MAP: Dictionary[String, int] = {
 	"full_turn": GameState.WaveTransition.FULL_TURN,
 	"immediate_skip": GameState.WaveTransition.IMMEDIATE_SKIP,
 }
 
 #region Helpers
 func _color_unit(unit: Unit) -> String:
-	var col = ColorUtils.COLOR_ALLY if unit.is_ally else ColorUtils.COLOR_ENEMY
+	var col: String = ColorUtils.COLOR_ALLY if unit.is_ally else ColorUtils.COLOR_ENEMY
 	return ColorUtils.colorize(unit.data.display_name, col)
 
 func _color_value(value: int, type: String = "hp") -> String:
-	var col = ColorUtils.COLOR_HP if type == "hp" else ColorUtils.COLOR_SHIELD
+	var col: String = ColorUtils.COLOR_HP if type == "hp" else ColorUtils.COLOR_SHIELD
 	return ColorUtils.colorize(str(value), col)
 
 func _color_card_value(card: Card) -> String:
@@ -63,37 +63,44 @@ func setup_game(
 	state.build_deck() # decklist already set by _apply_config
 
 	game_running = true
-	_run_game_loop()
+	await _run_game_loop()
 
 func _apply_config(config: Dictionary) -> void:
 	if config.has("decklist"):
-		state.CURRENT_DECKLIST = config["decklist"]
+		var decklist_val: Array = config["decklist"]
+		state.CURRENT_DECKLIST = decklist_val
 		
 	if config.has("hand_size"):
-		state.max_hand_size = int(config["hand_size"])
+		var hand_size_val: int = config["hand_size"]
+		state.max_hand_size = hand_size_val
 		
 	if config.has("actions_per_turn"):
-		state.actions_per_turn = int(config["actions_per_turn"])
+		var actions_val: int = config["actions_per_turn"]
+		state.actions_per_turn = actions_val
 		
 	if config.has("merges_per_turn"):
-		state.merges_per_turn = int(config["merges_per_turn"])
+		var merges_val: int = config["merges_per_turn"]
+		state.merges_per_turn = merges_val
 		
 	if config.has("dice_progression"):
 		var prog: Array[int] = []
-		for v in config["dice_progression"]:
-			prog.append(int(v))
+		var prog_raw: Array = config["dice_progression"]
+		for v: int in prog_raw:
+			prog.append(v)
 		state.set_dice_progression(prog)
 		
 	if config.has("wave_transition_mode"):
-		var mode_str: String = config["wave_transition_mode"]
-		state.wave_transition_mode = _WAVE_MODE_MAP.get(mode_str, GameState.WaveTransition.FULL_TURN)
+		var mode_str: String = str(config["wave_transition_mode"])
+		var wave_mode: int = _WAVE_MODE_MAP.get(mode_str, GameState.WaveTransition.FULL_TURN)
+		state.wave_transition_mode = wave_mode
 		
 func _spawn_wave(wave_index: int) -> void:
 	state.current_wave = wave_index
 	if wave_index < state.wave_definitions.size():
 		var enemy_data: Array[UnitData] = []
-		for ud in state.wave_definitions[wave_index]:
-			enemy_data.append(ud as UnitData)
+		var wave_units: Array = state.wave_definitions[wave_index]
+		for ud: UnitData in wave_units:
+			enemy_data.append(ud)
 		state.initialize_enemies(enemy_data)
 		EventBus.wave_started.emit(wave_index)
 #endregion
@@ -107,7 +114,7 @@ func _run_game_loop() -> void:
 	
 	while game_running:
 		EventBus.turn_started.emit(state.turn_number)
-		var turn_header = ColorUtils.colorize("╔══ TURN %d ══╗" % (state.turn_number + 1), ColorUtils.COLOR_HEADER)
+		var turn_header: String = ColorUtils.colorize("╔══ TURN %d ══╗" % (state.turn_number + 1), ColorUtils.COLOR_HEADER)
 		if state.turn_number == 0:
 			ui.show_message("\n" + turn_header)
 		else:
@@ -118,17 +125,17 @@ func _run_game_loop() -> void:
 		ui.show_enemy_intents(current_intents)
 
 		# ── Step 2: Reset ally shields & temp effects ──
-		for ally in state.allies:
+		for ally: Unit in state.allies:
 			ally.ult_used_this_turn = false
 			if not ally.is_dead:
 				ally.reset_shield()
-		for enemy in state.enemies:
+		for enemy: Unit in state.enemies:
 			enemy.ult_used_this_turn = false
 
 		# ── Step 3: Draw to hand limit ──
-		var drawn := state.draw_cards_to_limit()
+		var drawn: Array[Card] = state.draw_cards_to_limit()
 		if not drawn.is_empty():
-			var count_str = ColorUtils.colorize(str(drawn.size()), ColorUtils.COLOR_CARD)
+			var count_str: String = ColorUtils.colorize(str(drawn.size()), ColorUtils.COLOR_CARD)
 			ui.show_message("Drew %s card(s)." % count_str)
 
 		# ── Step 4: Player action phase (async) ──
@@ -147,7 +154,7 @@ func _run_game_loop() -> void:
 				continue # loop to next turn (enemies skip this turn)
 
 		# ── Step 6: Reset enemy shields & temp effects ──
-		for enemy in state.enemies:
+		for enemy: Unit in state.enemies:
 			if not enemy.is_dead:
 				enemy.reset_shield()
 
@@ -173,7 +180,7 @@ func _run_game_loop() -> void:
 		state.turn_number += 1
 		
 func _show_instructions() -> void:
-	var msg = """
+	var msg: String = """
 [color=#FFFFFF]═══════════ HOW TO PLAY ═══════════[/color]
 
 [color=#00FF00]Allies[/color] have two skills: [color=#FFFF00]odd[/color] card → Skill 1, [color=#FFFF00]even[/color] card → Skill 2.
@@ -198,10 +205,13 @@ func _player_action_phase() -> void:
 		
 	while true:
 		var action: Dictionary = await ui.get_player_action(state)
+		var action_type: String = str(action.get("type", ""))
 	
-		match action.get("type", ""):
+		match action_type:
 			"play":
-				await _handle_play(action["card"], action["target_ally"])
+				var play_card: Card = action["card"]
+				var target_ally: Unit = action["target_ally"]
+				await _handle_play(play_card, target_ally)
 				if state.all_enemies_dead():
 					if state.wave_transition_mode == GameState.WaveTransition.IMMEDIATE_SKIP \
 							and _try_advance_wave():
@@ -212,13 +222,16 @@ func _player_action_phase() -> void:
 						break # FULL_TURN / FINAL_WAVE: exit player phase immediately
 				
 			"merge":
-				_handle_merge(action["card_a"], action["card_b"])
+				var card_a: Card = action["card_a"]
+				var card_b: Card = action["card_b"]
+				_handle_merge(card_a, card_b)
 				
 			"convert":
 				_handle_convert()
 				
 			"ultimate":
-				await _handle_ally_ultimate(action["caster"])
+				var caster: Unit = action["caster"]
+				await _handle_ally_ultimate(caster)
 				
 			"stats":
 				ui.show_game_state(state)
@@ -247,10 +260,10 @@ func _handle_play(card: Card, ally: Unit) -> void:
 	
 	# Determine skill
 	var skill: SkillData = ally.data.skill_1 if card.is_odd() else ally.data.skill_2
-	var card_str = ColorUtils.colorize(str(card.get_effective_value()) + " V", ColorUtils.COLOR_CARD)
-	var ally_str = _color_unit(ally)
-	var skill_str = ColorUtils.colorize(skill.skill_name, ColorUtils.COLOR_HEADER)
-	var merged_str = ""
+	var card_str: String = ColorUtils.colorize(str(card.get_effective_value()) + " V", ColorUtils.COLOR_CARD)
+	var ally_str: String = _color_unit(ally)
+	var skill_str: String = ColorUtils.colorize(skill.skill_name, ColorUtils.COLOR_HEADER)
+	var merged_str: String = ""
 	if card.is_double_merged:
 		merged_str = ColorUtils.colorize("Double merged ", ColorUtils.COLOR_CARD)
 	elif card.is_merged:
@@ -269,11 +282,11 @@ func _handle_play(card: Card, ally: Unit) -> void:
 		ui.show_message(ColorUtils.colorize("> " + skill.description, ColorUtils.COLOR_DEAD))
 		
 	# Build context
-	var ctx := _build_ally_context(ally, card)
+	var ctx: SkillContext = _build_ally_context(ally, card)
 	
 	# Resolve gameplay first, then submit the dramatic presentation cue.
 	await _resolve_skill(skill, ctx)
-	for intent in current_intents:
+	for intent: EnemyIntent in current_intents:
 		intent.recalculate()
 	ui.show_enemy_intents(current_intents)
 
@@ -289,10 +302,10 @@ func _handle_play(card: Card, ally: Unit) -> void:
 		rank
 	)
 	
-	var moxie_gained := ally.gain_moxie(card.get_effective_value())
+	var moxie_gained: int = ally.gain_moxie(card.get_effective_value())
 	if moxie_gained > 0:
 		EventBus.moxie_changed.emit(ally, ally.moxie, ally.max_moxie)
-		var moxie_str := ColorUtils.colorize(
+		var moxie_str: String = ColorUtils.colorize(
 			"+%d Moxie (%d/%d)" % [moxie_gained, ally.moxie, ally.max_moxie],
 			ColorUtils.COLOR_CARD
 		)
@@ -312,16 +325,16 @@ func _handle_ally_ultimate(ally: Unit) -> void:
 	EventBus.moxie_changed.emit(ally, ally.moxie, ally.max_moxie)
 	EventBus.ultimate_cast.emit(ally, ult.skill_name)
 
-	var ally_str := _color_unit(ally)
-	var ult_str := ColorUtils.colorize("★ ULTIMATE: %s ★" % ult.skill_name, ColorUtils.COLOR_CARD)
+	var ally_str: String = _color_unit(ally)
+	var ult_str: String = ColorUtils.colorize("★ ULTIMATE: %s ★" % ult.skill_name, ColorUtils.COLOR_CARD)
 	ui.show_message("%s unleashes %s!" % [ally_str, ult_str])
 	if ult.description != "":
 		ui.show_message(ColorUtils.colorize("> " + ult.description, ColorUtils.COLOR_DEAD))
 
 	# Preserve next_skill_bonus unless this Ultimate itself adds to it (e.g. buff_ult)
-	var saved_bonus := state.next_skill_bonus
+	var saved_bonus: int = state.next_skill_bonus
 	state.next_skill_bonus = 0
-	var ctx := _build_ally_context(ally, null)
+	var ctx: SkillContext = _build_ally_context(ally, null)
 
 	await _resolve_skill(ult, ctx)
 	state.next_skill_bonus += saved_bonus
@@ -330,7 +343,7 @@ func _handle_ally_ultimate(ally: Unit) -> void:
 	_refresh_enemy_intents()
 
 func _refresh_enemy_intents() -> void:
-	for intent in current_intents:
+	for intent: EnemyIntent in current_intents:
 		intent.recalculate()
 	ui.show_enemy_intents(current_intents)
 	
@@ -338,15 +351,15 @@ func _handle_merge(a: Card, b: Card) -> void:
 	if state.merges_left <= 0:
 		ui.show_message("No merges left this turn.")
 		return
-	var error = state.get_merge_error(a, b)
+	var error: String = state.get_merge_error(a, b)
 	if error != "":
 		ui.show_message("Invalid merge: " + error)
 		return
 	
 	# Proceed with the merge
-	var result = state.try_merge(a, b)
+	var result: Card = state.try_merge(a, b)
 	state.merges_left -= 1
-	var result_str = _color_card_value(result)
+	var result_str: String = _color_card_value(result)
 	ui.show_message("Merged → %s" % result_str)
 
 
@@ -364,22 +377,22 @@ func _handle_convert() -> void:
 
 #region Context Builders
 func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
-	var ctx := SkillContext.new(ally, card, state)
+	var ctx: SkillContext = SkillContext.new(ally, card, state)
 
 	# Apply turn-wide bonus from Buff Skill 2 merged
 	if state.next_skill_bonus > 0:
 		ctx.card_value += state.next_skill_bonus
-		var bonus_str = ColorUtils.colorize("+" + str(state.next_skill_bonus), ColorUtils.COLOR_CARD)
+		var bonus_str: String = ColorUtils.colorize("+" + str(state.next_skill_bonus), ColorUtils.COLOR_CARD)
 		ui.show_message("  %s bonus value from Buff!" % bonus_str)
 		state.next_skill_bonus = 0
 
 	# Pick_n_target:
 	ctx.pick_n_target = func(count: int, filter: Callable) -> Array[Unit]:
 		var units: Array[Unit] = []
-		for u in state.allies:
+		for u: Unit in state.allies:
 			if filter.call(u):
 				units.append(u)
-		for u in state.enemies:
+		for u: Unit in state.enemies:
 			if filter.call(u):
 				units.append(u)
 		if units.is_empty():
@@ -389,7 +402,7 @@ func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
 	# Pick_n_card:
 	ctx.pick_n_card = func(count: int, filter: Callable) -> Array[Card]:
 		var units: Array[Card] = []
-		for c in state.hand:
+		for c: Card in state.hand:
 			if filter.call(c):
 				units.append(c)
 		if units.is_empty():
@@ -403,23 +416,23 @@ func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
 
 
 func _build_enemy_context(enemy: Unit, intent: EnemyIntent) -> SkillContext:
-	var ctx := SkillContext.new(enemy, null, state)
+	var ctx: SkillContext = SkillContext.new(enemy, null, state)
 	ctx.card_value = intent.effective_value
 	ctx.is_merged = intent.condition_met
 
 	# Enemy targeting is random — inject auto-target callables
 	ctx.pick_n_target = func(_count: int, _filter: Callable) -> Array[Unit]:
-		var target := state.get_living_allies()
+		var target: Array[Unit] = state.get_living_allies()
 		target.shuffle()
 		var result: Array[Unit] = []
 		
-		for i in mini(_count, target.size()):
+		for i: int in mini(_count, target.size()):
 			result.append(target[i])
 			
 		if not result.is_empty():
-			var names := result.map(func(t: Unit) -> String: return t.data.display_name)
-			var joined = ", ".join(names)
-			var colored = ColorUtils.colorize(joined, ColorUtils.COLOR_ALLY)
+			var names: Array = result.map(func(t: Unit) -> String: return t.data.display_name)
+			var joined: String = ", ".join(PackedStringArray(names))
+			var colored: String = ColorUtils.colorize(joined, ColorUtils.COLOR_ALLY)
 			ui.show_message(" Targets: %s" % colored)
 		return result
 	
@@ -437,20 +450,20 @@ func _resolve_skill(skill: SkillData, ctx: SkillContext) -> void:
 	if ctx.is_merged:
 		match skill.merged_mode:
 			SkillData.MergedMode.AND_MERGED_FIRST:
-				for effect in skill.merged_effects:
+				for effect: SkillEffect in skill.merged_effects:
 					await effect.execute(ctx)
-				for effect in skill.base_effects:
+				for effect: SkillEffect in skill.base_effects:
 					await effect.execute(ctx)
 			SkillData.MergedMode.AND_BASE_FIRST:
-				for effect in skill.base_effects:
+				for effect: SkillEffect in skill.base_effects:
 					await effect.execute(ctx)
-				for effect in skill.merged_effects:
+				for effect: SkillEffect in skill.merged_effects:
 					await effect.execute(ctx)
 			SkillData.MergedMode.OR:
-				for effect in skill.merged_effects:
+				for effect: SkillEffect in skill.merged_effects:
 					await effect.execute(ctx)
 	else:
-		for effect in skill.base_effects:
+		for effect: SkillEffect in skill.base_effects:
 			await effect.execute(ctx)
 
 	EventBus.skill_resolved.emit(ctx.caster, skill.skill_name)
@@ -460,29 +473,29 @@ func _resolve_skill(skill: SkillData, ctx: SkillContext) -> void:
 #region Enemy Turn
 func _roll_enemy_intents() -> void:
 	current_intents.clear()
-	var dice_sides := state.get_dice_size(state.turn_number) # 0-based
-	var dice_str = ColorUtils.colorize("d" + str(dice_sides), ColorUtils.COLOR_CARD)
+	var dice_sides: int = state.get_dice_size(state.turn_number) # 0-based
+	var dice_str: String = ColorUtils.colorize("d" + str(dice_sides), ColorUtils.COLOR_CARD)
 	ui.show_message("(Rolling %s)" % dice_str)
-	for enemy in state.enemies:
+	for enemy: Unit in state.enemies:
 		if enemy.is_dead:
 			continue
-		var roll := DiceRoller.roll(dice_sides)
-		var intent := EnemyIntent.new(enemy, roll)
+		var roll: int = DiceRoller.roll(dice_sides)
+		var intent: EnemyIntent = EnemyIntent.new(enemy, roll)
 		current_intents.append(intent)
 
 
 func _resolve_enemy_turns() -> void:
-	for intent in current_intents:
+	for intent: EnemyIntent in current_intents:
 		# Hide this enemy's intent the moment its action begins.
 		ui.clear_unit_intent(intent.enemy)
 	
 		if intent.enemy.is_dead:
 			continue
 			
-		var enemy_name = _color_unit(intent.enemy)
-		var dice_value = ColorUtils.colorize(str(intent.effective_value) + " V", ColorUtils.COLOR_CARD)
-		var skill_name = ColorUtils.colorize(intent.skill.skill_name, ColorUtils.COLOR_HEADER)
-		var condition_met = ""
+		var enemy_name: String = _color_unit(intent.enemy)
+		var dice_value: String = ColorUtils.colorize(str(intent.effective_value) + " V", ColorUtils.COLOR_CARD)
+		var skill_name: String = ColorUtils.colorize(intent.skill.skill_name, ColorUtils.COLOR_HEADER)
+		var condition_met: String = ""
 		if intent.condition_met == true:
 			condition_met = ColorUtils.colorize("Merged ", ColorUtils.COLOR_CARD)
 		ui.show_message("\n[%d] %s plays (%s) → %s%s" % [
@@ -493,7 +506,7 @@ func _resolve_enemy_turns() -> void:
 		if intent.condition_met and not intent.skill.merged_description.is_empty():
 			ui.show_message(ColorUtils.colorize("> " + intent.skill.merged_description, ColorUtils.COLOR_DEAD))
 			
-		var ctx := _build_enemy_context(intent.enemy, intent)
+		var ctx: SkillContext = _build_enemy_context(intent.enemy, intent)
 		await _resolve_skill(intent.skill, ctx)
 	
 		# Use effective_value, matching EnemyIntent's odd/even skill selection.
@@ -508,7 +521,7 @@ func _resolve_enemy_turns() -> void:
 			break
 			
 		if not intent.enemy.is_dead:
-			var gained := intent.enemy.gain_moxie(intent.effective_value)
+			var gained: int = intent.enemy.gain_moxie(intent.effective_value)
 			if gained > 0:
 				EventBus.moxie_changed.emit(intent.enemy, intent.enemy.moxie, intent.enemy.max_moxie)
 			if intent.enemy.can_cast_ultimate:
@@ -526,14 +539,14 @@ func _execute_enemy_ultimate(enemy: Unit) -> void:
 	EventBus.moxie_changed.emit(enemy, enemy.moxie, enemy.max_moxie)
 	EventBus.ultimate_cast.emit(enemy, ult.skill_name)
 	
-	var enemy_name := _color_unit(enemy)
-	var ult_str := ColorUtils.colorize("ULTIMATE: %s" % ult.skill_name, ColorUtils.COLOR_ENEMY)
+	var enemy_name: String = _color_unit(enemy)
+	var ult_str: String = ColorUtils.colorize("ULTIMATE: %s" % ult.skill_name, ColorUtils.COLOR_ENEMY)
 	ui.show_message("\n%s unleashes %s!" % [enemy_name, ult_str])
 	if ult.description != "":
 		ui.show_message(ColorUtils.colorize("> " + ult.description, ColorUtils.COLOR_DEAD))
 	
-	var dummy_intent := EnemyIntent.new(enemy, 0)
-	var ctx := _build_enemy_context(enemy, dummy_intent)
+	var dummy_intent: EnemyIntent = EnemyIntent.new(enemy, 0)
+	var ctx: SkillContext = _build_enemy_context(enemy, dummy_intent)
 	ctx.card_value = 0
 	ctx.is_merged = false
 	
@@ -544,15 +557,15 @@ func _execute_enemy_ultimate(enemy: Unit) -> void:
 #region Wave Management
 ## Returns true if a new wave was spawned (enemy turn should be skipped).
 func _try_advance_wave() -> bool:
-	var next_wave := state.current_wave + 1
+	var next_wave: int = state.current_wave + 1
 	if next_wave >= state.wave_definitions.size():
 		return false # no more waves
 	
-	var wave_header = ColorUtils.colorize("★ WAVE %d CLEARED! ★" % (state.current_wave + 1), ColorUtils.COLOR_HEADER)
+	var wave_header: String = ColorUtils.colorize("★ WAVE %d CLEARED! ★" % (state.current_wave + 1), ColorUtils.COLOR_HEADER)
 	ui.show_message("\n" + wave_header)
 	
 	# Clear all shields
-	for ally in state.allies:
+	for ally: Unit in state.allies:
 		ally.reset_shield()
 	
 	match state.wave_transition_mode:

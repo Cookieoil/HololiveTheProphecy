@@ -208,7 +208,7 @@ func setup(p_unit: Unit, p_card_catalog: IconCatalog, p_status_catalog: StatusIc
 
 	# Play born animation
 	if sprite.has_method("play_animation"):
-		sprite.play_animation(&"born")
+		sprite.call("play_animation", &"born")
 		
 	_skill_hud_active = false
 	play_intro()
@@ -392,12 +392,15 @@ func _update_glow_visibility() -> void:
 #region Drag & Drop
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	var mb: InputEventMouseButton = event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 		unit_clicked.emit(unit)
 
 
 func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
-	var drag: CardDrag = data as CardDrag
+	var drag: CardDrag = null
+	if data is CardDrag:
+		drag = data
 	if drag == null or unit == null or unit.is_dead or not unit.is_ally:
 		if _is_drag_hovering:
 			_reset_preview()
@@ -427,7 +430,9 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 
 
 func _drop_data(_pos: Vector2, data: Variant) -> void:
-	var drag: CardDrag = data as CardDrag
+	var drag: CardDrag = null
+	if data is CardDrag:
+		drag = data
 	_reset_preview()
 	if drag != null:
 		card_dropped_on_unit.emit(drag.card, unit)
@@ -462,19 +467,25 @@ func _reset_preview() -> void:
 func play_skill_animation(skill_index: int, rank: int = 0) -> void:
 	if sprite == null:
 		return
-	if sprite.has_method("play_skill_and_wait"):
-		await sprite.play_skill_and_wait(skill_index, rank)
+	var spine_portrait: SpinePortrait = sprite as SpinePortrait
+	if spine_portrait != null:
+		await spine_portrait.play_skill_and_wait(skill_index, rank)
+	elif sprite.has_method("play_skill_and_wait"):
+		await sprite.call("play_skill_and_wait", skill_index, rank)
 	elif sprite.has_method("play_skill"):
-		sprite.play_skill(skill_index, rank)
+		sprite.call("play_skill", skill_index, rank)
 		
 
 func play_ultimate_animation() -> void:
 	if sprite == null:
 		return
-	if sprite.has_method("play_ultimate_and_wait"):
-		await sprite.play_ultimate_and_wait()
+	var spine_portrait: SpinePortrait = sprite as SpinePortrait
+	if spine_portrait != null:
+		await spine_portrait.play_ultimate_and_wait()
+	elif sprite.has_method("play_ultimate_and_wait"):
+		await sprite.call("play_ultimate_and_wait")
 	elif sprite.has_method("play_animation"):
-		sprite.play_animation(&"unique")
+		sprite.call("play_animation", &"unique")
 
 
 func _play_skill_animation_for_card(card: Card) -> void:
@@ -482,18 +493,18 @@ func _play_skill_animation_for_card(card: Card) -> void:
 
 	if card.is_odd():
 		if card.is_double_merged:
-			sprite.play_animation(&"skill1_2")
+			sprite.call("play_animation", &"skill1_2")
 		elif card.is_merged:
-			sprite.play_animation(&"skill1_1")
+			sprite.call("play_animation", &"skill1_1")
 		else:
-			sprite.play_animation(&"skill1")
+			sprite.call("play_animation", &"skill1")
 	else:
-		sprite.play_animation(&"skill2_1")
+		sprite.call("play_animation", &"skill2_1")
 
 
 func play_character_animation(anim_name: StringName) -> void:
 	if sprite and sprite.has_method("play_animation"):
-		sprite.play_animation(anim_name)
+		sprite.call("play_animation", anim_name)
 
 #endregion
 
@@ -501,9 +512,10 @@ func play_character_animation(anim_name: StringName) -> void:
 #region Skill HUD fade
 
 func _is_skill_anim(anim: StringName) -> bool:
-	return sprite != null \
-		and sprite.has_method("is_skill_animation") \
-		and bool(sprite.call("is_skill_animation", anim))
+	if sprite == null or not sprite.has_method("is_skill_animation"):
+		return false
+	var res: bool = sprite.call("is_skill_animation", anim)
+	return res
 
 
 func _on_sprite_action_started(anim: StringName) -> void:
@@ -601,8 +613,11 @@ func _finish_intro() -> void:
 	if not _pending_intent.is_empty():
 		var p: Dictionary = _pending_intent
 		_pending_intent = {}
+		var p_text: String = p["text"]
+		var p_cats: PackedStringArray = p["categories"]
+		var p_delay: float = p["delay"]
 		# The original stagger delay still applies, so intents cascade in.
-		show_intent(p["text"], p["categories"], float(p["delay"]))
+		show_intent(p_text, p_cats, p_delay)
 
 
 func _cancel_intro() -> void:
@@ -619,7 +634,8 @@ func _kill_intro_tween() -> void:
 
 func _get_intro_duration() -> float:
 	if sprite != null and sprite.has_method("get_intro_duration"):
-		return float(sprite.call("get_intro_duration"))
+		var dur: float = sprite.call("get_intro_duration")
+		return dur
 	return 0.0  # Fallback TextureRect: fade in right away.
 
 #endregion
@@ -640,15 +656,18 @@ func _refresh_status_icons() -> void:
 	if statuses.is_empty() and status_icon_catalog != null:
 		statuses = status_icon_catalog.extract_unit_statuses(unit)
 
-	var sig := str(statuses)
+	var sig: String = str(statuses)
 	if sig == _last_status_signature: return
 	_last_status_signature = sig
 
-	for child in status_icons_grid.get_children():
+	for child: Node in status_icons_grid.get_children():
 		child.queue_free()
 
-	for st in statuses:
-		var badge := _create_e7_status_badge(st.get("icon", PLACEHOLDER_ICON), int(st.get("count", 1)), bool(st.get("is_debuff", false)))
+	for st: Dictionary in statuses:
+		var st_icon: Texture2D = st.get("icon", PLACEHOLDER_ICON)
+		var st_count: int = st.get("count", 1)
+		var st_debuff: bool = st.get("is_debuff", false)
+		var badge: Control = _create_e7_status_badge(st_icon, st_count, st_debuff)
 		status_icons_grid.add_child(badge)
 
 
@@ -706,7 +725,7 @@ func _refresh_display(delta: float) -> void:
 	var real_shield := maxf(0.0, float(unit.shield))
 
 	if sprite.has_method("set_dead"):
-		sprite.set_dead(unit.is_dead)
+		sprite.call("set_dead", unit.is_dead)
 
 	# --- Death visual scheduling (same delay as anim_die + shader tint) -----
 	if unit.is_dead and not _was_dead and _pending_death_timer < 0.0:
@@ -738,13 +757,19 @@ func _refresh_display(delta: float) -> void:
 			_chip_hold_timer = 0.0
 
 	# --- 1. Land matured hits (FIFO, they all share the same delay) --------
-	var landed := false
-	for h in _pending_hits:
-		h["delay"] = float(h["delay"]) - delta
-	while not _pending_hits.is_empty() and float(_pending_hits[0]["delay"]) <= 0.0:
+	var landed: bool = false
+	for h: Dictionary in _pending_hits:
+		var cur_delay: float = h["delay"]
+		h["delay"] = cur_delay - delta
+	while not _pending_hits.is_empty():
+		var first_delay: float = _pending_hits[0]["delay"]
+		if first_delay > 0.0:
+			break
 		var hit: Dictionary = _pending_hits.pop_front()
-		_withheld_hp -= float(hit["hp"])
-		_withheld_shield -= float(hit["shield"])
+		var hit_hp: float = hit["hp"]
+		var hit_sh: float = hit["shield"]
+		_withheld_hp -= hit_hp
+		_withheld_shield -= hit_sh
 		landed = true
 	if _pending_hits.is_empty():
 		_withheld_hp = 0.0      # clears float drift
@@ -764,20 +789,26 @@ func _refresh_display(delta: float) -> void:
 
 	# --- 2. Push flash to the shader ---------------------------------------
 	if sprite.has_method("set_hit_flash"):
-		sprite.set_hit_flash(clampf(_hit_flash_timer / HIT_FLASH_TIME, 0.0, 1.0))
+		sprite.call("set_hit_flash", clampf(_hit_flash_timer / HIT_FLASH_TIME, 0.0, 1.0))
 
 	# --- 3. Dead: only the shatter animates --------------------------------
 	if _was_dead:
 		if _shatter_timer > 0.0:
 			_shatter_timer = maxf(0.0, _shatter_timer - delta)
-			var elapsed := SHATTER_DURATION - _shatter_timer
-			var drag := exp(-10.5 * delta)
-			for shard in _shatter_shards:
-				if elapsed < float(shard["delay"]): continue
-				shard["vel"] *= drag
-				shard["vel"].y += 380.0 * delta
-				shard["pos"] += shard["vel"] * delta
-				shard["rot"] += float(shard["ang_vel"]) * delta
+			var elapsed: float = SHATTER_DURATION - _shatter_timer
+			var drag: float = exp(-10.5 * delta)
+			for shard: Dictionary in _shatter_shards:
+				var shard_delay: float = shard["delay"]
+				if elapsed < shard_delay: continue
+				var vel: Vector2 = shard["vel"]
+				vel *= drag
+				vel.y += 380.0 * delta
+				shard["vel"] = vel
+				var pos: Vector2 = shard["pos"]
+				shard["pos"] = pos + vel * delta
+				var rot: float = shard["rot"]
+				var ang_vel: float = shard["ang_vel"]
+				shard["rot"] = rot + ang_vel * delta
 		if health_bar_canvas:
 			health_bar_canvas.queue_redraw()
 		sprite.modulate = sprite.modulate.lerp(Color(0.35, 0.35, 0.35, 0.55), delta * 8.0)
@@ -903,16 +934,19 @@ func _draw_health_bar() -> void:
 				health_bar_canvas.draw_rect(r_rect, Color(0.45, 0.35, 0.38, 0.9), false, 1.0)
 				health_bar_canvas.draw_rect(Rect2(right_x - 0.5, -1.0, 3.5, sz.y + 2.0), Color(1.0, 0.85, 0.85, 0.9), true)
 
-		for shard in _shatter_shards:
-			var local_age := elapsed - float(shard["delay"])
-			var life := float(shard["life"])
+		for shard: Dictionary in _shatter_shards:
+			var s_delay: float = shard["delay"]
+			var local_age: float = elapsed - s_delay
+			var life: float = shard["life"]
 			if local_age < 0.0 or local_age >= life: continue
 
-			var t := local_age / life
-			var scale_f := lerpf(0.75, 1.15, t / 0.25) if t < 0.25 else lerpf(1.15, 0.15, (t - 0.25) / 0.75)
-			var alpha := 1.0 if t < 0.35 else (1.0 - ease((t - 0.35) / 0.65, 1.8))
+			var t: float = local_age / life
+			var scale_f: float = lerpf(0.75, 1.15, t / 0.25) if t < 0.25 else lerpf(1.15, 0.15, (t - 0.25) / 0.75)
+			var alpha: float = 1.0 if t < 0.35 else (1.0 - ease((t - 0.35) / 0.65, 1.8))
 
-			health_bar_canvas.draw_set_transform(shard["pos"], float(shard["rot"]), Vector2(scale_f, scale_f))
+			var s_pos: Vector2 = shard["pos"]
+			var s_rot: float = shard["rot"]
+			health_bar_canvas.draw_set_transform(s_pos, s_rot, Vector2(scale_f, scale_f))
 
 			var poly: PackedVector2Array = shard["poly"]
 			var core_col := Color(1.0, 0.98, 0.96, alpha).lerp(accent.lerp(Color(0.85, 0.70, 0.75, alpha), 0.5), clampf(t * 1.4, 0.0, 1.0))
@@ -1042,9 +1076,9 @@ func _on_unit_damaged(hp_lost: int, shield_lost: int) -> void:
 
 	# Fires for shield-only hits too.
 	if sprite.has_method("play_hit"):
-		sprite.play_hit()
+		sprite.call("play_hit")
 	elif sprite.has_method("play_animation"):
-		sprite.play_animation(&"hit", false)
+		sprite.call("play_animation", &"hit", false)
 
 
 func _get_effective_hit_flash_delay() -> float:
@@ -1052,16 +1086,24 @@ func _get_effective_hit_flash_delay() -> float:
 		return hit_flash_delay
 	if sprite != null:
 		var v: Variant = sprite.get("hit_reaction_delay")
-		if v != null:
-			return float(v)
+		if v is float:
+			var vf: float = v
+			return vf
+		elif v is int:
+			var vi: int = v
+			return float(vi)
 	return 0.0
 
 
 func _get_effective_death_delay() -> float:
 	if sprite != null:
 		var v: Variant = sprite.get("death_animation_delay")
-		if v != null:
-			return float(v)
+		if v is float:
+			var vf: float = v
+			return vf
+		elif v is int:
+			var vi: int = v
+			return float(vi)
 	return 0.0
 
 #endregion
@@ -1089,12 +1131,12 @@ func _render_skill_preview_icons(container: HBoxContainer, skill: SkillData, is_
 
 func _load_unit_texture(target_sprite: Control, unit_display_name: String) -> void:
 	if target_sprite.has_method("configure_from_unit"):
-		target_sprite.configure_from_unit(unit_display_name, not unit.is_ally)
+		target_sprite.call("configure_from_unit", unit_display_name, not unit.is_ally)
 		
 		if target_sprite.has_method("set_skeleton_data"):
 			# 1. OVERRIDE SYSTEM (The "Tickle Toggle")
 			if use_override_spine and override_spine_data != null:
-				target_sprite.set_skeleton_data(override_spine_data)
+				target_sprite.call("set_skeleton_data", override_spine_data)
 				return
 				
 			# 2. AUTOMATED FOLDER SEARCH
@@ -1112,7 +1154,7 @@ func _load_unit_texture(target_sprite: Control, unit_display_name: String) -> vo
 						if file_name.ends_with(".tres"):
 							var loaded_tres := load(spine_dir + file_name)
 							if loaded_tres:
-								target_sprite.set_skeleton_data(loaded_tres)
+								target_sprite.call("set_skeleton_data", loaded_tres)
 								break
 						file_name = dir.get_next()
 					dir.list_dir_end()

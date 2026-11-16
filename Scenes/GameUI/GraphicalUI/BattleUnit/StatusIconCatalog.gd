@@ -7,8 +7,8 @@ extends Resource
 const PLACEHOLDER_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
 
 @export var default_icon: Texture2D = PLACEHOLDER_ICON
-@export var buff_icons: Dictionary = {}   # status_id (String) -> Texture2D
-@export var debuff_icons: Dictionary = {} # status_id (String) -> Texture2D
+@export var buff_icons: Dictionary[String, Texture2D] = {}   # status_id (String) -> Texture2D
+@export var debuff_icons: Dictionary[String, Texture2D] = {} # status_id (String) -> Texture2D
 
 
 func get_status_icon(status_id: String) -> Texture2D:
@@ -22,8 +22,8 @@ func get_status_icon(status_id: String) -> Texture2D:
 func is_debuff_id(status_id: String) -> bool:
 	if debuff_icons.has(status_id):
 		return true
-	var lower := status_id.to_lower()
-	for kw in ["debuff", "weak", "vuln", "poison", "burn", "bleed", "stun", "slow", "curse", "down"]:
+	var lower: String = status_id.to_lower()
+	for kw: String in ["debuff", "weak", "vuln", "poison", "burn", "bleed", "stun", "slow", "curse", "down"]:
 		if lower.contains(kw):
 			return true
 	return false
@@ -36,19 +36,20 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 	if unit == null:
 		return result
 
-	var seen_ids: Dictionary = {}
+	var seen_ids: Dictionary[String, bool] = {}
 
 	# 1. Check common dictionary / array containers if present on Unit
-	for container_prop in ["statuses", "status_effects", "active_effects", "buffs", "debuffs"]:
+	for container_prop: String in ["statuses", "status_effects", "active_effects", "buffs", "debuffs"]:
 		if container_prop in unit:
 			var val: Variant = unit.get(container_prop)
 			var force_debuff: bool = (container_prop == "debuffs")
 			if val is Dictionary:
-				for k in val.keys():
-					var raw_entry: Variant = val[k]
+				var dict_val: Dictionary = val
+				for k: Variant in dict_val.keys():
+					var raw_entry: Variant = dict_val[k]
 					var count: int = _extract_count(raw_entry)
 					if count > 0:
-						var id_str := str(k)
+						var id_str: String = str(k)
 						seen_ids[id_str] = true
 						result.append({
 							"id": id_str,
@@ -57,10 +58,12 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 							"icon": get_status_icon(id_str)
 						})
 			elif val is Array:
-				for item in val:
-					var info := _parse_status_object(item, force_debuff)
+				var arr_val: Array = val
+				for item: Variant in arr_val:
+					var info: Dictionary = _parse_status_object(item, force_debuff)
 					if not info.is_empty():
-						seen_ids[info["id"]] = true
+						var info_id: String = info["id"]
+						seen_ids[info_id] = true
 						result.append(info)
 
 	# 2. Check flat numeric/boolean buff properties on Unit (e.g. Striker's next-attack buff)
@@ -79,7 +82,7 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 		{"prop": "weak", "id": "weak", "charges_prop": "", "one_shot": false},
 	]
 
-	for entry in candidate_props:
+	for entry: Dictionary in candidate_props:
 		var prop_name: String = entry["prop"]
 		var status_id: String = entry["id"]
 		if seen_ids.has(status_id) or not (prop_name in unit):
@@ -87,18 +90,32 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 		var raw_val: Variant = unit.get(prop_name)
 		var is_active: bool = false
 		var display_count: int = 1
+		var one_shot: bool = entry["one_shot"]
 
 		if raw_val is bool:
-			is_active = raw_val
+			var b_val: bool = raw_val
+			is_active = b_val
 			display_count = 1
-		elif raw_val is int or raw_val is float:
-			is_active = raw_val > 0
+		elif raw_val is int:
+			var i_val: int = raw_val
+			is_active = i_val > 0
+			display_count = 1 if one_shot else i_val
+		elif raw_val is float:
+			var f_val: float = raw_val
+			is_active = f_val > 0.0
 			# Next-attack buffs display "1" at the top-left to indicate 1 use remaining
-			display_count = 1 if entry["one_shot"] else int(raw_val)
+			display_count = 1 if one_shot else int(f_val)
 
 		var charges_prop: String = entry["charges_prop"]
 		if charges_prop != "" and (charges_prop in unit):
-			var c_val: int = int(unit.get(charges_prop))
+			var raw_charges: Variant = unit.get(charges_prop)
+			var c_val: int = 0
+			if raw_charges is int:
+				var ci: int = raw_charges
+				c_val = ci
+			elif raw_charges is float:
+				var cf: float = raw_charges
+				c_val = int(cf)
 			if c_val > 0:
 				display_count = c_val
 
@@ -113,14 +130,25 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 
 	# 3. Dynamic fallback: scan script variables for any custom *buff* or *debuff* property > 0
 	if result.is_empty():
-		for prop_dict in unit.get_property_list():
-			if not (prop_dict.usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
+		for prop_dict: Dictionary in unit.get_property_list():
+			var usage_val: int = prop_dict["usage"]
+			if not (usage_val & PROPERTY_USAGE_SCRIPT_VARIABLE):
 				continue
-			var p_name: String = prop_dict.name
-			var lower := p_name.to_lower()
+			var p_name: String = prop_dict["name"]
+			var lower: String = p_name.to_lower()
 			if lower.contains("buff") or lower.contains("debuff") or lower.contains("bonus"):
 				var v: Variant = unit.get(p_name)
-				if (v is bool and v) or ((v is int or v is float) and v > 0):
+				var v_active: bool = false
+				if v is bool:
+					var vb: bool = v
+					v_active = vb
+				elif v is int:
+					var vi: int = v
+					v_active = vi > 0
+				elif v is float:
+					var vf: float = v
+					v_active = vf > 0.0
+				if v_active:
 					result.append({
 						"id": p_name,
 						"count": 1,
@@ -132,35 +160,66 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 
 
 func _extract_count(raw: Variant) -> int:
-	if raw is int or raw is float:
-		return int(raw)
+	if raw is int:
+		var ri: int = raw
+		return ri
+	if raw is float:
+		var rf: float = raw
+		return int(rf)
 	if raw is bool:
-		return 1 if raw else 0
+		var rb: bool = raw
+		return 1 if rb else 0
 	if raw is Dictionary:
-		for k in ["stacks", "charges", "turns", "duration", "count", "amount", "value"]:
-			if raw.has(k) and int(raw[k]) > 0:
-				return int(raw[k])
+		var rd: Dictionary = raw
+		for k: String in ["stacks", "charges", "turns", "duration", "count", "amount", "value"]:
+			if rd.has(k):
+				var kv: int = _extract_scalar_int(rd[k])
+				if kv > 0:
+					return kv
 		return 1
 	if raw is Object:
-		for k in ["stacks", "charges", "turns", "duration", "count"]:
-			if k in raw and int(raw.get(k)) > 0:
-				return int(raw.get(k))
+		var ro: Object = raw
+		for k: String in ["stacks", "charges", "turns", "duration", "count"]:
+			if k in ro:
+				var kv: int = _extract_scalar_int(ro.get(k))
+				if kv > 0:
+					return kv
 		return 1
+	return 0
+
+
+func _extract_scalar_int(v: Variant) -> int:
+	if v is int:
+		var vi: int = v
+		return vi
+	if v is float:
+		var vf: float = v
+		return int(vf)
+	if v is bool:
+		var vb: bool = v
+		return 1 if vb else 0
 	return 0
 
 
 func _parse_status_object(item: Variant, force_debuff: bool) -> Dictionary:
 	if item is String:
+		var s_item: String = item
 		return {
-			"id": item,
+			"id": s_item,
 			"count": 1,
-			"is_debuff": force_debuff or is_debuff_id(item),
-			"icon": get_status_icon(item)
+			"is_debuff": force_debuff or is_debuff_id(s_item),
+			"icon": get_status_icon(s_item)
 		}
 	if item is Dictionary:
-		var id_str: String = str(item.get("id", item.get("name", "buff")))
-		var cnt: int = maxi(1, _extract_count(item))
-		var debuff: bool = force_debuff or bool(item.get("is_debuff", is_debuff_id(id_str)))
+		var d_item: Dictionary = item
+		var id_str: String = str(d_item.get("id", d_item.get("name", "buff")))
+		var cnt: int = maxi(1, _extract_count(d_item))
+		var raw_debuff: Variant = d_item.get("is_debuff", is_debuff_id(id_str))
+		var debuff_flag: bool = is_debuff_id(id_str)
+		if raw_debuff is bool:
+			var rb: bool = raw_debuff
+			debuff_flag = rb
+		var debuff: bool = force_debuff or debuff_flag
 		return {
 			"id": id_str,
 			"count": cnt,
@@ -168,13 +227,20 @@ func _parse_status_object(item: Variant, force_debuff: bool) -> Dictionary:
 			"icon": get_status_icon(id_str)
 		}
 	if item is Object:
+		var o_item: Object = item
 		var id_str: String = "buff"
-		if "id" in item:
-			id_str = str(item.get("id"))
-		elif "name" in item:
-			id_str = str(item.get("name"))
-		var cnt: int = maxi(1, _extract_count(item))
-		var debuff: bool = force_debuff or (bool(item.get("is_debuff")) if "is_debuff" in item else is_debuff_id(id_str))
+		if "id" in o_item:
+			id_str = str(o_item.get("id"))
+		elif "name" in o_item:
+			id_str = str(o_item.get("name"))
+		var cnt: int = maxi(1, _extract_count(o_item))
+		var obj_debuff: bool = is_debuff_id(id_str)
+		if "is_debuff" in o_item:
+			var raw_od: Variant = o_item.get("is_debuff")
+			if raw_od is bool:
+				var od_bool: bool = raw_od
+				obj_debuff = od_bool
+		var debuff: bool = force_debuff or obj_debuff
 		return {
 			"id": id_str,
 			"count": cnt,

@@ -31,7 +31,7 @@ var hand: Array[Card] = []
 var discard: Array[Card] = []
 var played_this_turn: Array[Card] = []
 ## Maps a temporary merged/double-merged Card -> Array[Card] of original base deck cards.
-var _merged_sources: Dictionary = {}
+var _merged_sources: Dictionary[Card, Array] = {}
 
 ## Draw cards
 var max_hand_size: int = MAX_HAND_SIZE
@@ -57,8 +57,8 @@ var turn_number: int = 0
 ## @param Array[UnitData] - an array contains all unit data
 func initialize_allies(ally_data: Array[UnitData]) -> void:
 	allies.clear()
-	for i in ally_data.size():
-		var u := Unit.new(ally_data[i], i)
+	for i: int in ally_data.size():
+		var u: Unit = Unit.new(ally_data[i], i)
 		allies.append(u)
 
 ## Clear all enemies from previous round, 
@@ -66,8 +66,8 @@ func initialize_allies(ally_data: Array[UnitData]) -> void:
 ## @param Array[UnitData] - an array contains all unit data
 func initialize_enemies(enemy_data: Array[UnitData]) -> void:
 	enemies.clear()
-	for i in enemy_data.size():
-		var u := Unit.new(enemy_data[i], i)
+	for i: int in enemy_data.size():
+		var u: Unit = Unit.new(enemy_data[i], i)
 		u.is_ally = false
 		enemies.append(u)
 
@@ -81,10 +81,10 @@ func build_deck(decklist: Array = CURRENT_DECKLIST) -> void:
 	discard.clear()
 	played_this_turn.clear()
 	_merged_sources.clear()
-	for entry in decklist:
+	for entry: Array in decklist:
 		var value: int = entry[0]
 		var count: int = entry[1]
-		for i in count:
+		for i: int in count:
 			deck.append(Card.new(value))
 	deck.shuffle()
 	
@@ -101,7 +101,7 @@ func set_dice_progression(prog: Array[int]) -> void:
 ## @return Array[Card] - an array of drawn cards
 func draw_n_cards(count: int) -> Array[Card]:
 	var drawn: Array[Card] = []
-	for i in count:
+	for i: int in count:
 		if deck.is_empty():
 			if discard.is_empty():
 				# Breaks the loop, no cards left in the game
@@ -121,8 +121,8 @@ func draw_n_cards(count: int) -> Array[Card]:
 ## @param int - the hand limit
 ## @return Array[Card] - call draw_n_cards to returns an array of cards
 func draw_cards_to_limit(hand_limit: int = -1) -> Array[Card]:
-	var limit := max_hand_size if hand_limit < 0 else hand_limit
-	var to_draw := limit - hand.size()
+	var limit: int = max_hand_size if hand_limit < 0 else hand_limit
+	var to_draw: int = limit - hand.size()
 	if to_draw <= 0:
 		return []
 	return draw_n_cards(to_draw)
@@ -134,7 +134,8 @@ func draw_cards_to_limit(hand_limit: int = -1) -> Array[Card]:
 func _extract_base_cards(card: Card) -> Array[Card]:
 	if _merged_sources.has(card):
 		var sources: Array[Card] = []
-		for sub in _merged_sources[card]:
+		var sub_cards: Array = _merged_sources[card]
+		for sub: Card in sub_cards:
 			sources.append_array(_extract_base_cards(sub))
 		_merged_sources.erase(card)
 		return sources
@@ -146,7 +147,7 @@ func _extract_base_cards(card: Card) -> Array[Card]:
 func _reset_and_discard(card: Card) -> void:
 	if card == null:
 		return
-	for base_card in _extract_base_cards(card):
+	for base_card: Card in _extract_base_cards(card):
 		base_card.clear_temp_buffs()
 		base_card.current_value = base_card.base_value
 		base_card.is_merged = false
@@ -179,7 +180,7 @@ func play_card_on_ally(card: Card, _ally: Unit) -> bool:
 ## Move played cards to discard pile, clearing temporary buffs and
 ## unpacking any merged cards back into their base components.
 func end_player_turn_cleanup() -> void:
-	for card in played_this_turn:
+	for card: Card in played_this_turn:
 		_reset_and_discard(card)
 	played_this_turn.clear()
 	
@@ -300,27 +301,27 @@ func try_merge(a: Card, b: Card) -> Card:
 ## Returns the card with the highest effective value in hand, or null.
 func get_highest_card_in_hand() -> Card:
 	var best: Card = null
-	for c in hand:
+	for c: Card in hand:
 		if best == null or c.get_effective_value() > best.get_effective_value():
 			best = c
 	return best
 	
 ## Returns the card with the lowest effective value in hand, or null.
 func get_lowest_card_in_hand() -> Card:
-	var worst : Card = null
-	for c in hand:
+	var worst: Card = null
+	for c: Card in hand:
 		if worst == null or c.get_effective_value() < worst.get_effective_value():
 			worst = c
 	return worst
 	
 ## Returns the N highest-value cards in hand (sorted descending).
 func get_top_n_cards(n: int) -> Array[Card]:
-	var sorted_hand := hand.duplicate()
+	var sorted_hand: Array[Card] = hand.duplicate()
 	sorted_hand.sort_custom(func(a: Card, b: Card) -> bool:
 		return a.get_effective_value() > b.get_effective_value()
 	)
 	var result: Array[Card] = []
-	for i in mini(n, sorted_hand.size()):
+	for i: int in mini(n, sorted_hand.size()):
 		result.append(sorted_hand[i])
 	return result
 #endregion
@@ -335,31 +336,31 @@ static func scaled_value(value: int, divisor: int = 1) -> int:
 
 func get_living_allies() -> Array[Unit]:
 	var result: Array[Unit] = []
-	for u in allies:
+	for u: Unit in allies:
 		if not u.is_dead:
 			result.append(u)
 	return result
 	
 func get_living_enemies() -> Array[Unit]:
 	var result: Array[Unit] = []
-	for u in enemies:
+	for u: Unit in enemies:
 		if not u.is_dead:
 			result.append(u)
 	return result
 	
 ## Returns the dice size for a given turn (0-based index).
 func get_dice_size(turn_index: int) -> int:
-	var idx := mini(turn_index, turn_dice_progression.size() - 1)
+	var idx: int = mini(turn_index, turn_dice_progression.size() - 1)
 	return turn_dice_progression[idx] + dice_size_modifier
 
 func all_enemies_dead() -> bool:
-	for u in enemies:
+	for u: Unit in enemies:
 		if not u.is_dead:
 			return false
 	return true
 
 func all_allies_dead() -> bool:
-	for u in allies:
+	for u: Unit in allies:
 		if not u.is_dead:
 			return false
 	return true
@@ -378,13 +379,13 @@ func get_merge_error(a: Card, b: Card) -> String:
 		return ""  # valid – cross merge is allowed
 	
 	# At least one is merged – check double merge conditions
-	var a_val = a.get_effective_value()
-	var b_val = b.get_effective_value()
+	var a_val: int = a.get_effective_value()
+	var b_val: int = b.get_effective_value()
 	
 	# Exactly one is merged → the merged card's value must match the unmerged card's value
 	if a.is_merged != b.is_merged:
-		var merged = a if a.is_merged else b
-		var unmerged = b if a.is_merged else a
+		var merged: Card = a if a.is_merged else b
+		var unmerged: Card = b if a.is_merged else a
 		if merged.get_effective_value() == unmerged.get_effective_value():
 			return ""  # valid double merge
 		else:

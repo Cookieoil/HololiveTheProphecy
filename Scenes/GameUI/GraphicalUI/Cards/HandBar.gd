@@ -124,11 +124,15 @@ func _get_game_state() -> GameState:
 		candidates.append(curr)
 		curr = curr.get_parent()
 
-	for node in candidates:
+	for node: Node in candidates:
 		var gm: Variant = node.get("game_manager")
-		if gm != null and is_instance_valid(gm) and gm.get("state") != null:
-			game_state = gm.get("state") as GameState
-			return game_state
+		if gm is Object and is_instance_valid(gm):
+			var gm_obj: Object = gm
+			var raw_state: Variant = gm_obj.get("state")
+			if raw_state is GameState:
+				var gs: GameState = raw_state
+				game_state = gs
+				return game_state
 
 	return null
 

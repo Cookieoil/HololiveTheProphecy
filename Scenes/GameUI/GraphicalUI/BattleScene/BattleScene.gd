@@ -23,7 +23,7 @@ extends GameUI
 @onready var log_label: Label = $HUD/MessageLog
 
 var game_manager: GameManager
-var _intent_cache: Dictionary = {}
+var _intent_cache: Dictionary[Unit, Dictionary] = {}
 
 signal action_decided(action_dict: Dictionary)
 signal unit_selected_for_target(unit: Unit)
@@ -35,8 +35,8 @@ func _ready() -> void:
 	if status_icon_catalog == null:
 		status_icon_catalog = StatusIconCatalog.new()
 
-	end_turn_button.pressed.connect(func(): action_decided.emit({"type": "end_turn"}))
-	convert_button.pressed.connect(func(): action_decided.emit({"type": "convert"}))
+	end_turn_button.pressed.connect(func() -> void: action_decided.emit({"type": "end_turn"}))
+	convert_button.pressed.connect(func() -> void: action_decided.emit({"type": "convert"}))
 	hand_bar.merge_requested.connect(_on_merge_requested)
 
 	game_manager = GameManager.new()
@@ -47,18 +47,19 @@ func _ready() -> void:
 	battle_overlay.setup(game_manager, icon_catalog)
 	battle_overlay.ally_ultimate_requested.connect(_on_ally_ultimate_requested)
 
-	var db = DataLoader.db()
+	var db: GameDatabase = DataLoader.db()
 	var ally_ids: Array = db.config.get("allies", ["striker", "healer", "buff"])
 	var ally_data: Array[UnitData] = []
-	for id in ally_ids:
+	for id: String in ally_ids:
 		if db.units.has(id):
-			ally_data.append(db.units[id])
+			var ud: UnitData = db.units[id]
+			ally_data.append(ud)
 
 	var config: Dictionary = db.config.duplicate()
 	if not turn_dice_progression.is_empty():
 		config["dice_progression"] = turn_dice_progression
 
-	game_manager.setup_game(ally_data, db.waves, self, config)
+	await game_manager.setup_game(ally_data, db.waves, self, config)
 
 
 #region GameUI Overrides
@@ -107,13 +108,7 @@ func show_hand_and_resources(state: GameState) -> void:
 func _update_top_bar(state: GameState) -> void:
 	if state == null:
 		return
-	var wave_num: int = 1
-	if "current_wave" in state:
-		wave_num = int(state.get("current_wave")) + 1
-	elif "wave_index" in state:
-		wave_num = int(state.get("wave_index")) + 1
-	elif "turn_number" in state:
-		wave_num = state.turn_number
+	var wave_num: int = state.current_wave + 1
 
 	wave_value_label.text = str(wave_num)
 	dice_value_label.text = str(state.get_dice_size(state.turn_number))
@@ -156,10 +151,13 @@ func _apply_intent_to(u_ui: UnitUI) -> void:
 	if entry.is_empty() or u_ui.unit.is_dead:
 		u_ui.clear_intent()
 	else:
+		var intent_text: String = entry["text"]
+		var intent_cats: PackedStringArray = entry["categories"]
+		var intent_order: int = entry["order"]
 		u_ui.show_intent(
-			entry["text"],
-			entry["categories"],
-			int(entry["order"]) * INTENT_STAGGER
+			intent_text,
+			intent_cats,
+			intent_order * INTENT_STAGGER
 		)
 
 
@@ -278,36 +276,37 @@ func _highlight_target_candidates(units: Array[Unit], active: bool) -> void:
 
 
 func _get_unit_ui(target_unit: Unit) -> UnitUI:
-	for container in [enemies_container, allies_container]:
-		for child in container.get_children():
-			var u_ui := child as UnitUI
+	var containers: Array[HBoxContainer] = [enemies_container, allies_container]
+	for container: HBoxContainer in containers:
+		for child: Node in container.get_children():
+			var u_ui: UnitUI = child as UnitUI
 			if u_ui and not u_ui.is_queued_for_deletion() and u_ui.unit == target_unit:
 				return u_ui
 	return null
 
 
-func _sync_unit_row(container: HBoxContainer, units: Array, is_ally: bool) -> void:
+func _sync_unit_row(container: HBoxContainer, units: Array[Unit], is_ally: bool) -> void:
 	var total: int = units.size()
 
 	# Reuse existing UnitUI nodes if they already match the current units
 	if container.get_child_count() == total:
-		var same_units := true
-		for idx in total:
+		var same_units: bool = true
+		for idx: int in total:
 			var data_idx: int = idx if is_ally else (total - 1 - idx)
-			var u_ui := container.get_child(idx) as UnitUI
+			var u_ui: UnitUI = container.get_child(idx) as UnitUI
 			if u_ui == null or u_ui.unit != units[data_idx]:
 				same_units = false
 				break
 		if same_units:
 			return
 
-	for child in container.get_children():
+	for child: Node in container.get_children():
 		child.queue_free()
 
-	for idx in total:
+	for idx: int in total:
 		var data_idx: int = idx if is_ally else (total - 1 - idx)
-		var unit := units[data_idx] as Unit
-		var card_ui: UnitUI = unit_ui_scene.instantiate()
+		var unit: Unit = units[data_idx]
+		var card_ui: UnitUI = unit_ui_scene.instantiate() as UnitUI
 		container.add_child(card_ui)
 		card_ui.setup(unit, icon_catalog, status_icon_catalog)
 		card_ui.play_intro(idx * 0.1)

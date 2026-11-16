@@ -1,0 +1,46 @@
+# --- Godot Engine Generated Files ---
+# Never let the AI read engine cache, imported assets, or build files
+.godot/
+.import/
+bin/
+export.cfg
+export_presets.cfg
+
+# --- Third-Party Addons ---
+# The AI shouldn't read the source code of your plugins (gdUnit4, godotsize, etc.)
+addons/
+
+# --- Project Specific Folders ---
+# Ignore test reports, temporary trash, and raw design spreadsheets
+reports/
+Trash/
+*.xlsx
+
+# --- Binary Assets (Huge token wasters) ---
+# AI cannot read the pixel data of images or audio anyway
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.webp
+*.wav
+*.ogg
+*.mp3
+*.ttf
+*.otf
+*.blend
+*.glb
+*.fbx
+*.res
+*.scn
+
+# --- IDE & OS Files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Git & Version Control ---
+.git/
+.gitattributes
+.gitignore

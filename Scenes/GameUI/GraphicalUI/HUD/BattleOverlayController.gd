@@ -16,8 +16,8 @@ var _ally_rail: VBoxContainer
 var _tooltip_layer: CanvasLayer
 var _tooltip: SkillTooltipPopup
 
-var _orbs_by_unit: Dictionary = {} # Unit -> MoxieOrbUI
-var _units_to_ui: Dictionary = {}  # Unit -> UnitUI
+var _orbs_by_unit: Dictionary[Unit, MoxieOrbUI] = {} # Unit -> MoxieOrbUI
+var _units_to_ui: Dictionary[Unit, UnitUI] = {}      # Unit -> UnitUI
 var _current_ally_units: Array[Unit] = []
 var _current_enemy_units: Array[Unit] = []
 
@@ -106,8 +106,7 @@ func rebuild_for_units(ally_uis: Array[UnitUI], enemy_uis: Array[UnitUI]) -> voi
 ## Toggle whether ally Ultimate orbs can be clicked right now (true inside get_player_action).
 func set_player_turn_interactive(enabled: bool) -> void:
 	_player_input_enabled = enabled
-	for u_var: Variant in _orbs_by_unit.keys().duplicate():
-		var u := u_var as Unit
+	for u: Unit in _orbs_by_unit.keys().duplicate():
 		if u == null or not u.is_ally:
 			continue
 		var orb := _get_valid_orb(u)
@@ -117,8 +116,7 @@ func set_player_turn_interactive(enabled: bool) -> void:
 
 ## Updates enemy orb preview segments from GameManager.current_intents & refreshes Enemy Ult warnings.
 func sync_enemy_intent_previews() -> void:
-	for u_var: Variant in _orbs_by_unit.keys().duplicate():
-		var u := u_var as Unit
+	for u: Unit in _orbs_by_unit.keys().duplicate():
 		if u == null or u.is_ally:
 			continue
 
@@ -133,8 +131,7 @@ func sync_enemy_intent_previews() -> void:
 
 
 func clear_enemy_intent_previews() -> void:
-	for u_var: Variant in _orbs_by_unit.keys().duplicate():
-		var u := u_var as Unit
+	for u: Unit in _orbs_by_unit.keys().duplicate():
 		if u == null or u.is_ally:
 			continue
 
@@ -152,42 +149,39 @@ func clear_enemy_intent_previews() -> void:
 func _is_live_unit_ui(raw: Variant) -> bool:
 	if raw == null or not is_instance_valid(raw):
 		return false
-	var node := raw as Node
-	if node == null or node.is_queued_for_deletion():
+	if not (raw is UnitUI):
 		return false
-	var uui := raw as UnitUI
-	return uui != null and uui.unit != null
+	var uui: UnitUI = raw
+	if uui.is_queued_for_deletion():
+		return false
+	return uui.unit != null
 
 
 func _get_valid_orb(u: Unit) -> MoxieOrbUI:
 	if u == null or not _orbs_by_unit.has(u):
 		return null
-	var raw: Variant = _orbs_by_unit.get(u)
-	if raw == null or not is_instance_valid(raw):
+	var orb: MoxieOrbUI = _orbs_by_unit[u]
+	if orb == null or not is_instance_valid(orb) or orb.is_queued_for_deletion():
 		_orbs_by_unit.erase(u)
 		return null
-	var node := raw as Node
-	if node == null or node.is_queued_for_deletion():
-		_orbs_by_unit.erase(u)
-		return null
-	return raw as MoxieOrbUI
+	return orb
 
 
 func _get_valid_unit_ui(u: Unit) -> UnitUI:
 	if u == null:
 		return null
 	if _units_to_ui.has(u):
-		var raw: Variant = _units_to_ui.get(u)
-		if _is_live_unit_ui(raw) and (raw as UnitUI).unit == u:
-			return raw as UnitUI
+		var cached_uui: UnitUI = _units_to_ui[u]
+		if _is_live_unit_ui(cached_uui) and cached_uui.unit == u:
+			return cached_uui
 		_units_to_ui.erase(u)
 
 	# Fallback: if BattleScene just replaced UnitUIs this frame, find & bind the live one immediately
-	var row := _allies_row if u.is_ally else _enemies_row
+	var row: Control = _allies_row if u.is_ally else _enemies_row
 	if row != null and is_instance_valid(row):
-		for child in row.get_children():
-			if _is_live_unit_ui(child) and (child as UnitUI).unit == u:
-				var found := child as UnitUI
+		for child: Node in row.get_children():
+			var found: UnitUI = child as UnitUI
+			if found != null and _is_live_unit_ui(found) and found.unit == u:
 				_bind_unit_ui(found)
 				return found
 	return null
@@ -327,18 +321,20 @@ func _spawn_orb(parent: BoxContainer, unit: Unit, code: String, uui: UnitUI = nu
 func _extract_unit_portrait(uui: UnitUI, unit: Unit) -> Texture2D:
 	# 1. Check UnitData first (e.g. @export var portrait: Texture2D)
 	if unit != null and unit.data != null:
-		for prop in ["portrait", "avatar", "icon", "unit_portrait", "texture"]:
+		for prop: String in ["portrait", "avatar", "icon", "unit_portrait", "texture"]:
 			var val: Variant = unit.data.get(prop)
 			if val is Texture2D:
-				return val as Texture2D
+				var tex: Texture2D = val
+				return tex
 
 	# 2. Fallback: extract frame 0 / portrait texture directly from UnitUI
 	if uui == null or not is_instance_valid(uui):
 		return null
-	for prop in ["portrait", "portrait_texture"]:
+	for prop: String in ["portrait", "portrait_texture"]:
 		var val: Variant = uui.get(prop)
 		if val is Texture2D:
-			return val as Texture2D
+			var tex: Texture2D = val
+			return tex
 
 	return _find_character_texture_in_node(uui)
 
@@ -398,8 +394,11 @@ func _bind_unit_ui(uui: UnitUI) -> void:
 
 
 func _get_state() -> GameState:
-	if game_manager != null and is_instance_valid(game_manager) and game_manager.get("state") != null:
-		return game_manager.get("state") as GameState
+	if game_manager != null and is_instance_valid(game_manager):
+		var raw_state: Variant = game_manager.get("state")
+		if raw_state is GameState:
+			var gs: GameState = raw_state
+			return gs
 	return null
 
 
@@ -408,10 +407,12 @@ func _find_intent_for_enemy(enemy: Unit) -> EnemyIntent:
 		return null
 	var intents: Variant = game_manager.get("current_intents")
 	if intents is Array:
-		for it in intents:
-			var ei := it as EnemyIntent
-			if ei != null and ei.enemy == enemy:
-				return ei
+		var intent_arr: Array = intents
+		for it: Variant in intent_arr:
+			if it is EnemyIntent:
+				var ei: EnemyIntent = it
+				if ei.enemy == enemy:
+					return ei
 	return null
 
 

@@ -163,7 +163,8 @@ func show_callout(data: Dictionary, anchor_rect: Rect2) -> void:
 	_footer_rtl.visible = has_foot
 	_footer_sep.visible = has_foot
 
-	_rebuild_category_icons(data.get("categories", PackedStringArray()))
+	var categories_val: PackedStringArray = data.get("categories", PackedStringArray())
+	_rebuild_category_icons(categories_val)
 
 	# Make visible before measuring so Container sorting is active on the very first hover
 	var was_visible := visible

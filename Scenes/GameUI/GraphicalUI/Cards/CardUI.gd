@@ -105,8 +105,9 @@ func is_consumed() -> bool:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if _pick_selectable and event is InputEventMouseButton \
-			and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	var mb: InputEventMouseButton = event as InputEventMouseButton
+	if _pick_selectable and mb != null \
+			and mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 		var hb := _find_hand_bar()
 		if hb != null:
 			hb.card_clicked.emit(card)
@@ -495,7 +496,9 @@ func _on_return_finished(layer: CanvasLayer) -> void:
 #region Merge drop target
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	var drag: CardDrag = data as CardDrag
+	var drag: CardDrag = null
+	if data is CardDrag:
+		drag = data
 	if drag == null or drag.card == null or drag.card == card:
 		merge_glow.visible = false
 		return false
@@ -515,7 +518,9 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
-	var drag: CardDrag = data as CardDrag
+	var drag: CardDrag = null
+	if data is CardDrag:
+		drag = data
 	merge_glow.visible = false
 
 	if drag == null or drag.card == null:

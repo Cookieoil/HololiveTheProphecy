@@ -107,11 +107,11 @@ enum CardModType {
 #region Helpers
 # Helper for coloring unit names based on side
 func _color_unit(unit: Unit) -> String:
-	var col = ColorUtils.COLOR_ALLY if unit.is_ally else ColorUtils.COLOR_ENEMY
+	var col: String = ColorUtils.COLOR_ALLY if unit.is_ally else ColorUtils.COLOR_ENEMY
 	return ColorUtils.colorize(unit.data.display_name, col)
 
 func _color_value(value: int, type: String = "hp") -> String:
-	var col = ColorUtils.COLOR_HP if type == "hp" else ColorUtils.COLOR_SHIELD
+	var col: String = ColorUtils.COLOR_HP if type == "hp" else ColorUtils.COLOR_SHIELD
 	return ColorUtils.colorize(str(value), col)
 
 func _color_card(card: Card) -> String:
@@ -252,36 +252,36 @@ func _resolve_value(ctx: SkillContext) -> int:
 
 #region Phase 4: Execute Action
 func execute(ctx: SkillContext) -> void:
-	var targets := await _resolve_targets(ctx)
+	var targets: Array[Unit] = await _resolve_targets(ctx)
 	if not _check_condition(ctx):
-		var caster_name = _color_unit(ctx.caster)
+		var caster_name: String = _color_unit(ctx.caster)
 		ctx.log(ColorUtils.colorize("%s - condition not met. Skipped." \
 		% caster_name, ColorUtils.COLOR_DEAD))
 		return # early exit
 	
-	var value := _resolve_value(ctx)
+	var value: int = _resolve_value(ctx)
 	
 	match action_type:
 		Action.DEAL_DAMAGE:
-			await _deal_damage(ctx, targets, maxi(1, value))
+			_deal_damage(ctx, targets, maxi(1, value))
 		
 		Action.GAIN_SHIELD:
-			await _gain_shield(ctx, targets, value)
+			_gain_shield(ctx, targets, value)
 		
 		Action.REDUCE_SHIELD:
-			await _reduce_shield(ctx, targets, value)
+			_reduce_shield(ctx, targets, value)
 			
 		Action.HEAL:
-			await _heal(ctx, targets, value)
+			_heal(ctx, targets, value)
 			
 		Action.DEAL_TRUE_DAMAGE:
-			await _deal_true_damage(ctx, targets, value)
+			_deal_true_damage(ctx, targets, value)
 			
 		Action.ADD_BONUS:
-			await _add_bonus(ctx, value)
+			_add_bonus(ctx, value)
 			
 		Action.APPLY_MODIFIER:
-			await _apply_modifier(ctx, targets, value)
+			_apply_modifier(ctx, targets, value)
 			
 		Action.MODIFY_CARD:
 			await _modify_card(ctx, value)
@@ -290,35 +290,35 @@ func execute(ctx: SkillContext) -> void:
 			await _discard_card(ctx)
 			
 		Action.DRAW_CARD:
-			await _draw_card(ctx)
+			_draw_card(ctx)
 			
 		Action.SET_NEXT_SKILL_BONUS:
-			await _set_next_skill_bonus(ctx, value)
+			_set_next_skill_bonus(ctx, value)
 			
 		Action.RAISE_MAX_HP:
-			await _raise_max_hp(ctx, targets, value)
+			_raise_max_hp(ctx, targets, value)
 			
 	if store_resolved_value:
 		ctx.stored_value = value
 		
 func _deal_damage(ctx: SkillContext, targets: Array[Unit], damage: int) -> void:
-	for target in targets:
+	for target: Unit in targets:
 		if target.is_dead:
 			continue
-		var hp_lost := target.take_damage(damage)
-		var caster_name = _color_unit(ctx.caster)
-		var target_name = _color_unit(target)
-		var dmg_str = _color_value(damage)
-		var lost_str = _color_value(hp_lost)
-		var hp_str = _color_value(target.current_hp)
+		var hp_lost: int = target.take_damage(damage)
+		var caster_name: String = _color_unit(ctx.caster)
+		var target_name: String = _color_unit(target)
+		var dmg_str: String = _color_value(damage)
+		var lost_str: String = _color_value(hp_lost)
+		var hp_str: String = _color_value(target.current_hp)
 		
 		# Base message: "Goblin deals 5 damage to Warrior (HP lost: 4) → HP: 6"
-		var log_msg := "%s deals %s damage to %s (HP lost: %s) → HP: %s" % [
+		var log_msg: String = "%s deals %s damage to %s (HP lost: %s) → HP: %s" % [
 			caster_name, dmg_str, target_name, lost_str, hp_str
 		]
 		# If the actual damage dealt (hp_lost) was different from the attempted amount, note it
 		if hp_lost != damage:
-			var attempted_str = _color_value(damage)
+			var attempted_str: String = _color_value(damage)
 			log_msg += " [Attempted: %s]" % attempted_str
 		
 		ctx.log(log_msg)
@@ -328,20 +328,20 @@ func _deal_damage(ctx: SkillContext, targets: Array[Unit], damage: int) -> void:
 			EventBus.unit_died.emit(target)
 
 func _gain_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
-	for target in targets:
+	for target: Unit in targets:
 		if target.is_dead:
 			continue
-		var gained := target.gain_shield(amount)
-		var target_name = _color_unit(target)
-		var gained_str = _color_value(gained, "shield")
-		var shield_str = ColorUtils.colorize(str(target.shield) + " V", ColorUtils.COLOR_SHIELD)
+		var gained: int = target.gain_shield(amount)
+		var target_name: String = _color_unit(target)
+		var gained_str: String = _color_value(gained, "shield")
+		var shield_str: String = ColorUtils.colorize(str(target.shield) + " V", ColorUtils.COLOR_SHIELD)
 		
 		# Base message: "Enemy A gains 5 Shield (Total: 8 V)"
-		var log_msg := "%s gains %s Shield (Total: %s)" % [target_name, gained_str, shield_str]
+		var log_msg: String = "%s gains %s Shield (Total: %s)" % [target_name, gained_str, shield_str]
 		
 		# Only append the attempted amount if it was modified/capped
 		if gained != amount:
-			var amt_str = _color_value(amount, "shield")
+			var amt_str: String = _color_value(amount, "shield")
 			log_msg += " [Attempted: %s]" % amt_str
 			
 		ctx.log(log_msg)
@@ -349,20 +349,20 @@ func _gain_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
 		
 
 func _reduce_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
-	for target in targets:
+	for target: Unit in targets:
 		if target.is_dead:
 			continue
-		var removed := target.reduce_shield(amount)
-		var target_name = _color_unit(target)
-		var rem_str = _color_value(removed, "shield")
-		var shield_str = ColorUtils.colorize(str(target.shield) + " V", ColorUtils.COLOR_SHIELD)
+		var removed: int = target.reduce_shield(amount)
+		var target_name: String = _color_unit(target)
+		var rem_str: String = _color_value(removed, "shield")
+		var shield_str: String = ColorUtils.colorize(str(target.shield) + " V", ColorUtils.COLOR_SHIELD)
 		
 		# Base message: "Reduced [Target]'s shield by 3 (Total: 5 V)"
-		var log_msg := "Reduced %s's shield by %s (Total: %s)" % [
+		var log_msg: String = "Reduced %s's shield by %s (Total: %s)" % [
 			target_name, rem_str, shield_str
 		]
 		if removed != amount:
-			var amt_str = _color_value(amount, "shield")
+			var amt_str: String = _color_value(amount, "shield")
 			log_msg += " [Attempted: %s]" % amt_str
 		
 		ctx.log(log_msg)
@@ -370,21 +370,21 @@ func _reduce_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> voi
 
 
 func _heal(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
-	for target in targets:
+	for target: Unit in targets:
 		if target.is_dead:
 			continue
-		var restored := target.heal(amount)
-		var caster_name = _color_unit(ctx.caster)
-		var target_name = _color_unit(target)
-		var rest_str = _color_value(restored)
-		var hp_str = ColorUtils.colorize(str(target.current_hp) + " HP", ColorUtils.COLOR_HP)
+		var restored: int = target.heal(amount)
+		var caster_name: String = _color_unit(ctx.caster)
+		var target_name: String = _color_unit(target)
+		var rest_str: String = _color_value(restored)
+		var hp_str: String = ColorUtils.colorize(str(target.current_hp) + " HP", ColorUtils.COLOR_HP)
 		
 		# Base message: "Priest heals Warrior for 8 (Total: 12 HP)"
-		var log_msg := "%s heals %s for %s (Total: %s)" % [
+		var log_msg: String = "%s heals %s for %s (Total: %s)" % [
 			caster_name, target_name, rest_str, hp_str
 		]
 		if restored != amount:
-			var amt_str = _color_value(amount)
+			var amt_str: String = _color_value(amount)
 			log_msg += " [Attempted: %s]" % amt_str
 		
 		ctx.log(log_msg)
@@ -392,46 +392,44 @@ func _heal(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
 
 
 func _deal_true_damage(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
-	for target in targets:
+	for target: Unit in targets:
 		if target.is_dead:
 			continue
-		var true_damage := target.deal_true_damage(amount)
-		var target_name = _color_unit(target)
-		var dmg_str = _color_value(true_damage)
-		var hp_str = ColorUtils.colorize(str(target.current_hp) + " HP", ColorUtils.COLOR_HP)
+		var true_damage: int = target.deal_true_damage(amount)
+		var target_name: String = _color_unit(target)
+		var dmg_str: String = _color_value(true_damage)
+		var hp_str: String = ColorUtils.colorize(str(target.current_hp) + " HP", ColorUtils.COLOR_HP)
 		
 		# Base message: "Warrior loses 8 health (Total: 8 HP)"
-		var log_msg := "%s loses %s health (Total: %s)" % [
+		var log_msg: String = "%s loses %s health (Total: %s)" % [
 			target_name, dmg_str, hp_str
 		]
 		if true_damage != amount:
-			var amt_str = _color_value(amount)
+			var amt_str: String = _color_value(amount)
 			log_msg += " [Attempted: %s]" % amt_str
 		
 		ctx.log(log_msg)
 		if target.is_dead:
-			var suffix := " by self-damage!" if target == ctx.caster else "!"
+			var suffix: String = " by self-damage!" if target == ctx.caster else "!"
 			ctx.log(ColorUtils.colorize("%s is defeated%s" % [target.data.display_name, suffix], ColorUtils.COLOR_DEAD))
 			EventBus.unit_died.emit(target)
 
 
 func _add_bonus(ctx: SkillContext, value: int) -> void:
 	ctx.card_value += value
-	var val_str = _color_value(value, "card")  
-	var total_str = _color_value(ctx.card_value, "card")
-	var val_colored = ColorUtils.colorize(str(value), ColorUtils.COLOR_CARD)
-	var total_colored = ColorUtils.colorize(str(ctx.card_value) + " V", ColorUtils.COLOR_CARD)
+	var val_colored: String = ColorUtils.colorize(str(value), ColorUtils.COLOR_CARD)
+	var total_colored: String = ColorUtils.colorize(str(ctx.card_value) + " V", ColorUtils.COLOR_CARD)
 	ctx.log("+%s bonus value (total: %s)." % [val_colored, total_colored])
 
 
 func _apply_modifier(ctx: SkillContext, targets: Array[Unit], value: int) -> void:
 	if value == 0: return
-	for target in targets:
+	for target: Unit in targets:
 		if target.is_dead:
 			continue
 		target.apply_value_modifier(-value)
-		var target_name = _color_unit(target)
-		var mod_str = ColorUtils.colorize(str(target.value_modifier) + " V", ColorUtils.COLOR_DEAD)
+		var target_name: String = _color_unit(target)
+		var mod_str: String = ColorUtils.colorize(str(target.value_modifier) + " V", ColorUtils.COLOR_DEAD)
 		ctx.log("Applied -%d value debuff to %s (total mod: %s)" % [
 			value, target_name, mod_str
 		])
@@ -443,24 +441,24 @@ func _modify_card(ctx: SkillContext, value: int) -> void:
 			if ctx.game_state.hand.is_empty():
 				ctx.log("No cards in hand to modify.")
 				return
-			var filter := func(_c: Card) -> bool: return true
+			var filter: Callable = func(_c: Card) -> bool: return true
 			var chosen: Array[Card] = await ctx.pick_n_card.call(card_count, filter)
 			if chosen.is_empty():
 				ctx.log("No card chosen.")
 				return
-			for card in chosen:
+			for card: Card in chosen:
 				_apply_card_mod(ctx, card, value)
 
 		CardSelectMode.AUTO_TOP_N:
-			var top_cards := ctx.game_state.get_top_n_cards(card_count)
+			var top_cards: Array[Card] = ctx.game_state.get_top_n_cards(card_count)
 			if top_cards.is_empty():
 				ctx.log("No cards in hand to modify.")
 				return
-			for card in top_cards:
+			for card: Card in top_cards:
 				_apply_card_mod(ctx, card, value)
 
 		CardSelectMode.AUTO_HIGHEST:
-			var highest := ctx.game_state.get_highest_card_in_hand()
+			var highest: Card = ctx.game_state.get_highest_card_in_hand()
 			if highest == null:
 				ctx.log("No cards in hand to modify.")
 				return
@@ -477,10 +475,10 @@ func _apply_card_mod(ctx: SkillContext, card: Card, value: int) -> void:
 		CardModType.DEBUFF:
 			card.value_debuff += value
 	
-	var new_val := card.get_effective_value()
-	var new_val_str := card.format_value(new_val)
+	var new_val: int = card.get_effective_value()
+	var new_val_str: String = card.format_value(new_val)
 	
-	var verb := "Boosted" if card_mod_type == CardModType.BUFF else "Reduced"
+	var verb: String = "Boosted" if card_mod_type == CardModType.BUFF else "Reduced"
 	ctx.log("%s %s by %s → new value: %s" % [verb, card_str, val_str, new_val_str])
 	EventBus.card_value_changed.emit(card, old_val, card.get_effective_value())
 
@@ -493,10 +491,10 @@ func _discard_card(ctx: SkillContext) -> void:
 	var chosen_cards: Array[Card] = []
 	match card_select_mode:
 		CardSelectMode.PICK_N_CARD:
-			var filter := func(_c: Card) -> bool: return true
+			var filter: Callable = func(_c: Card) -> bool: return true
 			chosen_cards = await ctx.pick_n_card.call(card_count, filter)
 		CardSelectMode.AUTO_HIGHEST:
-			var c := ctx.game_state.get_highest_card_in_hand()
+			var c: Card = ctx.game_state.get_highest_card_in_hand()
 			if c != null:
 				chosen_cards = [c]
 		CardSelectMode.AUTO_TOP_N:
@@ -509,23 +507,23 @@ func _discard_card(ctx: SkillContext) -> void:
 	if store_resolved_value and not chosen_cards.is_empty():
 		ctx.stored_value = chosen_cards[0].get_effective_value()
 
-	for card in chosen_cards:
+	for card: Card in chosen_cards:
 		ctx.game_state.discard_card(card)
-		var old_val = card.get_effective_value()
-		var card_str = card.format_value(old_val)
-		var log_msg = "Discarded %s." % card_str
+		var old_val: int = card.get_effective_value()
+		var card_str: String = card.format_value(old_val)
+		var log_msg: String = "Discarded %s." % card_str
 		if store_resolved_value:
-			var stored_value : String = ColorUtils.colorize(str(ctx.stored_value) + " V", ColorUtils.COLOR_CARD)
+			var stored_value: String = ColorUtils.colorize(str(ctx.stored_value) + " V", ColorUtils.COLOR_CARD)
 			log_msg += " (stored value: %s)" % stored_value
 		ctx.log(log_msg)
 		EventBus.card_discarded.emit(card)
 
 
 func _draw_card(ctx: SkillContext) -> void:
-	var drawn := ctx.game_state.draw_n_cards(card_count)
-	for card in drawn:
-		var old_var = card.get_effective_value()
-		var card_str = card.format_value(old_var)
+	var drawn: Array[Card] = ctx.game_state.draw_n_cards(card_count)
+	for card: Card in drawn:
+		var old_var: int = card.get_effective_value()
+		var card_str: String = card.format_value(old_var)
 		ctx.log("Drew %s." % card_str)
 		EventBus.card_drawn.emit(card)
 	if drawn.is_empty():
@@ -534,17 +532,17 @@ func _draw_card(ctx: SkillContext) -> void:
 
 func _set_next_skill_bonus(ctx: SkillContext, value: int) -> void:
 	ctx.game_state.next_skill_bonus += value
-	var val_str = ColorUtils.colorize(str(value), ColorUtils.COLOR_CARD)
+	var val_str: String = ColorUtils.colorize(str(value), ColorUtils.COLOR_CARD)
 	ctx.log("Next skill played this turn gains %s value." % val_str)
 
 
 func _raise_max_hp(ctx: SkillContext, targets: Array[Unit], value: int) -> void:
-	for target in targets:
+	for target: Unit in targets:
 		target.raise_max_hp(value)
-		var target_name = _color_unit(target)
-		var val_str = _color_value(value)
-		var hp_str = _color_value(target.current_hp)
-		var max_str = _color_value(target.max_hp)
+		var target_name: String = _color_unit(target)
+		var val_str: String = _color_value(value)
+		var hp_str: String = _color_value(target.current_hp)
+		var max_str: String = _color_value(target.max_hp)
 		ctx.log("%s max HP raised to %s → HP: %s/%s" % [
 			target_name, val_str, hp_str, max_str
 		])
@@ -556,14 +554,16 @@ func get_description() -> String:
 
 	# Condition prefix
 	if condition != Condition.NONE:
-		var cond_name : String = Condition.keys()[condition].replace("_", " ").to_lower()
+		var cond_raw: String = Condition.keys()[condition]
+		var cond_name: String = cond_raw.replace("_", " ").to_lower()
 		if negate_condition:
 			parts.append("If NOT %s:" % cond_name)
 		else:
 			parts.append("If %s:" % cond_name)
 
 	# Action verb
-	var action_name : String = Action.keys()[action_type].replace("_", " ").capitalize()
+	var action_raw: String = Action.keys()[action_type]
+	var action_name: String = action_raw.replace("_", " ").capitalize()
 	parts.append(action_name)
 
 	# Value description
@@ -576,11 +576,13 @@ func get_description() -> String:
 	if action_type == Action.DRAW_CARD:
 		parts.append("%d card(s)" % card_count)
 	elif action_type == Action.DISCARD_CARD:
-		parts.append("(%s)" % CardSelectMode.keys()[card_select_mode].to_lower())
+		var card_sel_raw: String = CardSelectMode.keys()[card_select_mode]
+		parts.append("(%s)" % card_sel_raw.to_lower())
 
 	# Target description
 	if target_mode != TargetMode.NONE:
-		var target_name : String = TargetMode.keys()[target_mode].replace("_", " ").to_lower()
+		var target_raw: String = TargetMode.keys()[target_mode]
+		var target_name: String = target_raw.replace("_", " ").to_lower()
 		if target_mode == TargetMode.PICK_N_ENEMY:
 			parts.append("to %d %s" % [target_count, target_name])
 		else:
@@ -590,7 +592,8 @@ func get_description() -> String:
 
 
 func _describe_value() -> String:
-	var source_name : String = ValueSource.keys()[value_source].replace("_", " ").capitalize()
+	var source_raw: String = ValueSource.keys()[value_source]
+	var source_name: String = source_raw.replace("_", " ").capitalize()
 	var desc := "[%s" % source_name
 
 	if value_multiplier != 1:

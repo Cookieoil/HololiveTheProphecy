@@ -21,7 +21,9 @@ static func db() -> GameDatabase:
 
 static func quit_code(code: int) -> void:
 	if not Engine.is_editor_hint():
-		Engine.get_main_loop().quit(code)
+		var tree: SceneTree = Engine.get_main_loop() as SceneTree
+		if tree != null:
+			tree.quit(code)
 
 static func reload() -> void:
 	_db = null

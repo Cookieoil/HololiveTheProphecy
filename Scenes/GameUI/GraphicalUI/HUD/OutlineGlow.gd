@@ -17,7 +17,7 @@ const GROUP_GLOW_SHADER: Shader = preload(
 )
 
 static var _shared_flow_tex: NoiseTexture2D
-static var _silhouette_mipmap_cache: Dictionary = {}
+static var _silhouette_mipmap_cache: Dictionary[Variant, Texture2D] = {}
 
 var glow_bleed: float = 15.0
 var frame_corner_radius: float = 8.0
@@ -33,8 +33,9 @@ static func attach_to(target_control: Control, p_corner_radius: float = 8.0, p_b
 	glow.frame_corner_radius = p_corner_radius
 	glow.glow_bleed = p_bleed
 	if target_control != null and target_control.has_method("get_canvas_group"):
-		var group := target_control.call("get_canvas_group") as CanvasGroup
-		if group != null:
+		var raw_group: Variant = target_control.call("get_canvas_group")
+		if raw_group is CanvasGroup:
+			var group: CanvasGroup = raw_group
 			glow.bind_canvas_group(group)
 	target_control.add_child(glow)
 	return glow
@@ -196,21 +197,23 @@ static func _ensure_shared_resources() -> void:
 
 
 static func _ensure_mipmapped_silhouette(tex: Texture2D) -> Texture2D:
-	if tex == null or tex.has_mipmaps():
+	if tex == null:
 		return tex
 	var key: Variant = tex.resource_path if not tex.resource_path.is_empty() else tex.get_rid()
 	if _silhouette_mipmap_cache.has(key):
-		var cached := _silhouette_mipmap_cache[key] as Texture2D
+		var cached: Texture2D = _silhouette_mipmap_cache[key]
 		if cached != null:
 			return cached
-	var img := tex.get_image()
+	var img: Image = tex.get_image()
 	if img == null or img.is_empty():
+		return tex
+	if img.has_mipmaps():
 		return tex
 	if img.is_compressed():
 		img.decompress()
 	if img.generate_mipmaps() != OK:
 		return tex
-	var mip_tex := ImageTexture.create_from_image(img)
+	var mip_tex: ImageTexture = ImageTexture.create_from_image(img)
 	_silhouette_mipmap_cache[key] = mip_tex
 	return mip_tex
 

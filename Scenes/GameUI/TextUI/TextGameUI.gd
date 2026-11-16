@@ -9,7 +9,7 @@ extends GameUI
 @onready var output: RichTextLabel = $Output
 @onready var input: LineEdit = $Input
 
-const ICON_MAP := {
+const ICON_MAP: Dictionary[String, String] = {
 	"damage": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
 	"shield": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
 	"heal":   "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
@@ -53,8 +53,8 @@ func focus_input() -> void:
 		input.grab_focus()
 		
 func _card_display(card: Card) -> String:
-	var val = card.get_effective_value()
-	var suffix = "V"
+	var val: int = card.get_effective_value()
+	var suffix: String = "V"
 	if card.is_double_merged:
 		suffix = "DMV"
 	elif card.is_merged:
@@ -80,8 +80,8 @@ func _append_output(line: String) -> void:
 
 #region Display overrides
 func _resolve_icons(text: String) -> String:
-	var result := text
-	for key in ICON_MAP:
+	var result: String = text
+	for key: String in ICON_MAP:
 		result = result.replace("{" + "icon:" + key + "}", ICON_MAP[key])
 	return result
 
@@ -135,8 +135,8 @@ func show_game_state(_state: GameState) -> void:
 func show_hand_and_resources(_state: GameState) -> void:
 	_append_output("")
 	_append_output(ColorUtils.colorize("── Hand ──", ColorUtils.COLOR_HEADER))
-	for i in _state.hand.size():
-		var display = ColorUtils.colorize(_card_display(_state.hand[i]), ColorUtils.COLOR_CARD)
+	for i: int in _state.hand.size():
+		var display: String = ColorUtils.colorize(_card_display(_state.hand[i]), ColorUtils.COLOR_CARD)
 		_append_output("  [%d] %s" % [i, display])
 	_append_output("Actions: %d  |  Merges: %d  |  Deck: %d  |  Discard: %d" % [
 		_state.actions_left, _state.merges_left, _state.deck.size(), _state.discard.size()
@@ -217,38 +217,40 @@ func get_player_action(_state: GameState) -> Dictionary:
 	
 func ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]:
 	var chosen: Array[Unit] = []
-	var available: Array = []  # each element: {"unit": Unit, "idx": int}
-	for i in units.size():
+	var available: Array[Dictionary] = []  # each element: {"unit": Unit, "idx": int}
+	for i: int in units.size():
 		available.append({"unit": units[i], "idx": i})
 
-	for n in count:
+	for n: int in count:
 		if available.is_empty():
 			break
 		_append_output(ColorUtils.colorize("Pick target %d of %d:" % [n+1, count], ColorUtils.COLOR_HEADER))
-		for entry in available:
-			var u: Unit = entry.unit          # get the Unit from the dict
-			var idx: int = entry.idx          # original index
-			var name: String = ColorUtils.colorize(u.data.display_name, ColorUtils.COLOR_ENEMY if not u.is_ally else ColorUtils.COLOR_ALLY)
+		for entry: Dictionary in available:
+			var u: Unit = entry["unit"]       # get the Unit from the dict
+			var idx: int = entry["idx"]       # original index
+			var u_name: String = ColorUtils.colorize(u.data.display_name, ColorUtils.COLOR_ENEMY if not u.is_ally else ColorUtils.COLOR_ALLY)
 			var hp: String = ColorUtils.colorize(str(u.current_hp), ColorUtils.COLOR_HP)
 			var max_hp: String = ColorUtils.colorize(str(u.max_hp), ColorUtils.COLOR_HP)
 			var shield: String = ColorUtils.colorize(str(u.shield), ColorUtils.COLOR_SHIELD)
-			_append_output("  [%d] %s  HP: %s/%s  Shield: %s" % [idx, name, hp, max_hp, shield])
+			_append_output("  [%d] %s  HP: %s/%s  Shield: %s" % [idx, u_name, hp, max_hp, shield])
 	
 		while true:
-			var raw := await _await_input("target>> ")
+			var raw: String = await _await_input("target>> ")
 			if not raw.is_valid_int():
 				show_message("Enter a number.")
 				continue
-			var idx := raw.to_int()
-			var found_entry = null
-			for entry in available:
-				if entry.idx == idx:
+			var idx: int = raw.to_int()
+			var found_entry: Dictionary = {}
+			for entry: Dictionary in available:
+				var entry_idx: int = entry["idx"]
+				if entry_idx == idx:
 					found_entry = entry
 					break
-			if found_entry == null:
+			if found_entry.is_empty():
 				show_message("Index %d not available (already picked or out of range 0–%d)." % [idx, units.size()-1])
 				continue
-			chosen.append(found_entry.unit)
+			var picked_unit: Unit = found_entry["unit"]
+			chosen.append(picked_unit)
 			available.erase(found_entry)
 			break
 	return chosen
@@ -256,35 +258,37 @@ func ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]:
 
 func ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]:
 	var chosen: Array[Card] = []
-	var available: Array = []  # each element: {"unit": Unit, "idx": int}
-	for i in cards.size():
+	var available: Array[Dictionary] = []  # each element: {"card": Card, "idx": int}
+	for i: int in cards.size():
 		available.append({"card": cards[i], "idx": i})
 
-	for n in count:
+	for n: int in count:
 		if available.is_empty():
 			break
 		_append_output(ColorUtils.colorize("Pick %d out of %d card(s):" % [n+1, count], ColorUtils.COLOR_HEADER))
-		for entry in available:
-			var card: Card = entry.card
-			var idx: int = entry.idx
+		for entry: Dictionary in available:
+			var card: Card = entry["card"]
+			var idx: int = entry["idx"]
 			var display: String = ColorUtils.colorize(_card_display(card), ColorUtils.COLOR_CARD)
 			_append_output("  [%d] %s" % [idx, display])
 	
 		while true:
-			var raw := await _await_input("card>> ")
+			var raw: String = await _await_input("card>> ")
 			if not raw.is_valid_int():
 				show_message("Enter a number.")
 				continue
-			var idx := raw.to_int()
-			var found_entry = null
-			for entry in available:
-				if entry.idx == idx:
+			var idx: int = raw.to_int()
+			var found_entry: Dictionary = {}
+			for entry: Dictionary in available:
+				var entry_idx: int = entry["idx"]
+				if entry_idx == idx:
 					found_entry = entry
 					break
-			if found_entry == null:
+			if found_entry.is_empty():
 				show_message("Index %d not available (already picked or out of range 0–%d)." % [idx, cards.size()-1])
 				continue
-			chosen.append(found_entry.card)
+			var picked_card: Card = found_entry["card"]
+			chosen.append(picked_card)
 			available.erase(found_entry)
 			break
 	return chosen
