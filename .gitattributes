@@ -1,2 +1,77 @@
-# Normalize EOL for all files that Git considers text files.
+# ---------------------------------------------------------------------------
+# 1. Default: let Git detect text files and normalize to LF in the repo
+# ---------------------------------------------------------------------------
 * text=auto eol=lf
+
+# ---------------------------------------------------------------------------
+# 2. Excel: binary, keep "our" version on merge conflict
+#    (requires: git config --global merge.ours.driver true)
+#    Order matters: `binary` sets -merge; `merge=ours` must come after.
+# ---------------------------------------------------------------------------
+*.xlsx  binary
+*.xlsx  merge=ours
+*.xls   binary
+*.xls   merge=ours
+*.ods   binary
+*.ods   merge=ours
+
+# ---------------------------------------------------------------------------
+# 3. Godot binary assets (never normalized, never diffed)
+# ---------------------------------------------------------------------------
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.bmp   binary
+*.tga   binary
+*.exr   binary
+*.hdr   binary
+*.dds   binary
+*.ktx   binary
+*.ogg   binary
+*.mp3   binary
+*.wav   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.glb   binary
+*.fbx   binary
+*.blend binary
+*.res   binary
+*.scn   binary
+
+# ---------------------------------------------------------------------------
+# 4. Godot text resources — force LF so scene diffs stay readable
+#    (Godot always writes LF; this prevents Windows editors from injecting CRLF)
+# ---------------------------------------------------------------------------
+*.gd    text eol=lf
+*.gdshader  text eol=lf
+*.gdshaderinc text eol=lf
+*.tscn  text eol=lf
+*.tres  text eol=lf
+*.tres  text eol=lf
+*.godot text eol=lf
+*.cfg   text eol=lf
+*.import text eol=lf
+*.uid   text eol=lf
+*.gltf  text eol=lf
+*.svg   text eol=lf
+
+# ---------------------------------------------------------------------------
+# 5. Windows scripts need CRLF to run correctly
+# ---------------------------------------------------------------------------
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# ---------------------------------------------------------------------------
+# 6. POSIX shell scripts must stay LF even on Windows
+# ---------------------------------------------------------------------------
+*.sh    text eol=lf
+
+# ---------------------------------------------------------------------------
+# 7. GitHub linguist hints (optional, cosmetic — affects repo language stats)
+# ---------------------------------------------------------------------------
+*.tscn  linguist-language=GDScript
+*.tres  linguist-language=GDScript

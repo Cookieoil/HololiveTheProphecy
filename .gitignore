@@ -2,12 +2,18 @@
 .godot/
 /android/
 
-# Extra safety ignores
-*.uid
+# Godot-specific ignores
+export.cfg
+export_presets.cfg
+*.translation
+
+# Mono-specific ignores
 .mono/
 data_*/
-mono_crash_*.json
+mono_crash.*.json
 
-# Excel import and merge
-*.xlsx binary
-*.xlsx merge=ours
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

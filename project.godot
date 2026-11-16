@@ -25,6 +25,22 @@ config/icon="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg"
 EventBus="*uid://ddut3jex7xgkl"
 ColorUtils="*uid://s4v00fmpp2le"
 
+[debug]
+
+gdscript/warnings/enable=true
+gdscript/warnings/exclude_addons=true
+gdscript/warnings/directory_rules={
+"res://addons/": 0,
+"res://": 1
+}
+gdscript/warnings/untyped_declaration=2
+gdscript/warnings/unsafe_property_access=2
+gdscript/warnings/unsafe_method_access=2
+gdscript/warnings/unsafe_cast=2
+gdscript/warnings/unsafe_call_argument=2
+gdscript/warnings/return_value_discarded=1
+gdscript/warnings/missing_await=2
+
 [display]
 
 window/size/viewport_width=1280
