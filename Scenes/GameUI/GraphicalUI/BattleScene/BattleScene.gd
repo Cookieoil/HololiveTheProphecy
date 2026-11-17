@@ -217,7 +217,11 @@ func ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]:
 	if cards.is_empty():
 		return []
 	if cards.size() <= count:
-		return cards.duplicate()
+		# Nothing to choose: the game takes every matching card, so flash them
+		# instead of a prompt to show the player which cards were selected.
+		var auto_picked: Array[Card] = cards.duplicate()
+		await flash_auto_selected_cards(auto_picked)
+		return auto_picked
 
 	show_message("Click %d card(s) in hand!" % count)
 	var chosen: Array[Card] = []

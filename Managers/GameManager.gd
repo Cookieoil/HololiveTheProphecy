@@ -513,7 +513,12 @@ func _build_enemy_context(enemy: Unit, intent: EnemyIntent) -> SkillContext:
 		return result
 	
 	ctx.pick_n_card = func(count: int, _filter: Callable) -> Array[Card]:
-		return state.get_top_n_cards(count)
+		# Enemies never get a hand prompt, so auto-pick the top cards and reveal
+		# them with the hostile (red) flash, since an enemy caused the change.
+		var auto_cards: Array[Card] = state.get_top_n_cards(count)
+		if not auto_cards.is_empty():
+			await ui.flash_auto_selected_cards(auto_cards, true)
+		return auto_cards
 
 	# Flash_cards: reveal cards the game picked automatically (no prompt shown).
 	# Enemy-caused changes flash red (hostile) so the player sees the hit.
