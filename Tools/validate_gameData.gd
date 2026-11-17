@@ -34,6 +34,12 @@ const DATA_BUILDER_PATH: String = "res://Tools/dataBuilder.gd"
 
 const ARG_JSON_ONLY: String = "--json-only"
 const ARG_STRICT: String = "--strict"
+const ARG_SUMMARY: String = "--summary"
+const ARG_HELP: String = "--help"
+
+## GitHub Actions environment variables used for CI reporting.
+const ENV_GITHUB_ACTIONS: String = "GITHUB_ACTIONS"
+const ENV_STEP_SUMMARY: String = "GITHUB_STEP_SUMMARY"
 
 ## Keys a typo would silently change: Core/DataLoader.gd falls back to a default
 ## for any missing key, so these four must always be present on an effect.
@@ -104,11 +110,27 @@ var _ally_skill_ids: Dictionary = {}
 var _skill_meta: Dictionary = {}
 
 var _id_pattern: RegEx = null
+
+## Raw JSON text per res:// path, so diagnostics can be located in the source.
+var _raw_text: Dictionary = {}
+## Raw parsed JSON, kept so the loaded database can be cross-checked against it.
+var _skills_json: Dictionary = {}
+var _allies_json: Dictionary = {}
+var _enemies_json: Dictionary = {}
+var _waves_json: Dictionary = {}
+var _config_json: Dictionary = {}
+
+var _summary_path: String = ""
+var _help_requested: bool = false
 #endregion
 
 #region Lifecycle Methods
 func _ready() -> void:
 	_parse_arguments()
+	if _help_requested:
+		_print_usage()
+		get_tree().quit(0)
+		return
 	_collect_allowlists()
 	print("=== Game data validation ===")
 	if _skip_workbook:
@@ -120,43 +142,53 @@ func _ready() -> void:
 	_report()
 
 
-## Flags arrive after "--", i.e. OS.get_cmdline_user_args().
+## Flags arrive after "--", i.e. OS.get_cmdline_user_args(). The summary path
+## also falls back to GITHUB_STEP_SUMMARY, so CI needs no extra arguments.
 func _parse_arguments() -> void:
+	_summary_path = OS.get_environment(ENV_STEP_SUMMARY)
 	var arguments: PackedStringArray = OS.get_cmdline_args()
 	arguments.append_array(OS.get_cmdline_user_args())
-	for argument: String in arguments:
-		var flag: String = argument.strip_edges().to_lower()
+	var index: int = 0
+	while index < arguments.size():
+		var flag: String = arguments[index].strip_edges().to_lower()
 		if flag == ARG_JSON_ONLY:
 			_skip_workbook = true
 		elif flag == ARG_STRICT:
 			_strict = true
+		elif flag == ARG_HELP:
+			_help_requested = true
+		elif flag == ARG_SUMMARY and index + 1 < arguments.size():
+			_summary_path = arguments[index + 1]
+			index += 1
+		index += 1
 #endregion
 
 #region Private Methods
 ## Prints the report and quits with the matching exit code.
 func _report() -> void:
 	print("")
+	var exit_code: int = 0
 	if not _errors.is_empty():
 		print("VALIDATION FAILED (%d error(s), %d warning(s)):" % [_errors.size(), _warnings.size()])
 		for message: String in _errors:
 			print("  ERROR   %s" % message)
 		for message: String in _warnings:
 			print("  WARNING %s" % message)
-		get_tree().quit(1)
-		return
-	if _strict and not _warnings.is_empty():
+		exit_code = 1
+	elif _strict and not _warnings.is_empty():
 		print("VALIDATION FAILED --strict (%d warning(s)):" % _warnings.size())
 		for message: String in _warnings:
 			print("  WARNING %s" % message)
-		get_tree().quit(1)
-		return
-	if _warnings.is_empty():
+		exit_code = 1
+	elif _warnings.is_empty():
 		print("VALIDATION PASSED")
 	else:
 		print("VALIDATION PASSED with %d warning(s):" % _warnings.size())
 		for message: String in _warnings:
 			print("  WARNING %s" % message)
-	get_tree().quit(0)
+	_emit_annotations()
+	_write_step_summary(exit_code)
+	get_tree().quit(exit_code)
 
 
 func _fail(message: String) -> void:
@@ -399,19 +431,19 @@ func _bundle_count(bundle: Dictionary, key: String) -> int:
 ## Validates the raw JSON files the runtime loader consumes.
 func _validate_runtime_json() -> void:
 	print("--- runtime json: %s ---" % JSON_DIR)
-	var skills: Dictionary = _read_json_object(SKILLS_PATH, "skills.json")
-	var allies: Dictionary = _read_json_object(ALLIES_PATH, "allies.json")
-	var enemies: Dictionary = _read_json_object(ENEMIES_PATH, "enemies.json")
-	var waves: Dictionary = _read_json_object(WAVES_PATH, "waves.json")
-	var config: Dictionary = _read_json_object(CONFIG_PATH, "config.json")
+	_skills_json = _read_json_object(SKILLS_PATH, "skills.json")
+	_allies_json = _read_json_object(ALLIES_PATH, "allies.json")
+	_enemies_json = _read_json_object(ENEMIES_PATH, "enemies.json")
+	_waves_json = _read_json_object(WAVES_PATH, "waves.json")
+	_config_json = _read_json_object(CONFIG_PATH, "config.json")
 
-	_validate_skills(skills)
-	_validate_units(allies, "allies.json", false, _ally_ids)
-	_validate_units(enemies, "enemies.json", true, _enemy_ids)
+	_validate_skills(_skills_json)
+	_validate_units(_allies_json, "allies.json", false, _ally_ids)
+	_validate_units(_enemies_json, "enemies.json", true, _enemy_ids)
 	_validate_unit_collisions()
 	_validate_skill_usage()
-	_validate_waves(waves)
-	_validate_config(config)
+	_validate_waves(_waves_json)
+	_validate_config(_config_json)
 
 
 ## Reads a JSON file whose root must be an object.
@@ -425,6 +457,7 @@ func _read_json_object(path: String, label: String) -> Dictionary:
 		return {}
 	var text: String = file.get_as_text()
 	file.close()
+	_raw_text[path] = text
 	var parsed: Variant = JSON.parse_string(text)
 	if parsed == null:
 		_fail("%s is not valid JSON" % label)
@@ -945,4 +978,285 @@ func _check_loader_integration() -> void:
 		var ally_id: String = str(ally_raw)
 		if not database.units.has(ally_id):
 			_fail("[loader] config.allies references unknown unit '%s'" % ally_id)
+	_validate_loader_consistency(database)
+
+
+## Prints the accepted command line flags.
+func _print_usage() -> void:
+	print("Game data validator")
+	print("")
+	print("Usage: godot --headless --path . \"res://Tools/validator.tscn\" [-- <flags>]")
+	print("")
+	print("Flags:")
+	print("  %-12s validate the JSON + DataLoader only, skip the workbook" % ARG_JSON_ONLY)
+	print("  %-12s treat warnings as errors (exit code 1)" % ARG_STRICT)
+	print("  %-12s write a Markdown job summary to <path>" % ARG_SUMMARY)
+	print("  %-12s show this help and exit 0" % ARG_HELP)
+	print("")
+	print("In GitHub Actions (GITHUB_ACTIONS=true) every error and warning is also")
+	print("emitted as a workflow annotation, so it shows up inline on the PR diff.")
+
+
+## Emits GitHub Actions workflow commands so failures annotate the exact file
+## (and, when it can be located, line) inside the pull request.
+func _emit_annotations() -> void:
+	if OS.get_environment(ENV_GITHUB_ACTIONS) != "true":
+		return
+	for message: String in _errors:
+		_emit_annotation("error", message)
+	for message: String in _warnings:
+		_emit_annotation("warning", message)
+
+
+func _emit_annotation(severity: String, message: String) -> void:
+	var text: String = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+	var file: String = _diagnostic_file(message)
+	var line: int = _diagnostic_line(message)
+	if file.is_empty():
+		print("::%s title=Game data::%s" % [severity, text])
+	elif line > 0:
+		print("::%s file=%s,line=%d,title=Game data::%s" % [severity, file, line, text])
+	else:
+		print("::%s file=%s,title=Game data::%s" % [severity, file, text])
+
+
+## Maps a diagnostic message to the repo-relative data file it belongs to.
+func _diagnostic_file(message: String) -> String:
+	if message.contains("skills.json"):
+		return _repo_path(SKILLS_PATH)
+	if message.contains("allies.json"):
+		return _repo_path(ALLIES_PATH)
+	if message.contains("enemies.json"):
+		return _repo_path(ENEMIES_PATH)
+	if message.contains("waves.json"):
+		return _repo_path(WAVES_PATH)
+	if message.contains("config.json"):
+		return _repo_path(CONFIG_PATH)
+	if message.contains("workbook"):
+		return _repo_path(WORKBOOK_PATH)
+	return ""
+
+
+func _repo_path(res_path: String) -> String:
+	if res_path.begins_with("res://"):
+		return res_path.substr("res://".length())
+	return res_path
+
+
+## Best-effort 1-based source line for a diagnostic, 0 when it cannot be located.
+func _diagnostic_line(message: String) -> int:
+	if message.contains("skills.json"):
+		var skill_id: String = _first_quoted(message)
+		if skill_id.is_empty():
+			return 0
+		var skill_line: int = _line_of(SKILLS_PATH, "\"%s\": {" % skill_id, 0)
+		var effect_index: int = _bracket_index(message, "effect[")
+		if effect_index >= 0:
+			var effect_line: int = _line_of(SKILLS_PATH, "\"effect_id\":", effect_index, maxi(0, skill_line - 1))
+			if effect_line > 0:
+				return effect_line
+		return skill_line
+	if message.contains("allies.json") or message.contains("enemies.json"):
+		var unit_path: String = ALLIES_PATH if message.contains("allies.json") else ENEMIES_PATH
+		var unit_id: String = _first_quoted(message)
+		if unit_id.is_empty():
+			return 0
+		return _line_of(unit_path, "\"%s\": {" % unit_id, 0)
+	if message.contains("waves.json"):
+		return _waves_line(message)
+	if message.contains("config.json"):
+		return _config_line(message)
+	return 0
+
+
+func _waves_line(message: String) -> int:
+	var wave_index: int = _bracket_index(message, "wave[")
+	if wave_index < 0:
+		return _line_of(WAVES_PATH, "\"waves\"", 0)
+	var wave_line: int = _line_of(WAVES_PATH, "\"wave_index\"", wave_index)
+	var enemy_index: int = _bracket_index(message, "enemy[")
+	if enemy_index >= 0 and wave_line > 0:
+		var enemy_line: int = _line_of(WAVES_PATH, "\"unit_id\"", enemy_index, wave_line - 1)
+		if enemy_line > 0:
+			return enemy_line
+	return wave_line
+
+
+func _config_line(message: String) -> int:
+	var key: String = _first_quoted(message)
+	if key.is_empty():
+		for candidate: String in ["decklist", "dice_progression", "allies", "hand_size", "actions_per_turn", "merges_per_turn", "wave_transition_mode"]:
+			if message.contains(candidate):
+				key = candidate
+				break
+	if key.is_empty():
+		return 0
+	return _line_of(CONFIG_PATH, "\"%s\"" % key, 0)
+
+
+## 1-based line of the `occurrence`-th (0-based) line at or after `from_line`
+## that contains `needle`, or 0 when it is not found.
+func _line_of(path: String, needle: String, occurrence: int, from_line: int = 0) -> int:
+	var text: String = str(_raw_text.get(path, ""))
+	if text.is_empty():
+		return 0
+	var lines: PackedStringArray = text.split("\n")
+	var found: int = 0
+	for index: int in lines.size():
+		if index < from_line:
+			continue
+		if lines[index].contains(needle):
+			if found == occurrence:
+				return index + 1
+			found += 1
+	return 0
+
+
+## The first 'single quoted' token of a diagnostic message, or "".
+func _first_quoted(message: String) -> String:
+	var start: int = message.find("'")
+	if start < 0:
+		return ""
+	var end: int = message.find("'", start + 1)
+	if end < 0:
+		return ""
+	return message.substr(start + 1, end - start - 1)
+
+
+## The integer inside the first "<marker>N]" token, or -1 when absent.
+func _bracket_index(message: String, marker: String) -> int:
+	var start: int = message.find(marker)
+	if start < 0:
+		return -1
+	start += marker.length()
+	var end: int = message.find("]", start)
+	if end < 0:
+		return -1
+	var digits: String = message.substr(start, end - start)
+	if not digits.is_valid_int():
+		return -1
+	return digits.to_int()
+
+
+## Appends a Markdown report to the GitHub Actions job summary so the result is
+## readable on the run page without digging through the raw log.
+func _write_step_summary(exit_code: int) -> void:
+	if _summary_path.is_empty():
+		return
+	var lines: PackedStringArray = PackedStringArray()
+	lines.append("## Game data validation")
+	lines.append("")
+	if exit_code == 0:
+		lines.append("Result: **PASSED** (%d warning(s))" % _warnings.size())
+	else:
+		lines.append("Result: **FAILED** (%d error(s), %d warning(s))" % [_errors.size(), _warnings.size()])
+	lines.append("")
+	lines.append("| Skills | Allies | Enemies | Waves |")
+	lines.append("| --- | --- | --- | --- |")
+	lines.append("| %d | %d | %d | %d |" % [
+		_skills_json.size(),
+		_allies_json.size(),
+		_enemies_json.size(),
+		_as_array(_waves_json.get("waves", [])).size(),
+	])
+	lines.append("")
+	if not _errors.is_empty():
+		lines.append("### Errors")
+		lines.append("")
+		for message: String in _errors:
+			lines.append("- `%s`" % message)
+		lines.append("")
+	if not _warnings.is_empty():
+		lines.append("### Warnings")
+		lines.append("")
+		for message: String in _warnings:
+			lines.append("- `%s`" % message)
+		lines.append("")
+	var file: FileAccess = FileAccess.open(_summary_path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string("\n".join(lines))
+	file.close()
+
+
+## Proves the loaded database matches the raw JSON one-to-one (nothing was
+## silently dropped) and that loading is deterministic across reloads.
+func _validate_loader_consistency(database: GameDatabase) -> void:
+	if database == null:
+		return
+	if database.skills.size() != _skills_json.size():
+		_fail("[loader] skills.json declares %d skill(s) but %d were loaded" % [_skills_json.size(), database.skills.size()])
+	for skill_key: Variant in _skills_json.keys():
+		var skill_id: String = str(skill_key)
+		if not database.skills.has(skill_id):
+			continue
+		var raw_entry: Dictionary = _as_dictionary(_skills_json[skill_key])
+		var raw_effects: int = _as_array(raw_entry.get("effects", [])).size()
+		var skill_raw: Variant = database.skills[skill_id]
+		if not (skill_raw is SkillData):
+			continue
+		var skill: SkillData = skill_raw
+		var loaded_effects: int = skill.base_effects.size() + skill.merged_effects.size()
+		if raw_effects != loaded_effects:
+			_fail("[loader] skills.json '%s' declares %d effect(s) but %d were loaded (an effect was dropped)" % [skill_id, raw_effects, loaded_effects])
+	_validate_loaded_units(_allies_json, "allies.json", database.allies)
+	_validate_loaded_units(_enemies_json, "enemies.json", database.enemies)
+	var raw_waves: int = _as_array(_waves_json.get("waves", [])).size()
+	if database.waves.size() != raw_waves:
+		_fail("[loader] waves.json declares %d wave(s) but %d were loaded" % [raw_waves, database.waves.size()])
+	var raw_decklist: int = _as_array(_config_json.get("decklist", [])).size()
+	var loaded_decklist: int = _as_array(database.config.get("decklist", [])).size()
+	if raw_decklist != loaded_decklist:
+		_fail("[loader] config.json declares %d decklist entry(ies) but %d were loaded" % [raw_decklist, loaded_decklist])
+	if _database_fingerprint(DataLoader.load_database()) != _database_fingerprint(database):
+		_fail("[loader] loading the same files twice produced different databases (non-deterministic parse)")
+
+
+func _validate_loaded_units(units_json: Dictionary, label: String, loaded: Dictionary) -> void:
+	if loaded.size() != units_json.size():
+		_fail("[loader] %s declares %d unit(s) but %d were loaded" % [label, units_json.size(), loaded.size()])
+	for unit_key: Variant in units_json.keys():
+		var unit_id: String = str(unit_key)
+		if not loaded.has(unit_id):
+			continue
+		var entry: Dictionary = _as_dictionary(units_json[unit_key])
+		var unit_raw: Variant = loaded[unit_id]
+		if not (unit_raw is UnitData):
+			continue
+		var unit: UnitData = unit_raw
+		var context: String = "%s '%s'" % [label, unit_id]
+		for slot: String in UNIT_SKILL_SLOTS:
+			if _string_field(entry, slot, context, false).strip_edges().is_empty():
+				continue
+			var resolved: bool = true
+			match slot:
+				"skill_1":
+					resolved = unit.skill_1 != null
+				"skill_2":
+					resolved = unit.skill_2 != null
+				_:
+					resolved = unit.ultimate != null
+			if not resolved:
+				_fail("[loader] %s %s did not resolve to a loaded skill" % [context, slot])
+
+
+## Stable text digest of everything the runtime cares about in a database.
+func _database_fingerprint(database: GameDatabase) -> String:
+	if database == null:
+		return "null"
+	var parts: PackedStringArray = PackedStringArray()
+	parts.append("skills=%d" % database.skills.size())
+	for skill_key: Variant in database.skills.keys():
+		var skill_raw: Variant = database.skills[skill_key]
+		if skill_raw is SkillData:
+			var skill: SkillData = skill_raw
+			parts.append("s:%s:%d:%d" % [str(skill_key), skill.base_effects.size(), skill.merged_effects.size()])
+	parts.append("units=%d" % database.units.size())
+	parts.append("waves=%d" % database.waves.size())
+	for wave_raw: Variant in database.waves:
+		parts.append("w:%d" % _as_array(wave_raw).size())
+	parts.append("decklist=%d" % _as_array(database.config.get("decklist", [])).size())
+	parts.append("allies=%d" % _as_array(database.config.get("allies", [])).size())
+	parts.append("dice=%d" % _as_array(database.config.get("dice_progression", [])).size())
+	return "|".join(parts)
 #endregion

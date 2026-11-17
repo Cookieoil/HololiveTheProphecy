@@ -50,7 +50,12 @@
   - Editor: `Project -> Tools -> Export game_data.xlsx to JSON`
   - CLI: `godot --headless --path . --script res://Tools/export_xlsx_to_json.gd`
   - Validate: `godot --headless --path . "res://Tools/validator.tscn"` — checks the raw JSON schema/semantics, the `DataLoader` path and the workbook, then exits `1` on any error. Add `-- --json-only` to skip the workbook or `-- --strict` to also fail on warnings.
-- **CI runs that validator** (`.github/workflows/validate_game_data.yml`) on every PR touching `Data/`, `Core/`, `Skills/`, `Managers/`, `Tools/`, `addons/xlsx_importPlugin/`, `project.godot` (and on every push to `main`). A red job means bad game data — never merge past it.
+- **CI runs that validator** (`.github/workflows/validate_game_data.yml`) on every PR touching `Data/`, `Core/`, `Skills/`, `Managers/`, `Scenes/`, `GDTest/`, `Tools/`, `addons/xlsx_importPlugin/`, `project.godot` (and on every push to `main`). A red job means bad game data — never merge past it. Errors and warnings are annotated inline on the PR and summarised on the job page.
+- **Local pre-flight before pushing** (the same three gates CI runs, all headless):
+  - Validate data: `godot --headless --path . "res://Tools/validator.tscn"`
+  - Compile every script: `godot --headless --path . --script res://Tools/check_scripts.gd`
+  - Unit tests: `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
+- **Never commit `reports/`** (gdUnit4 output) or Godot's `~*` atomic-write temp files; both are gitignored.
 
 - **JSON numbers parse as `float`.** Always coerce with the typed helpers (`_to_int` / `_get_int`, `int(float_value)`) instead of `int(dict["key"])`, which is a compile error under `unsafe_call_argument`.
 
