@@ -5,6 +5,9 @@ name: Validate Game Data
 # res://Data/xlsx/game_data.xlsx is only a bulk-entry authoring tool. Both are
 # checked here, together with the GDScript compile gate and the gdUnit4 suite,
 # so a broken data edit or a typing regression cannot reach main.
+#
+# Actions are pinned to commit SHAs on purpose: a moving major tag is a supply
+# chain risk. The trailing comment records the version each SHA was verified at.
 on:
   pull_request:
     paths:
@@ -22,7 +25,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# The pipeline only ever reads the repository.
+# The pipeline only ever reads the repository; the test job additionally asks
+# for checks:write so it can publish its report.
 permissions:
   contents: read
 
@@ -40,7 +44,7 @@ jobs:
       godot: ${{ steps.read.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -70,12 +74,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Godot
-        uses: chickensoft-games/setup-godot@v2
+        uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2
         with:
           version: ${{ needs.version.outputs.godot }}
           use-dotnet: false
@@ -86,26 +90,29 @@ jobs:
         run: godot --headless --path . --import
 
       # Validates the raw JSON schema/semantics, the DataLoader path and the
-      # workbook. Failures are annotated inline on the PR and summarised on the
-      # job page; the step fails on any error. Flags after "--": --json-only skips
-      # the workbook, --strict also fails on warnings.
+      # workbook. Errors and warnings are annotated inline on the PR and
+      # summarised on the job page; --strict makes warnings fatal as well, so a
+      # warning-free data set is the requirement to merge.
       - name: Validate game data
         timeout-minutes: 5
-        run: godot --headless --path . "res://Tools/validator.tscn"
+        run: godot --headless --path . "res://Tools/validator.tscn" -- --strict
 
   project:
     name: Scripts and tests
     needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Godot
-        uses: chickensoft-games/setup-godot@v2
+        uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2
         with:
           version: ${{ needs.version.outputs.godot }}
           use-dotnet: false
@@ -132,9 +139,21 @@ jobs:
       # runner as a build artifact.
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gdunit4-reports
           path: reports/
           if-no-files-found: ignore
           retention-days: 7
+
+      # Publishes the JUnit XML as a check run (test table + annotations on the
+      # failing lines). Never fails the job: PRs from forks only get a read-only
+      # token, so creating a check run is not permitted there.
+      - name: Publish test report
+        if: always()
+        continue-on-error: true
+        uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a # v3.2.0
+        with:
+          name: gdUnit4
+          path: reports/*/results.xml
+          reporter: java-junit

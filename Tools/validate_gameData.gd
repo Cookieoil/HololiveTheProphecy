@@ -411,7 +411,7 @@ func _validate_workbook() -> void:
 		_fail("workbook is missing required sheet(s): %s" % ", ".join(missing_sheets))
 	var bundle: Dictionary = builder.build_json_bundle(sheets)
 	for warning_text: String in builder.warnings:
-		print("  workbook warning: %s" % warning_text)
+		_warn("[workbook] %s" % warning_text)
 	if not builder.errors.is_empty():
 		for error_text: String in builder.errors:
 			_fail("[workbook] %s" % error_text)
