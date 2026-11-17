@@ -295,6 +295,13 @@ func play_cast_burst() -> void:
 
 
 func _on_unit_moxie_changed(_cur: int, _max: int) -> void:
+	# An enemy's roll is spent the moment its Moxie actually changes: the rolled
+	# value just landed, or the Ultimate consumed the gauge. Keeping the preview
+	# alive past that point double-counts the roll, which falsely lights up the
+	# "Ultimate incoming" glow and leaves ghost segments on an emptied orb.
+	if unit != null and not unit.is_ally:
+		_preview_gain = 0
+
 	_update_cursor()
 	_sync_glow()
 	_sync_ring_shader()

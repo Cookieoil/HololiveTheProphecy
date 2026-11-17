@@ -242,11 +242,17 @@ func _bind_unit(p_unit: Unit) -> void:
 		unit.damaged.disconnect(_on_unit_damaged)
 	if unit != null and unit.statuses_changed.is_connected(_on_unit_statuses_changed):
 		unit.statuses_changed.disconnect(_on_unit_statuses_changed)
+	if unit != null and unit.moxie_changed.is_connected(_on_unit_moxie_changed):
+		unit.moxie_changed.disconnect(_on_unit_moxie_changed)
 	unit = p_unit
 	if unit != null and not unit.damaged.is_connected(_on_unit_damaged):
 		unit.damaged.connect(_on_unit_damaged)
 	if unit != null and not unit.statuses_changed.is_connected(_on_unit_statuses_changed):
 		unit.statuses_changed.connect(_on_unit_statuses_changed)
+	if unit != null and not unit.moxie_changed.is_connected(_on_unit_moxie_changed):
+		unit.moxie_changed.connect(_on_unit_moxie_changed)
+	# A freshly bound unit has no pending intent warning yet.
+	_ult_warning_active = false
 	_statuses_dirty = true
 	_pending_status_timer = -1.0
 
@@ -331,6 +337,11 @@ func show_intent(text: String, _categories: PackedStringArray, delay: float = 0.
 
 ## animated = true fades out; false hides instantly.
 func clear_intent(animated: bool = false) -> void:
+	# A unit that is gone can never hold a pending Ultimate warning.
+	if unit == null or unit.is_dead:
+		_ult_warning_active = false
+		_refresh_outline_glow()
+
 	_pending_intent = {}
 	_intent_visible = false
 	_kill_intent_tween()
@@ -389,10 +400,27 @@ func _refresh_outline_glow() -> void:
 		return
 	if _is_orb_linked_highlighted or _is_drag_hovering or _is_target_highlighted:
 		_glow.set_active(true, OutlineGlow.Preset.RUNETERRA_BLUE)
-	elif _ult_warning_active:
+	elif _ult_warning_active or _enemy_holds_full_gauge():
 		_glow.set_active(true, OutlineGlow.Preset.THREAT_CRIMSON)
 	else:
 		_glow.set_active(false)
+
+
+## An enemy that already holds a full Moxie gauge is one step away from its
+## Ultimate, so its threat aura carries over from the pre-turn intent preview
+## straight into the cast instead of flickering off in between.
+func _enemy_holds_full_gauge() -> bool:
+	return unit != null and not unit.is_ally and unit.can_cast_ultimate
+
+
+## An enemy's pending intent is spent the moment its Moxie actually changes:
+## either the rolled value just landed, or the Ultimate consumed the gauge.
+## Player-phase debuffs re-sync the preview from the live intents instead.
+func _on_unit_moxie_changed(_current: int, _maximum: int) -> void:
+	if unit == null or unit.is_ally:
+		return
+	_ult_warning_active = false
+	_refresh_outline_glow()
 		
 
 func _update_glow_visibility() -> void:
