@@ -6,7 +6,8 @@ extends Node
 
 signal ally_ultimate_requested(ally: Unit)
 
-var icon_catalog: IconCatalog
+var icon_catalog: CardIconCatalog
+var tooltip_icon_catalog: TooltipIconCatalog
 var game_manager: Node # GameManager
 
 var _rail_layer: CanvasLayer
@@ -28,6 +29,8 @@ var _auto_sync_queued: bool = false
 
 
 func _ready() -> void:
+	if tooltip_icon_catalog == null:
+		tooltip_icon_catalog = TooltipIconCatalog.new()
 	_build_rails()
 	_build_tooltip()
 	if EventBus.has_signal("ultimate_cast"):
@@ -39,9 +42,17 @@ func _ready() -> void:
 	call_deferred("_auto_bind_scene_rows")
 
 
-func setup(p_game_manager: Node, p_icon_catalog: IconCatalog) -> void:
+func setup(
+	p_game_manager: Node,
+	p_icon_catalog: CardIconCatalog,
+	p_tooltip_icon_catalog: TooltipIconCatalog = null
+) -> void:
 	game_manager = p_game_manager
 	icon_catalog = p_icon_catalog
+	if p_tooltip_icon_catalog != null:
+		tooltip_icon_catalog = p_tooltip_icon_catalog
+	elif tooltip_icon_catalog == null:
+		tooltip_icon_catalog = TooltipIconCatalog.new()
 	if _tooltip != null:
 		_tooltip.icon_catalog = icon_catalog
 	_auto_bind_scene_rows()
@@ -417,7 +428,9 @@ func _find_intent_for_enemy(enemy: Unit) -> EnemyIntent:
 
 
 func _on_unit_card_hover_started(unit: Unit, card: Card, anchor_rect: Rect2) -> void:
-	var data := SkillPreviewFormatter.build_card_on_ally_data(unit, card, _get_state())
+	var data := SkillPreviewFormatter.build_card_on_ally_data(
+		unit, card, _get_state(), tooltip_icon_catalog
+	)
 	_tooltip.show_callout(data, anchor_rect)
 
 	var orb := _get_valid_orb(unit)
@@ -436,7 +449,9 @@ func _on_unit_intent_hover_started(unit: Unit, anchor_rect: Rect2) -> void:
 	var intent := _find_intent_for_enemy(unit)
 	if intent == null:
 		return
-	var data := SkillPreviewFormatter.build_enemy_intent_data(intent, _get_state())
+	var data := SkillPreviewFormatter.build_enemy_intent_data(
+		intent, _get_state(), tooltip_icon_catalog
+	)
 	_tooltip.show_callout(data, anchor_rect)
 
 
@@ -448,7 +463,9 @@ func _on_orb_hover_started(orb: MoxieOrbUI, unit: Unit) -> void:
 	if get_viewport().gui_is_dragging():
 		return
 	var intent := _find_intent_for_enemy(unit) if not unit.is_ally else null
-	var data := SkillPreviewFormatter.build_orb_ultimate_data(unit, orb.badge_code, _get_state(), intent)
+	var data := SkillPreviewFormatter.build_orb_ultimate_data(
+		unit, orb.badge_code, _get_state(), intent, tooltip_icon_catalog
+	)
 	_tooltip.show_callout(data, orb.get_global_rect())
 
 	var uui := _get_valid_unit_ui(unit)

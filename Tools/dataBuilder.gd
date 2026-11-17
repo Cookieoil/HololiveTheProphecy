@@ -66,6 +66,7 @@ const EFFECT_DEFAULTS: Dictionary = {
 	"order": 0,
 	"trigger": "base",
 	"action": "deal_damage",
+	"status_id": "",
 	"target_mode": "none",
 	"target_count": 1,
 	"value_source": "card_value",

@@ -11,7 +11,7 @@ const SCREEN_MARGIN: float = 12.0
 ## Temporary toggle: category icon row in the tooltip header.
 const SHOW_CATEGORY_ICONS: bool = false
 
-var icon_catalog: IconCatalog
+var icon_catalog: CardIconCatalog
 
 var _accent_color: Color = Color(0.49, 0.83, 0.99)
 var _arrow_on_left: bool = true
@@ -93,6 +93,9 @@ func _build_ui() -> void:
 	_body_rtl.size = Vector2(content_w, 0.0)
 	_body_rtl.add_theme_font_size_override("normal_font_size", 13)
 	_body_rtl.add_theme_font_size_override("bold_font_size", 14)
+	# Inline keyword icons ([img]) need a little vertical breathing room so the
+	# 16px glyph never touches the line above.
+	_body_rtl.add_theme_constant_override("line_separation", 3)
 	_body_rtl.add_theme_color_override("default_color", Color(0.93, 0.95, 0.98))
 	_body_rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vbox.add_child(_body_rtl)

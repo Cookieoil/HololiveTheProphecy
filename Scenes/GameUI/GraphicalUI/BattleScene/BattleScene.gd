@@ -2,8 +2,9 @@
 class_name BattleScene
 extends GameUI
 
-@export var icon_catalog: IconCatalog
+@export var icon_catalog: CardIconCatalog
 @export var status_icon_catalog: StatusIconCatalog
+@export var tooltip_icon_catalog: TooltipIconCatalog
 @export var unit_ui_scene: PackedScene = preload("res://Scenes/GameUI/GraphicalUI/BattleUnit/UnitUI.tscn")
 @export var turn_dice_progression: Array[int] = []
 
@@ -34,6 +35,8 @@ const INTENT_STAGGER: float = 0.08
 func _ready() -> void:
 	if status_icon_catalog == null:
 		status_icon_catalog = StatusIconCatalog.new()
+	if tooltip_icon_catalog == null:
+		tooltip_icon_catalog = TooltipIconCatalog.new()
 
 	end_turn_button.pressed.connect(func() -> void: action_decided.emit({"type": "end_turn"}))
 	convert_button.pressed.connect(func() -> void: action_decided.emit({"type": "convert"}))
@@ -44,7 +47,7 @@ func _ready() -> void:
 
 	# wire overlay right after game_manager exists, before setup_game
 	# so that show_game_state() -> _sync_overlay_units() has a valid overlay
-	battle_overlay.setup(game_manager, icon_catalog)
+	battle_overlay.setup(game_manager, icon_catalog, tooltip_icon_catalog)
 	battle_overlay.ally_ultimate_requested.connect(_on_ally_ultimate_requested)
 
 	var db: GameDatabase = DataLoader.db()
@@ -67,6 +70,12 @@ func _ready() -> void:
 func on_card_played(card: Card, state: GameState) -> void:
 	hand_bar.remove_card(card)   # animated collapse
 	_update_top_bar(state)       # Actions counter updates immediately too
+
+## Cards the game selected without asking (auto_top_n / auto_highest) get a
+## short highlight so the player can see what was picked for them.
+## `hostile` is set when an enemy caused the change; those cards flash red.
+func flash_auto_selected_cards(cards: Array[Card], hostile: bool = false) -> void:
+	await hand_bar.flash_auto_selected(cards, hostile)
 
 func play_unit_skill(unit: Unit, skill_index: int, rank: int = 0) -> void:
 	var unit_ui := _get_unit_ui(unit)
@@ -217,10 +226,15 @@ func ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]:
 
 	while chosen.size() < count and not available.is_empty():
 		var picked: Card = await hand_bar.card_clicked
-		if available.has(picked):
-			chosen.append(picked)
-			available.erase(picked)
-			hand_bar.set_pick_candidates(available, true)
+		if not available.has(picked):
+			continue
+		chosen.append(picked)
+		available.erase(picked)
+		# Already-picked cards go dark while the remaining candidates keep glowing
+		# until the last requested card has been chosen.
+		hand_bar.set_pick_candidates(available, true)
+		if chosen.size() < count:
+			show_message("Click %d more card(s) in hand!" % (count - chosen.size()))
 
 	hand_bar.set_pick_candidates([], false)
 	return chosen

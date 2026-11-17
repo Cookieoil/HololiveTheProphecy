@@ -38,6 +38,7 @@ const ACTION_MAP: Dictionary = {
 	"draw_card": EffectBlock.Action.DRAW_CARD,
 	"set_next_skill_bonus": EffectBlock.Action.SET_NEXT_SKILL_BONUS,
 	"raise_max_hp": EffectBlock.Action.RAISE_MAX_HP,
+	"apply_status": EffectBlock.Action.APPLY_STATUS,
 }
 const TARGET_MODE_MAP: Dictionary = {
 	"none": EffectBlock.TargetMode.NONE,
@@ -357,6 +358,7 @@ static func _build_effect_block(data: Dictionary, skill_id: String) -> EffectBlo
 		EffectBlock.CardModType.BUFF, context + " card_mod_type"
 	)
 	block.card_count = _get_int(data, "card_count", 1)
+	block.status_id = _get_string(data, "status_id", "")
 	block.store_resolved_value = _get_bool(data, "store_resolved_value", false)
 	return block
 

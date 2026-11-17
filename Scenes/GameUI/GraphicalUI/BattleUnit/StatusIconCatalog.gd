@@ -1,30 +1,78 @@
 # StatusIconCatalog.gd
 class_name StatusIconCatalog
 extends Resource
-## Catalog for character buff/debuff status icons (separate from card IconCatalog).
+## Catalog for character buff/debuff status icons (separate from CardIconCatalog).
 ## Provides lookup and automatic inspection of Unit buff/debuff state.
+##
+## Two dictionaries drive it:
+##   buff_icons   -> status_id : Texture2D (rendered in a blue badge frame)
+##   debuff_icons -> status_id : Texture2D (rendered in a red badge frame)
+## Anything unregistered falls back to `default_icon`, so a brand new status
+## still shows a badge instead of an empty slot.
+##
+## @author TheGreatJellyfish
+## @version 11/16/2026
 
+#region Constants
 const PLACEHOLDER_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
+## Sample icons shipped with the project. icon.svg is 128x128 and icon2.png is
+## 1000x1000; the UI badge scales both into the same square, so mismatched
+## dimensions (or aspect ratios) never break the layout.
+const SAMPLE_ICON_SVG: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
+const SAMPLE_ICON_PNG: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon2.png")
 
+## Keyword heuristics: a status id containing one of these counts as a debuff
+## even before it is registered in `debuff_icons`.
+const DEBUFF_KEYWORDS: PackedStringArray = [
+	"debuff", "weak", "vuln", "poison", "burn", "bleed", "stun", "slow",
+	"curse", "down", "gloom", "decay", "wither",
+]
+#endregion
+
+#region Exports
 @export var default_icon: Texture2D = PLACEHOLDER_ICON
 @export var buff_icons: Dictionary[String, Texture2D] = {}   # status_id (String) -> Texture2D
 @export var debuff_icons: Dictionary[String, Texture2D] = {} # status_id (String) -> Texture2D
+#endregion
+
+#region Lifecycle Methods
+## Registers the project's sample statuses, so a bare
+## `StatusIconCatalog.new()` already resolves icons. Values authored in a
+## .tres are assigned after _init(), so they always win.
+func _init() -> void:
+	register_default_icons()
+#endregion
+
+#region Public Methods
+## Adds the sample status mappings without overwriting authored entries.
+func register_default_icons() -> void:
+	if not buff_icons.has(Unit.STATUS_REGENERATION):
+		buff_icons[Unit.STATUS_REGENERATION] = SAMPLE_ICON_PNG
+	if not debuff_icons.has(Unit.STATUS_GLOOM):
+		debuff_icons[Unit.STATUS_GLOOM] = SAMPLE_ICON_SVG
 
 
+## Never returns null: unknown ids (and empty slots) fall back to the default.
 func get_status_icon(status_id: String) -> Texture2D:
-	if buff_icons.has(status_id) and buff_icons[status_id] != null:
-		return buff_icons[status_id]
-	if debuff_icons.has(status_id) and debuff_icons[status_id] != null:
-		return debuff_icons[status_id]
+	var id: String = status_id.strip_edges().to_lower()
+	var buff_icon: Texture2D = buff_icons.get(id, null)
+	if buff_icon != null:
+		return buff_icon
+	var debuff_icon: Texture2D = debuff_icons.get(id, null)
+	if debuff_icon != null:
+		return debuff_icon
 	return default_icon if default_icon != null else PLACEHOLDER_ICON
 
 
+## Registered buff ids win over the keyword heuristics.
 func is_debuff_id(status_id: String) -> bool:
-	if debuff_icons.has(status_id):
+	var id: String = status_id.strip_edges().to_lower()
+	if buff_icons.has(id):
+		return false
+	if debuff_icons.has(id):
 		return true
-	var lower: String = status_id.to_lower()
-	for kw: String in ["debuff", "weak", "vuln", "poison", "burn", "bleed", "stun", "slow", "curse", "down"]:
-		if lower.contains(kw):
+	for keyword: String in DEBUFF_KEYWORDS:
+		if id.contains(keyword):
 			return true
 	return false
 
@@ -34,6 +82,10 @@ func is_debuff_id(status_id: String) -> bool:
 func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if unit == null:
+		return result
+
+	# Dead units never keep badges around.
+	if _object_bool(unit, "is_dead", false):
 		return result
 
 	var seen_ids: Dictionary[String, bool] = {}
@@ -54,7 +106,7 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 						result.append({
 							"id": id_str,
 							"count": count,
-							"is_debuff": force_debuff or is_debuff_id(id_str),
+							"is_debuff": force_debuff or _entry_is_debuff(raw_entry, id_str),
 							"icon": get_status_icon(id_str)
 						})
 			elif val is Array:
@@ -159,6 +211,33 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 	return result
 
 
+#endregion
+
+
+#region Private Methods
+## Honors an explicit "is_debuff" flag on a status entry, otherwise falls back
+## to the id heuristics.
+func _entry_is_debuff(entry_raw: Variant, status_id: String) -> bool:
+	if entry_raw is Dictionary:
+		var entry: Dictionary = entry_raw
+		var flag_raw: Variant = entry.get("is_debuff", null)
+		if flag_raw is bool:
+			var flag: bool = flag_raw
+			return flag
+	return is_debuff_id(status_id)
+
+
+## Safely reads a boolean property off an Object (dead-unit guard).
+func _object_bool(target: Object, prop_name: String, fallback: bool) -> bool:
+	if not (prop_name in target):
+		return fallback
+	var raw: Variant = target.get(prop_name)
+	if raw is bool:
+		var bool_value: bool = raw
+		return bool_value
+	return fallback
+
+
 func _extract_count(raw: Variant) -> int:
 	if raw is int:
 		var ri: int = raw
@@ -248,3 +327,4 @@ func _parse_status_object(item: Variant, force_debuff: bool) -> Dictionary:
 			"icon": get_status_icon(id_str)
 		}
 	return {}
+#endregion

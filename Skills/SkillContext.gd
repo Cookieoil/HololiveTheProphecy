@@ -24,6 +24,9 @@ var stored_value: int = 0
 var pick_n_target: Callable = Callable()
 # Async callable: func(count: int, filter: Callable) -> Array[Unit]
 var pick_n_card: Callable = Callable()
+# Async callable: func(cards: Array[Card]) -> void
+# Presentation cue for cards the game selected automatically (no prompt shown).
+var flash_cards: Callable = Callable()
 # Sync callable: func(message: String) -> void
 var log_message: Callable = Callable()
 

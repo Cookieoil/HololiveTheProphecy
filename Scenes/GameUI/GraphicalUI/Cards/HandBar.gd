@@ -13,8 +13,15 @@ const REMOVE_TWEEN_TIME: float = 0.18
 const ENTER_TWEEN_TIME: float = 0.22
 const CARD_WIDTH: float = 100.0
 const CARD_HEIGHT: float = 145.0
+## How long auto-selected cards stay lit before the flash fades out.
+const AUTO_FLASH_HOLD: float = 0.55
 
 var game_state: GameState
+
+# While _pick_active is true the game is waiting for the player to click cards
+# in hand, so every candidate keeps its pick highlight on.
+var _pick_active: bool = false
+var _pick_candidates: Array[Card] = []
 
 @onready var cards_row: HBoxContainer = $MarginContainer/VBox/CardsRow
 
@@ -30,22 +37,69 @@ func _ready() -> void:
 #region Public API (called by GraphicalGameUI)
 
 func set_pick_candidates(candidates: Array[Card], active: bool) -> void:
+	_pick_active = active
+	if active:
+		_pick_candidates = candidates.duplicate()
+	else:
+		_pick_candidates.clear()
+	_apply_pick_candidates()
+
+
+## Briefly highlights cards the game picked on its own (auto_top_n /
+## auto_highest) so the player can see which cards were affected even though no
+## prompt was shown. Awaited by the caller, so the cards stay lit before the
+## hand is rebuilt or the cards are discarded.
+## `hostile` is set when an enemy caused the change; those cards flash red.
+func flash_auto_selected(cards: Array[Card], hostile: bool = false) -> void:
+	if cards.is_empty() or not is_inside_tree():
+		return
+
+	var flashed: Array[CardUI] = []
+	for card: Card in cards:
+		var ui: CardUI = _find_card_ui(card)
+		if ui != null:
+			flashed.append(ui)
+	if flashed.is_empty():
+		return
+
+	for ui: CardUI in flashed:
+		ui.set_flash_active(true, hostile)
+
+	var tween: Tween = create_tween()
+	tween.tween_interval(AUTO_FLASH_HOLD)
+	await tween.finished
+
+	for ui: CardUI in flashed:
+		if is_instance_valid(ui) and not ui.is_consumed():
+			ui.set_flash_active(false)
+
+
+## Re-applies the current pick highlight to every card in the row.
+## Called after each pick (so already-chosen cards go dark while the remaining
+## candidates keep glowing) and after the row is rebuilt (so a mid-pick refresh
+## does not silently drop the highlight).
+func _apply_pick_candidates() -> void:
 	for child: Node in cards_row.get_children():
 		var ui := child as CardUI
-		if ui != null:
-			ui.set_pick_selectable(active and candidates.has(ui.card))
-			
+		if ui == null or ui.is_consumed():
+			continue
+		ui.set_pick_selectable(_pick_active and _pick_candidates.has(ui.card))
+
+
 func set_hand(cards: Array[Card]) -> void:
 	for child: Node in cards_row.get_children():
 		cards_row.remove_child(child)
 		child.queue_free()
 	for c: Card in cards:
 		_spawn_card(c, false)
+	_apply_pick_candidates()
 
 
 func add_card(card: Card) -> void:
 	## New cards enter from the LEFT, sliding existing cards right.
 	var ui: CardUI = _spawn_card(card, true)
+	# Keep any in-progress pick highlight correct for the rebuilt row.
+	_apply_pick_candidates()
 	cards_row.move_child(ui, 0)
 
 

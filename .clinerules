@@ -1,0 +1,5 @@
+# Git Workflow
+After you have completed a task and all tests/verifications pass, you MUST:
+1. Run `git add .`
+2. Generate a commit message using the Conventional Commits format.
+3. Run `git commit -m "your generated message"`

@@ -22,7 +22,6 @@
 			"uuid": "15f5c248-18c5-463e-b70f-1111190e3510",
 			"title": "Light tasks",
 			"tasks": [
-				"edec03dc-fe42-41a6-a27d-8c586679be38",
 				"1123dfaa-782d-4cfc-8237-d490a01e159d",
 				"591fc37c-7d63-4f48-a283-d9feabaa7cdd",
 				"5361585b-8897-45f3-82e1-8de82a2e037d"
@@ -38,6 +37,7 @@
 			"title": "Done",
 			"tasks": [
 				"79f83019-950f-40b1-bd82-043422f4c9ea",
+				"edec03dc-fe42-41a6-a27d-8c586679be38",
 				"258ca0ab-7514-4d3e-b7ba-ad11dc4ad6ba",
 				"dcefedab-d114-4a7e-a713-d6593ec93b26",
 				"31c2f2a9-5bd2-4359-be65-5572811e98eb",

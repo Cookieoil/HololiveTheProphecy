@@ -5,6 +5,8 @@
 [ext_resource type="Resource" uid="uid://bdor57tkqj1yu" path="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/IconTest.tres" id="2_hqvvd"]
 [ext_resource type="Script" uid="uid://d31cx2a0p2aw3" path="res://Scenes/GameUI/GraphicalUI/Cards/HandBar.gd" id="3_m4kqq"]
 [ext_resource type="Texture2D" uid="uid://c3oo6wx54hb7m" path="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg" id="4_phsvg"]
+[ext_resource type="Resource" path="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/StatusIcons.tres" id="6_status"]
+[ext_resource type="Resource" path="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/TooltipIcons.tres" id="7_tooltip"]
 
 [sub_resource type="Environment" id="Environment_hqvvd"]
 background_mode = 3
@@ -15,6 +17,8 @@ glow_intensity = 0.8
 [node name="Main" type="Node" unique_id=311251633]
 script = ExtResource("1_cb2vx")
 icon_catalog = ExtResource("2_hqvvd")
+status_icon_catalog = ExtResource("6_status")
+tooltip_icon_catalog = ExtResource("7_tooltip")
 
 [node name="Background" type="CanvasLayer" parent="." unique_id=1362181667]
 layer = -1

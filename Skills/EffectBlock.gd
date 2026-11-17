@@ -45,6 +45,7 @@ enum Action {
 	DRAW_CARD, # Draw N cards from deck
 	SET_NEXT_SKILL_BONUS, # Add to GameState.next_skill_bonus
 	RAISE_MAX_HP, # Set target max HP
+	APPLY_STATUS, # Apply `status_id` stacks/rounds to the targets
 }
 
 ## How to compute the numeric amount for an effect:
@@ -90,6 +91,9 @@ enum CardModType {
 @export var card_select_mode: CardSelectMode = CardSelectMode.PICK_N_CARD
 @export var card_mod_type: CardModType = CardModType.BUFF
 @export var card_count: int = 1 # For draw_card and auto_top_n
+
+@export_group("Status")
+@export var status_id: String = "" # For apply_status: the buff/debuff id (e.g. "gloom")
 
 @export_group("Value")
 @export var value_source: ValueSource = ValueSource.CARD_VALUE
@@ -298,6 +302,9 @@ func execute(ctx: SkillContext) -> void:
 		Action.RAISE_MAX_HP:
 			_raise_max_hp(ctx, targets, value)
 			
+		Action.APPLY_STATUS:
+			_apply_status(ctx, targets, value)
+			
 	if store_resolved_value:
 		ctx.stored_value = value
 		
@@ -435,6 +442,14 @@ func _apply_modifier(ctx: SkillContext, targets: Array[Unit], value: int) -> voi
 		])
 
 
+## Presentation cue: shows the player which cards the game picked for them
+## (auto_top_n / auto_highest) since no prompt was shown.
+func _flash_auto_selected(ctx: SkillContext, cards: Array[Card]) -> void:
+	if cards.is_empty() or not ctx.flash_cards.is_valid():
+		return
+	await ctx.flash_cards.call(cards)
+
+
 func _modify_card(ctx: SkillContext, value: int) -> void:
 	match card_select_mode:
 		CardSelectMode.PICK_N_CARD:
@@ -454,6 +469,7 @@ func _modify_card(ctx: SkillContext, value: int) -> void:
 			if top_cards.is_empty():
 				ctx.log("No cards in hand to modify.")
 				return
+			await _flash_auto_selected(ctx, top_cards)
 			for card: Card in top_cards:
 				_apply_card_mod(ctx, card, value)
 
@@ -462,6 +478,8 @@ func _modify_card(ctx: SkillContext, value: int) -> void:
 			if highest == null:
 				ctx.log("No cards in hand to modify.")
 				return
+			var single: Array[Card] = [highest]
+			await _flash_auto_selected(ctx, single)
 			_apply_card_mod(ctx, highest, value)
 
 
@@ -489,20 +507,26 @@ func _discard_card(ctx: SkillContext) -> void:
 		return
 
 	var chosen_cards: Array[Card] = []
+	var auto_selected: bool = false
 	match card_select_mode:
 		CardSelectMode.PICK_N_CARD:
 			var filter: Callable = func(_c: Card) -> bool: return true
 			chosen_cards = await ctx.pick_n_card.call(card_count, filter)
 		CardSelectMode.AUTO_HIGHEST:
+			auto_selected = true
 			var c: Card = ctx.game_state.get_highest_card_in_hand()
 			if c != null:
 				chosen_cards = [c]
 		CardSelectMode.AUTO_TOP_N:
+			auto_selected = true
 			chosen_cards = ctx.game_state.get_top_n_cards(card_count)
 
 	if chosen_cards.is_empty():
 		ctx.log("No card discarded.")
 		return
+
+	if auto_selected:
+		await _flash_auto_selected(ctx, chosen_cards)
 
 	if store_resolved_value and not chosen_cards.is_empty():
 		ctx.stored_value = chosen_cards[0].get_effective_value()
@@ -536,6 +560,27 @@ func _set_next_skill_bonus(ctx: SkillContext, value: int) -> void:
 	ctx.log("Next skill played this turn gains %s value." % val_str)
 
 
+## Applies a buff/debuff status to the resolved targets. The resolved value is
+## used as the number of stacks (or rounds) added.
+func _apply_status(ctx: SkillContext, targets: Array[Unit], value: int) -> void:
+	var id: String = status_id.strip_edges().to_lower()
+	if id.is_empty():
+		ctx.log(ColorUtils.colorize("apply_status effect has no status_id.", ColorUtils.COLOR_DEAD))
+		return
+	var amount: int = maxi(1, value)
+	for target: Unit in targets:
+		if target.is_dead:
+			continue
+		var new_count: int = target.apply_status(id, amount)
+		var target_name: String = _color_unit(target)
+		var amount_str: String = _color_value(amount)
+		var total_str: String = ColorUtils.colorize(str(new_count), ColorUtils.COLOR_CARD)
+		ctx.log("%s gains %s %s (total: %s)" % [
+			target_name, amount_str, id.capitalize(), total_str
+		])
+		EventBus.unit_statuses_changed.emit(target)
+
+
 func _raise_max_hp(ctx: SkillContext, targets: Array[Unit], value: int) -> void:
 	for target: Unit in targets:
 		target.raise_max_hp(value)
@@ -564,6 +609,8 @@ func get_description() -> String:
 	# Action verb
 	var action_raw: String = Action.keys()[action_type]
 	var action_name: String = action_raw.replace("_", " ").capitalize()
+	if action_type == Action.APPLY_STATUS and not status_id.strip_edges().is_empty():
+		action_name = "%s (%s)" % [action_name, status_id.strip_edges()]
 	parts.append(action_name)
 
 	# Value description

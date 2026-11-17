@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusIconCatalog" format=3]
+
+[ext_resource type="Script" path="res://Scenes/GameUI/GraphicalUI/BattleUnit/StatusIconCatalog.gd" id="1_status"]
+[ext_resource type="Texture2D" path="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg" id="2_svg"]
+[ext_resource type="Texture2D" path="res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon2.png" id="3_png"]
+
+[resource]
+script = ExtResource("1_status")
+default_icon = ExtResource("2_svg")
+buff_icons = Dictionary[String, Texture2D]({
+"regeneration": ExtResource("3_png")
+})
+debuff_icons = Dictionary[String, Texture2D]({
+"gloom": ExtResource("2_svg")
+})
+metadata/_custom_type_script = "uid://cn7bgu63vdfq6"
+

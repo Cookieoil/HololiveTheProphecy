@@ -18,7 +18,13 @@ const HOVER_LIFT: float = 18.0
 const HOVER_TWEEN_TIME: float = 0.12
 const HOVER_Z_INDEX: int = 20
 
-@export var icon_catalog: IconCatalog
+@export var icon_catalog: CardIconCatalog
+
+@export_group("Value Change Timing")
+## How long the value label waits before it re-renders after a runtime value
+## change (e.g. an enemy card debuff), mirroring the unit hit-reaction delay so
+## the number lands slightly after the change instead of popping instantly.
+@export_range(0.0, 3.0, 0.05) var value_change_delay: float = 0.35
 
 var card: Card
 var hand_bar: HandBar
@@ -26,12 +32,17 @@ var hand_bar: HandBar
 var _hover_tween: Tween
 var _is_hovered: bool = false
 var _pick_selectable: bool = false
+var _flash_active: bool = false
+## True when the flash was caused by an enemy, so the glow turns red.
+var _flash_hostile: bool = false
 
 var _drag_in_progress: bool = false
 var _is_consumed: bool = false
 var _return_tween: Tween
 var _return_layer: CanvasLayer
 var _glow: OutlineGlow
+## Pending delayed re-render of the value label after a runtime value change.
+var _value_tween: Tween
 
 @onready var hover_visual: PanelContainer = $Bounds/HoverVisual
 @onready var icon_row: HBoxContainer = $Bounds/HoverVisual/Margin/VBox/IconRow
@@ -69,6 +80,11 @@ func _ready() -> void:
 	mouse_entered.connect(_on_card_mouse_entered)
 	mouse_exited.connect(_on_card_mouse_exited)
 
+	# The hand UI is not rebuilt during the enemy turn, so the value label must
+	# react to runtime card changes (buffs / debuffs) on its own.
+	if EventBus.has_signal("card_value_changed"):
+		EventBus.card_value_changed.connect(_on_card_value_changed)
+
 
 func _process(_delta: float) -> void:
 	# Immediately clear merge highlight if the cursor leaves this card while dragging.
@@ -76,16 +92,50 @@ func _process(_delta: float) -> void:
 		if not get_viewport().gui_is_dragging() \
 				or not get_global_rect().has_point(get_global_mouse_position()):
 			merge_glow.visible = false
-		
-	if _glow != null and merge_glow != null:
-		var preset := OutlineGlow.Preset.RUNETERRA_BLUE if _pick_selectable \
-			else OutlineGlow.Preset.ARCANE_GOLD
-		_glow.set_active(merge_glow.visible, preset)
-		
+
+	_refresh_glow()
+
+
+## Single source of truth for the card's outer glow.
+##   enemy-caused flash (auto-selected cards hit by an enemy skill)     → THREAT_CRIMSON
+##   selected   (pick prompt, or auto-selected by the game)            → RUNETERRA_BLUE
+##   merge drop (dragging a mergeable card onto this one)              → ARCANE_GOLD
+##   neither                                                           → off
+func _refresh_glow() -> void:
+	if _glow == null or merge_glow == null:
+		return
+	if _pick_selectable or _flash_active:
+		var flash_preset: OutlineGlow.Preset = (
+			OutlineGlow.Preset.THREAT_CRIMSON if _flash_hostile
+			else OutlineGlow.Preset.RUNETERRA_BLUE
+		)
+		_glow.set_active(true, flash_preset)
+	elif merge_glow.visible:
+		_glow.set_active(true, OutlineGlow.Preset.ARCANE_GOLD)
+	else:
+		_glow.set_active(false)
+
+
+## Highlights this card while the game is asking the player to choose cards in
+## hand. HandBar calls this for every candidate; candidates that have already
+## been picked are switched back off so the remaining ones keep glowing.
 func set_pick_selectable(active: bool) -> void:
 	_pick_selectable = active
-	if merge_glow:
+	if merge_glow != null:
 		merge_glow.visible = active
+	# Refresh right away so every candidate lights up on the very frame the
+	# prompt appears instead of waiting for the next _process tick.
+	_refresh_glow()
+
+
+## Highlights this card while the game shows which cards it picked on its own
+## (auto_top_n / auto_highest). HandBar times the flash and clears it again.
+## `hostile` is passed when an enemy caused the change so the card flashes red
+## (THREAT_CRIMSON) instead of the friendly blue.
+func set_flash_active(active: bool, hostile: bool = false) -> void:
+	_flash_active = active
+	_flash_hostile = active and hostile
+	_refresh_glow()
 
 
 #region Consumed guard
@@ -95,6 +145,13 @@ func set_pick_selectable(active: bool) -> void:
 ## target, hover restore, return animation) can revive a dying card.
 func mark_consumed() -> void:
 	_is_consumed = true
+	# A dying card must never keep (or gain) a pick highlight while it collapses.
+	_pick_selectable = false
+	_flash_active = false
+	_flash_hostile = false
+	if merge_glow != null:
+		merge_glow.visible = false
+	_refresh_glow()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cancel_return_animation(false)
 	modulate.a = 0.0
@@ -116,8 +173,14 @@ func _gui_input(event: InputEvent) -> void:
 func _exit_tree() -> void:
 	if _hover_tween != null and _hover_tween.is_valid():
 		_hover_tween.kill()
-	
+
 	_hover_tween = null
+
+	if _value_tween != null and _value_tween.is_valid():
+		_value_tween.kill()
+
+	_value_tween = null
+
 	_cancel_return_animation()
 
 
@@ -548,4 +611,24 @@ func _find_hand_bar() -> HandBar:
 		curr = curr.get_parent()
 
 	return null
+#endregion
+
+#region EventBus handlers
+
+## Runtime card value change (skill buffs / debuffs, e.g. an enemy reducing the
+## value of cards in hand). The label waits `value_change_delay` before it
+## re-renders so the number lands with the reaction — the same beat UnitUI uses
+## for damage — instead of changing on the exact frame the model was mutated.
+func _on_card_value_changed(changed_card: Card, old_value: int, new_value: int) -> void:
+	if changed_card == null or changed_card != card or _is_consumed:
+		return
+	if old_value == new_value or not is_inside_tree():
+		return
+
+	if _value_tween != null and _value_tween.is_valid():
+		_value_tween.kill()
+
+	_value_tween = create_tween()
+	_value_tween.tween_interval(value_change_delay)
+	_value_tween.tween_callback(_refresh)
 #endregion

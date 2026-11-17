@@ -12,7 +12,7 @@ const PLACEHOLDER_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/Bat
 const STAGGER_OFFSET_Y: float = 65.0
 const SPINE_BASE_DIR = "res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/"
 
-@export var icon_catalog: IconCatalog
+@export var icon_catalog: CardIconCatalog
 @export var status_icon_catalog: StatusIconCatalog
 
 @export_group("Spine Override")
@@ -22,6 +22,13 @@ const SPINE_BASE_DIR = "res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/"
 
 @export_group("Hit Flash Timing")
 @export_range(0.0, 3.0, 0.05) var hit_flash_delay: float = 0.0
+
+@export_group("Status Apply Delay")
+## How long the badge strip waits before showing a new/stacked status, so it
+## lands together with the hit reaction.
+## -1 = reuse the damage delay above (hit_flash_delay / sprite hit_reaction_delay).
+## TEMPORARY: this is a stand-in until a full animation track drives the timing.
+@export_range(-1.0, 3.0, 0.05) var status_apply_delay: float = -1.0
 
 @export_group("Skill HUD Fade")
 @export_range(0.0, 1.0, 0.01) var hud_fade_out_time: float = 0.12
@@ -122,6 +129,10 @@ var _shatter_shards: Array[Dictionary] = []
 
 var _last_status_signature: String = ""
 var _manual_statuses: Array[Dictionary] = []
+## Set whenever the unit's status list changes, so the strip only rebuilds then.
+var _statuses_dirty: bool = true
+## Counts down to the moment a pending status change becomes visible (-1 = none).
+var _pending_status_timer: float = -1.0
 #endregion
 
 
@@ -151,9 +162,9 @@ func _ready() -> void:
 	oval_body.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	name_label.visible = false
 	skill_preview_box.visible = false
-	status_icons_grid.visible = SHOW_STATUS_STRIP
+	status_icons_grid.visible = SHOW_STATUS_ICONS
 	# Hidden Controls are skipped by the VBox, so the strip leaves no empty gap.
-	status_section.visible = SHOW_STATUS_STRIP
+	status_section.visible = SHOW_STATUS_ICONS or SHOW_SKILL_PREVIEW_STRIP
 
 	_setup_glow_style()
 	if health_bar_canvas:
@@ -178,6 +189,14 @@ func _process(delta: float) -> void:
 
 	if unit == null or unit.data == null: return
 
+	# Pending status changes appear once the reaction delay has elapsed, so the
+	# badge lands with the hit animation (temporary until a real anim track).
+	if _pending_status_timer >= 0.0:
+		_pending_status_timer -= delta
+		if _pending_status_timer <= 0.0 or unit.is_dead:
+			_pending_status_timer = -1.0
+			_statuses_dirty = true
+
 	_refresh_status_icons()
 	_refresh_display(delta)
 
@@ -186,7 +205,7 @@ func _process(delta: float) -> void:
 
 #region Setup & Binding
 
-func setup(p_unit: Unit, p_card_catalog: IconCatalog, p_status_catalog: StatusIconCatalog = null) -> void:
+func setup(p_unit: Unit, p_card_catalog: CardIconCatalog, p_status_catalog: StatusIconCatalog = null) -> void:
 	_bind_unit(p_unit)
 	icon_catalog = p_card_catalog
 	if p_status_catalog != null:
@@ -221,9 +240,15 @@ func setup(p_unit: Unit, p_card_catalog: IconCatalog, p_status_catalog: StatusIc
 func _bind_unit(p_unit: Unit) -> void:
 	if unit != null and unit.damaged.is_connected(_on_unit_damaged):
 		unit.damaged.disconnect(_on_unit_damaged)
+	if unit != null and unit.statuses_changed.is_connected(_on_unit_statuses_changed):
+		unit.statuses_changed.disconnect(_on_unit_statuses_changed)
 	unit = p_unit
 	if unit != null and not unit.damaged.is_connected(_on_unit_damaged):
 		unit.damaged.connect(_on_unit_damaged)
+	if unit != null and not unit.statuses_changed.is_connected(_on_unit_statuses_changed):
+		unit.statuses_changed.connect(_on_unit_statuses_changed)
+	_statuses_dirty = true
+	_pending_status_timer = -1.0
 
 
 func set_staggered(is_lower: bool) -> void:
@@ -414,7 +439,7 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 	_is_drag_hovering = true
 	_hovered_drag_card = drag.card
 	_update_glow_visibility()
-	skill_preview_box.visible = SHOW_STATUS_STRIP
+	skill_preview_box.visible = SHOW_SKILL_PREVIEW_STRIP
 	
 	var is_merged: bool = drag.card.is_merged or drag.card.is_double_merged
 	if drag.card.is_odd():
@@ -646,32 +671,69 @@ func _get_intro_duration() -> float:
 
 
 #region Status Icons
-## Temporary toggle: the status badge / skill preview strip above the portrait.
-const SHOW_STATUS_STRIP: bool = false
+## Status badge strip above the portrait (buff/debuff icons + counter).
+const SHOW_STATUS_ICONS: bool = true
+## Legacy skill-category preview rows in the same section (kept off).
+const SHOW_SKILL_PREVIEW_STRIP: bool = false
+
+## Square size of one status badge. The grid has 4 columns, so four badges
+## fit inside the 114px strip without resizing the UnitUI.
+const BADGE_SIZE: float = 24.0
+## Inset that keeps the icon art away from the badge frame.
+const ICON_INSET: float = 3.0
+## Counter label styling (bottom-right corner, outlined white).
+const COUNT_FONT_SIZE: int = 11
+const COUNT_OUTLINE_SIZE: int = 4
+## How far the counter overhangs the badge corner (matches the reference art).
+const COUNT_OVERHANG: float = 3.0
+## Counts above this are shown as "99+".
+const COUNT_DISPLAY_MAX: int = 99
+## Badge tile tint: buffs are royal blue, debuffs crimson (LoR/R1999 style).
+const BUFF_TILE_COLOR: Color = Color(0.10, 0.26, 0.42, 0.95)
+const BUFF_FRAME_COLOR: Color = Color(0.36, 0.78, 1.0, 0.95)
+const DEBUFF_TILE_COLOR: Color = Color(0.34, 0.09, 0.12, 0.95)
+const DEBUFF_FRAME_COLOR: Color = Color(1.0, 0.34, 0.32, 0.95)
 
 func set_manual_statuses(statuses: Array[Dictionary]) -> void:
 	_manual_statuses = statuses
 	_last_status_signature = ""
+	_pending_status_timer = -1.0
+	_statuses_dirty = true
 	_refresh_status_icons()
+
+
+## The unit applied/stacked/ticked a status. The strip rebuilds after the
+## reaction delay so the badge appears together with the hit animation.
+func _on_unit_statuses_changed() -> void:
+	var delay: float = _get_effective_status_delay()
+	if delay <= 0.0 or unit == null or unit.is_dead:
+		_statuses_dirty = true
+		return
+	# Keep the earliest deadline so several statuses from one skill land together.
+	if _pending_status_timer < 0.0:
+		_pending_status_timer = delay
 
 
 func _refresh_status_icons() -> void:
 	if status_icons_grid == null: return
-	if not SHOW_STATUS_STRIP:
+	if not SHOW_STATUS_ICONS:
 		status_icons_grid.visible = false
 		return
 	status_icons_grid.visible = true
 	if unit == null: return
+	if not _statuses_dirty: return
 
 	var statuses: Array[Dictionary] = _manual_statuses.duplicate()
 	if statuses.is_empty() and status_icon_catalog != null:
 		statuses = status_icon_catalog.extract_unit_statuses(unit)
 
-	var sig: String = str(statuses)
-	if sig == _last_status_signature: return
-	_last_status_signature = sig
+	_statuses_dirty = false
+	_last_status_signature = _status_signature(statuses)
 
+	# remove_child + queue_free keeps the grid from drawing both the old and the
+	# new badges during the rebuild frame.
 	for child: Node in status_icons_grid.get_children():
+		status_icons_grid.remove_child(child)
 		child.queue_free()
 
 	for st: Dictionary in statuses:
@@ -682,44 +744,71 @@ func _refresh_status_icons() -> void:
 		status_icons_grid.add_child(badge)
 
 
+## Compact signature of the current strip, useful when debugging rebuilds.
+func _status_signature(statuses: Array[Dictionary]) -> String:
+	var parts: PackedStringArray = []
+	for st: Dictionary in statuses:
+		var st_count: int = st.get("count", 0)
+		var st_debuff: bool = st.get("is_debuff", false)
+		parts.append("%s:%d:%s" % [
+			str(st.get("id", "?")), st_count, "1" if st_debuff else "0"
+		])
+	return "|".join(parts)
+
+
 func _create_e7_status_badge(tex: Texture2D, count: int, is_debuff: bool) -> Control:
 	var box := Panel.new()
-	box.custom_minimum_size = Vector2(24, 24)
+	box.custom_minimum_size = Vector2(BADGE_SIZE, BADGE_SIZE)
+	# The counter is allowed to overhang the bottom-right corner.
+	box.clip_contents = false
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.10, 0.14, 0.94)
+	bg.bg_color = DEBUFF_TILE_COLOR if is_debuff else BUFF_TILE_COLOR
 	bg.border_width_left = 1
 	bg.border_width_top = 1
 	bg.border_width_right = 1
 	bg.border_width_bottom = 1
-	bg.border_color = Color(0.85, 0.25, 0.25, 0.9) if is_debuff else Color(0.20, 0.72, 1.0, 0.9)
+	bg.border_color = DEBUFF_FRAME_COLOR if is_debuff else BUFF_FRAME_COLOR
 	bg.corner_radius_top_left = 4
 	bg.corner_radius_top_right = 4
 	bg.corner_radius_bottom_left = 4
 	bg.corner_radius_bottom_right = 4
 	box.add_theme_stylebox_override("panel", bg)
 
+	# The art keeps its own colors (Color.WHITE), so a 128x128 SVG and a
+	# 1000x1000 PNG both scale into the same square without tint or stretch.
 	var icon_rect := TextureRect.new()
 	icon_rect.texture = tex if tex != null else PLACEHOLDER_ICON
 	icon_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	icon_rect.offset_left = 3
-	icon_rect.offset_top = 3
-	icon_rect.offset_right = -3
-	icon_rect.offset_bottom = -3
+	icon_rect.offset_left = ICON_INSET
+	icon_rect.offset_top = ICON_INSET
+	icon_rect.offset_right = -ICON_INSET
+	icon_rect.offset_bottom = -ICON_INSET
 	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon_rect.modulate = Color(1.0, 0.38, 0.38) if is_debuff else Color(0.22, 0.78, 1.0)
+	icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	icon_rect.modulate = Color.WHITE
 	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(icon_rect)
 
+	# Count badge: bottom-right corner, white with a heavy dark outline so the
+	# number stays readable over any icon (Legends of Runeterra style).
 	var count_lbl := Label.new()
-	count_lbl.text = str(maxi(1, count))
-	count_lbl.position = Vector2(1, -3)
-	count_lbl.add_theme_font_size_override("font_size", 11)
+	var display_count: int = maxi(1, count)
+	if display_count > COUNT_DISPLAY_MAX:
+		count_lbl.text = "%d+" % COUNT_DISPLAY_MAX
+	else:
+		count_lbl.text = str(display_count)
+	count_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	count_lbl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	count_lbl.offset_right = COUNT_OVERHANG
+	count_lbl.offset_bottom = COUNT_OVERHANG
+	count_lbl.add_theme_font_size_override("font_size", COUNT_FONT_SIZE)
 	count_lbl.add_theme_color_override("font_color", Color.WHITE)
 	count_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-	count_lbl.add_theme_constant_override("outline_size", 4)
+	count_lbl.add_theme_constant_override("outline_size", COUNT_OUTLINE_SIZE)
 	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(count_lbl)
 
@@ -1106,6 +1195,14 @@ func _get_effective_hit_flash_delay() -> float:
 	return 0.0
 
 
+## Delay used to reveal a status change. Falls back to the damage reaction delay
+## so badges, HP bar and flinch all resolve on the same beat.
+func _get_effective_status_delay() -> float:
+	if status_apply_delay >= 0.0:
+		return status_apply_delay
+	return _get_effective_hit_flash_delay()
+
+
 func _get_effective_death_delay() -> float:
 	if sprite != null:
 		var v: Variant = sprite.get("death_animation_delay")
@@ -1125,7 +1222,7 @@ func _get_effective_death_delay() -> float:
 func _render_skill_preview_icons(container: HBoxContainer, skill: SkillData, is_merged: bool) -> void:
 	for child in container.get_children():
 		child.queue_free()
-	if not SHOW_STATUS_STRIP:
+	if not SHOW_SKILL_PREVIEW_STRIP:
 		return
 	if skill == null or icon_catalog == null: return
 

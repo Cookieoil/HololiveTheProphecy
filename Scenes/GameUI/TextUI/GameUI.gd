@@ -40,6 +40,15 @@ func clear_unit_intent(_unit: Unit) -> void:
 ## Presentation cue: a card was accepted and left the hand.
 func on_card_played(_card: Card, _state: GameState) -> void:
 	pass
+
+## Presentation cue: the game picked these cards out of the hand on its own
+## (auto_top_n / auto_highest), so no prompt was shown. Briefly highlight them
+## so the player can still see which cards were affected.
+## `hostile` marks enemy-caused changes; implementations should flash red
+## instead of the friendly highlight colour.
+## Callers may `await` this; implementations that animate should be coroutines.
+func flash_auto_selected_cards(_cards: Array[Card], _hostile: bool = false) -> void:
+	pass
 #endregion
 
 #region Player Input (async)

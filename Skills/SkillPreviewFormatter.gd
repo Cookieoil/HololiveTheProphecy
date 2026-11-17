@@ -7,9 +7,13 @@ const COL_MOXIE := "#C77DFF"
 const COL_ULT := "#FF6B6B"
 const COL_OK := "#6EE7B7"
 const COL_MUTED := "#9CA3AF"
+## Slightly smaller inline icons for the dimmed "Merged" reminder line (font_size=12).
+const MUTED_ICON_SIZE: int = 14
 
 ## Returns structured data for the Sketch-2 callout when dragging a Card onto an Ally.
-static func build_card_on_ally_data(ally: Unit, card: Card, state: GameState) -> Dictionary:
+static func build_card_on_ally_data(
+	ally: Unit, card: Card, state: GameState, tooltip_catalog: TooltipIconCatalog = null
+) -> Dictionary:
 	if ally == null or card == null or ally.data == null:
 		return {}
 
@@ -38,11 +42,17 @@ static func build_card_on_ally_data(ally: Unit, card: Card, state: GameState) ->
 	else:
 		subtitle = "%s  •  %d Value" % [merge_txt, skill_val]
 
-	var body_lines := _resolve_description_lines(skill, ally, skill_val, is_merged, state)
+	var body_lines := _resolve_description_lines(
+		skill, ally, skill_val, is_merged, state, tooltip_catalog
+	)
 
 	# Helpful memory aid: when dragging an unmerged card, dimly remind what Merged does
 	if not is_merged and skill.merged_description.strip_edges() != "":
-		var merged_preview := _substitute_tokens(skill.merged_description, skill_val, state)
+		var no_blocks: Array[SkillEffect] = []
+		var merged_preview := _substitute_tokens(
+			skill.merged_description, skill_val, state, no_blocks, null,
+			tooltip_catalog, MUTED_ICON_SIZE
+		)
 		body_lines.append("\n[color=%s][font_size=12]%s[/font_size][/color]" % [COL_MUTED, merged_preview])
 
 	var next_moxie := mini(ally.max_moxie, ally.moxie + card_val)
@@ -51,9 +61,9 @@ static func build_card_on_ally_data(ally: Unit, card: Card, state: GameState) ->
 		COL_MOXIE, ally.moxie, next_moxie, ally.max_moxie, card_val, ready_tag
 	]
 
-	var accent := Color(0.98, 0.78, 0.25) if is_merged else (
-		Color(0.49, 0.83, 0.99) if is_odd else Color(0.94, 0.67, 0.99)
-	)
+	# Accent reflects the hovered unit's side only (ally = blue, enemy = red),
+	# never the card's merge/parity state.
+	var accent := Color(0.49, 0.83, 0.99) if ally.is_ally else Color(0.95, 0.55, 0.45)
 
 	return {
 		"header": header,
@@ -66,7 +76,9 @@ static func build_card_on_ally_data(ally: Unit, card: Card, state: GameState) ->
 
 
 ## Returns structured data when hovering an Enemy's Dice IntentLabel.
-static func build_enemy_intent_data(intent: EnemyIntent, state: GameState) -> Dictionary:
+static func build_enemy_intent_data(
+	intent: EnemyIntent, state: GameState, tooltip_catalog: TooltipIconCatalog = null
+) -> Dictionary:
 	if intent == null or intent.enemy == null or intent.skill == null:
 		return {}
 
@@ -77,23 +89,27 @@ static func build_enemy_intent_data(intent: EnemyIntent, state: GameState) -> Di
 	var slot_idx := 1 if is_odd else 2
 	var parity_txt := "Odd" if is_odd else "Even"
 
+	var header := "Skill %d (%s)" % [slot_idx, parity_txt]
+
 	var cond_txt := ""
 	if skill.condition_threshold > 0:
-		cond_txt = " (≥%d Active)" % skill.condition_threshold if intent.condition_met \
-			else " (<%d Base)" % skill.condition_threshold
-
-	var header := "Skill %d (%s)%s" % [slot_idx, parity_txt, cond_txt]
+		cond_txt = "≥%d Active" % skill.condition_threshold if intent.condition_met \
+			else "<%d Base" % skill.condition_threshold
 
 	var mod_txt := ""
 	if enemy.value_modifier != 0:
 		mod_txt = " (Roll %d %+d)" % [intent.raw_dice_value, enemy.value_modifier]
-	var subtitle := "%s — %s  •  %d%s" % [enemy.data.display_name, skill.skill_name, val, mod_txt]
 
-	var body_lines := _resolve_description_lines(skill, enemy, val, intent.condition_met, state)
+	var value_txt := "%d Value%s" % [val, mod_txt]
+	var subtitle := "%s  •  %s" % [cond_txt, value_txt] if cond_txt != "" else value_txt
+
+	var body_lines := _resolve_description_lines(
+		skill, enemy, val, intent.condition_met, state, tooltip_catalog
+	)
 
 	if intent.will_trigger_ultimate() and enemy.data.ultimate != null:
 		var ult := enemy.data.ultimate
-		var ult_lines := _resolve_description_lines(ult, enemy, 0, false, state)
+		var ult_lines := _resolve_description_lines(ult, enemy, 0, false, state, tooltip_catalog)
 		body_lines.append("\n[b][color=%s]CHAINS ULTIMATE — %s:[/color][/b]" % [COL_ULT, ult.skill_name])
 		body_lines.append_array(ult_lines)
 
@@ -114,7 +130,13 @@ static func build_enemy_intent_data(intent: EnemyIntent, state: GameState) -> Di
 
 
 ## Returns structured data when hovering an Ally or Enemy Moxie/Ultimate Orb (A1-A3 / E1-E3).
-static func build_orb_ultimate_data(unit: Unit, badge_code: String, state: GameState, intent: EnemyIntent = null) -> Dictionary:
+static func build_orb_ultimate_data(
+	unit: Unit,
+	badge_code: String,
+	state: GameState,
+	intent: EnemyIntent = null,
+	tooltip_catalog: TooltipIconCatalog = null
+) -> Dictionary:
 	if unit == null or unit.data == null:
 		return {}
 
@@ -131,7 +153,7 @@ static func build_orb_ultimate_data(unit: Unit, badge_code: String, state: GameS
 		}
 
 	var subtitle := "%s  •  %d Moxie" % [ult.skill_name, unit.max_moxie]
-	var body_lines := _resolve_description_lines(ult, unit, 0, false, state)
+	var body_lines := _resolve_description_lines(ult, unit, 0, false, state, tooltip_catalog)
 
 	var footer: String
 	var accent: Color
@@ -175,7 +197,8 @@ static func _resolve_description_lines(
 	caster: Unit,
 	initial_val: int,
 	is_merged: bool,
-	state: GameState
+	state: GameState,
+	tooltip_catalog: TooltipIconCatalog = null
 ) -> PackedStringArray:
 	var out: PackedStringArray = []
 	var base_val := initial_val
@@ -185,8 +208,13 @@ static func _resolve_description_lines(
 	if is_merged and skill.merged_mode == SkillData.MergedMode.AND_MERGED_FIRST:
 		base_val = _estimate_post_blocks_value(skill.merged_effects, initial_val, state)
 
-	var base_txt := _substitute_tokens(skill.description.strip_edges(), base_val, state, skill.base_effects, caster)
-	var merged_txt := _substitute_tokens(skill.merged_description.strip_edges(), merged_val, state, skill.merged_effects, caster)
+	var base_txt := _substitute_tokens(
+		skill.description.strip_edges(), base_val, state, skill.base_effects, caster, tooltip_catalog
+	)
+	var merged_txt := _substitute_tokens(
+		skill.merged_description.strip_edges(), merged_val, state, skill.merged_effects, caster,
+		tooltip_catalog
+	)
 
 	if not is_merged:
 		if base_txt != "":
@@ -231,7 +259,9 @@ static func _substitute_tokens(
 	val: int,
 	state: GameState,
 	blocks: Array[SkillEffect] = [],
-	caster: Unit = null
+	caster: Unit = null,
+	tooltip_catalog: TooltipIconCatalog = null,
+	icon_size: int = 0
 ) -> String:
 	if text == "":
 		return ""
@@ -281,6 +311,10 @@ static func _substitute_tokens(
 	for pm in phrase_rx.search_all(result):
 		result = result.replace(pm.get_string(0), _num_bb(primary_computed if blocks.size() == 1 else val))
 
+	# 5. Swap keywords/tokens for their inline icons (icon left of the keyword,
+	#    or a pure glyph, depending on the TooltipIconCatalog entry).
+	if tooltip_catalog != null:
+		result = tooltip_catalog.format_description(result, icon_size)
 	return result
 
 

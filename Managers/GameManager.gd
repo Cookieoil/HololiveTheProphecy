@@ -228,8 +228,25 @@ func _run_game_loop() -> void:
 				game_running = false
 				break
 				
-		# ── Step 8: Clean up ──
+		# ── Step 8: Clean up (statuses tick once per round) ──
 		_end_of_turn_cleanup()
+
+		# A status tick can finish off the last unit, so re-check the outcome.
+		if state.all_allies_dead():
+			ui.show_message(ColorUtils.colorize("\n══ DEFEAT ══", ColorUtils.COLOR_ENEMY))
+			EventBus.game_over.emit(false)
+			game_running = false
+			break
+
+		if state.all_enemies_dead():
+			if _try_advance_wave():
+				state.turn_number += 1
+				continue
+			ui.show_message(ColorUtils.colorize("\n══ VICTORY ══", ColorUtils.COLOR_ALLY))
+			EventBus.game_over.emit(true)
+			game_running = false
+			break
+
 		state.turn_number += 1
 		
 func _show_instructions() -> void:
@@ -461,6 +478,12 @@ func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
 		if units.is_empty():
 			return []
 		return await ui.ask_pick_cards(units, count)
+
+	# Flash_cards: reveal cards the game picked automatically (no prompt shown).
+	ctx.flash_cards = func(cards: Array[Card]) -> void:
+		if cards.is_empty():
+			return
+		await ui.flash_auto_selected_cards(cards)
 		
 	ctx.log_message = func(msg: String) -> void:
 		ui.show_message("  " + msg)
@@ -491,6 +514,13 @@ func _build_enemy_context(enemy: Unit, intent: EnemyIntent) -> SkillContext:
 	
 	ctx.pick_n_card = func(count: int, _filter: Callable) -> Array[Card]:
 		return state.get_top_n_cards(count)
+
+	# Flash_cards: reveal cards the game picked automatically (no prompt shown).
+	# Enemy-caused changes flash red (hostile) so the player sees the hit.
+	ctx.flash_cards = func(cards: Array[Card]) -> void:
+		if cards.is_empty():
+			return
+		await ui.flash_auto_selected_cards(cards, true)
 		
 	ctx.log_message = func(msg: String) -> void:
 		ui.show_message("  " + msg)
@@ -635,7 +665,62 @@ func _try_advance_wave() -> bool:
 #endregion
 
 #region Cleanup
+## Step 8 of the round loop: every buff/debuff ticks exactly once per round.
+## "duration" statuses (Regeneration) apply their effect then count down,
+## "stacks" statuses (Gloom) keep their stacks and hit their owner for
+## one HP per stack (true damage, so shields never absorb it).
 func _end_of_turn_cleanup() -> void:
-	pass
-	
+	var ticked_units: Array[Unit] = []
+	ticked_units.append_array(state.allies)
+	ticked_units.append_array(state.enemies)
+
+	var header_shown: bool = false
+	for unit: Unit in ticked_units:
+		if unit.is_dead:
+			continue
+		var events: Array[Dictionary] = unit.tick_round_end_statuses()
+		if events.is_empty():
+			continue
+		if not header_shown:
+			ui.show_message("\n" + ColorUtils.colorize("── End of Round ──", ColorUtils.COLOR_HEADER))
+			header_shown = true
+		for event: Dictionary in events:
+			_log_status_event(unit, event)
+
+
+## Formats one status tick result and mirrors it onto the EventBus.
+func _log_status_event(unit: Unit, event: Dictionary) -> void:
+	var status_id: String = str(event.get("status_id", ""))
+	var kind: String = str(event.get("kind", ""))
+	var amount: int = _coerce_int(event.get("amount", 0), 0)
+	var count: int = _coerce_int(event.get("count", 0), 0)
+	var unit_name: String = _color_unit(unit)
+	var label: String = ColorUtils.colorize(status_id.capitalize(), ColorUtils.COLOR_HEADER)
+
+	match kind:
+		"heal":
+			var healed_str: String = _color_value(amount)
+			var hp_str: String = _color_value(unit.current_hp)
+			ui.show_message("  %s: %s restores %s HP (HP: %s, %d round(s) left)" % [
+				label, unit_name, healed_str, hp_str, maxi(0, count - 1)
+			])
+			EventBus.unit_healed.emit(unit, amount)
+		"damage":
+			var lost_str: String = _color_value(amount)
+			var hurt_hp_str: String = _color_value(unit.current_hp)
+			ui.show_message("  %s: %s loses %s HP (HP: %s, %d stack(s))" % [
+				label, unit_name, lost_str, hurt_hp_str, count
+			])
+			EventBus.damage_dealt.emit(unit, unit, count, amount)
+			if unit.is_dead:
+				ui.show_message(ColorUtils.colorize("  %s is defeated by %s!" % [
+					unit.data.display_name, status_id.capitalize()
+				], ColorUtils.COLOR_DEAD))
+				EventBus.unit_died.emit(unit)
+		"expired":
+			ui.show_message("  %s: %s expired on %s." % [
+				label, status_id.capitalize(), unit_name
+			])
+	EventBus.unit_statuses_changed.emit(unit)
+
 #endregion

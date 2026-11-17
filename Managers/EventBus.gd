@@ -34,3 +34,8 @@ signal skill_resolved(caster: Unit, skill_name: String)
 signal moxie_changed(unit: Unit, current: int, maximum: int)
 signal ultimate_cast(caster: Unit, skill_name: String)
 #endregion
+
+#region Status Events
+## A unit's buff/debuff list changed (applied, stacked, ticked or expired).
+signal unit_statuses_changed(unit: Unit)
+#endregion
