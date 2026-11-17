@@ -24,7 +24,7 @@
 			"tasks": [
 				"1123dfaa-782d-4cfc-8237-d490a01e159d",
 				"591fc37c-7d63-4f48-a283-d9feabaa7cdd",
-				"5361585b-8897-45f3-82e1-8de82a2e037d"
+				"2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295"
 			]
 		},
 		{
@@ -39,6 +39,7 @@
 				"79f83019-950f-40b1-bd82-043422f4c9ea",
 				"edec03dc-fe42-41a6-a27d-8c586679be38",
 				"258ca0ab-7514-4d3e-b7ba-ad11dc4ad6ba",
+				"5361585b-8897-45f3-82e1-8de82a2e037d",
 				"dcefedab-d114-4a7e-a713-d6593ec93b26",
 				"31c2f2a9-5bd2-4359-be65-5572811e98eb",
 				"cca31f3a-18a2-45b7-a7fe-ea5c08d23926",
@@ -222,6 +223,13 @@
 			"uuid": "5361585b-8897-45f3-82e1-8de82a2e037d",
 			"title": "Icons for Tooltip",
 			"description": "add icons to Tooltip, similar to LOR card description. Name it as TooltipIconCatalog",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295",
+			"title": "tooltip des fix",
+			"description": "change the tooltip description Chain ultimate to only Ultimate:",
 			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
 			"steps": []
 		}
