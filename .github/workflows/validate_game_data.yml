@@ -1,39 +1,140 @@
 # .github/workflows/validate_game_data.yml
 name: Validate Game Data
+
+# res://Data/json/ is the single source of truth the game loads at runtime and
+# res://Data/xlsx/game_data.xlsx is only a bulk-entry authoring tool. Both are
+# checked here, together with the GDScript compile gate and the gdUnit4 suite,
+# so a broken data edit or a typing regression cannot reach main.
 on:
   pull_request:
-    paths: ["Data/xlsx/**", "addons/xlsx_importPlugin/**"]
+    paths:
+      - "Data/**"
+      - "Core/**"
+      - "Skills/**"
+      - "Managers/**"
+      - "Scenes/**"
+      - "GDTest/**"
+      - "Tools/**"
+      - "addons/xlsx_importPlugin/**"
+      - "project.godot"
+      - ".github/workflows/validate_game_data.yml"
   push:
     branches: [main]
+  workflow_dispatch:
+
+# The pipeline only ever reads the repository.
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes the previous run.
+concurrency:
+  group: validate-game-data-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate:
+  version:
+    name: Resolve Godot version
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      godot: ${{ steps.read.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
-      
-      # 1. Automatically extract the Godot version from project.godot file
-      - name: Get Godot Version
-        id: godot-version
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Read config/features straight out of project.godot, e.g.
+      # config/features=PackedStringArray("4.7", "GL Compatibility").
+      - name: Read version from project.godot
+        id: read
         run: |
-          VERSION=$(grep -oE 'features=PackedStringArray\([^)]*\)' project.godot \
-                    | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1)
-          # "4.7" -> "4.7.0", "4.6" -> "4.6.0"; leave "4.6.1" as-is
+          set -euo pipefail
+          VERSION="$(grep -oE 'features=PackedStringArray\([^)]*\)' project.godot \
+                    | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1 || true)"
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read config/features from project.godot"
+            exit 1
+          fi
+          # setup-godot needs major.minor.patch: "4.7" -> "4.7.0".
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             VERSION="${VERSION}.0"
           fi
-          echo "Using Godot Version: $VERSION"
-          echo "FOUND_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Resolved Godot version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      # 2. Feed the new version into the setup tool
-      - uses: chickensoft-games/setup-godot@v2
+  data:
+    name: Game data
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
         with:
-          version: ${{ env.FOUND_VERSION }}
+          persist-credentials: false
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ needs.version.outputs.godot }}
           use-dotnet: false
 
-      # 3. Run it
+      # A fresh checkout has no .godot/, so import before anything reads classes.
       - name: Import project
+        timeout-minutes: 5
         run: godot --headless --path . --import
-      - name: Validate xlsx
-        timeout-minutes: 3
+
+      # Validates the raw JSON schema/semantics, the DataLoader path and the
+      # workbook. Failures are annotated inline on the PR and summarised on the
+      # job page; the step fails on any error. Flags after "--": --json-only skips
+      # the workbook, --strict also fails on warnings.
+      - name: Validate game data
+        timeout-minutes: 5
         run: godot --headless --path . "res://Tools/validator.tscn"
+
+  project:
+    name: Scripts and tests
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ needs.version.outputs.godot }}
+          use-dotnet: false
+
+      - name: Import project
+        timeout-minutes: 5
+        run: godot --headless --path . --import
+
+      # Loads every project script, so a type error or a stale class_name fails
+      # the build instead of only surfacing when the affected scene is opened.
+      - name: Compile all scripts
+        timeout-minutes: 5
+        run: godot --headless --path . --script res://Tools/check_scripts.gd
+
+      # gdUnit4 refuses to run in headless mode unless that check is ignored;
+      # -c keeps going after the first failure so the log lists every failure.
+      - name: Unit tests
+        timeout-minutes: 10
+        run: |
+          godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            -a res://GDTest -c --ignoreHeadlessMode
+
+      # reports/ is gitignored, so the HTML/XML report only ever leaves the
+      # runner as a build artifact.
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdunit4-reports
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 7
