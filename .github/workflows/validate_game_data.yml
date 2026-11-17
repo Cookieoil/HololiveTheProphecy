@@ -1,39 +1,75 @@
 # .github/workflows/validate_game_data.yml
 name: Validate Game Data
+
+# res://Data/json/ is the single source of truth the game loads at runtime, and
+# res://Data/xlsx/game_data.xlsx is only a bulk-entry authoring tool. Both layers
+# are checked, so this runs whenever anything that can affect game data changes.
 on:
   pull_request:
-    paths: ["Data/xlsx/**", "addons/xlsx_importPlugin/**"]
+    paths:
+      - "Data/**"
+      - "Core/**"
+      - "Skills/**"
+      - "Managers/**"
+      - "Tools/**"
+      - "addons/xlsx_importPlugin/**"
+      - "project.godot"
+      - ".github/workflows/validate_game_data.yml"
   push:
     branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch supersedes the previous run.
+concurrency:
+  group: validate-game-data-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
+    name: Validate JSON + workbook
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      
-      # 1. Automatically extract the Godot version from project.godot file
-      - name: Get Godot Version
-        id: godot-version
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # 1. Read the Godot version straight out of project.godot, e.g.
+      #    config/features=PackedStringArray("4.7", "GL Compatibility").
+      - name: Resolve Godot version
         run: |
-          VERSION=$(grep -oE 'features=PackedStringArray\([^)]*\)' project.godot \
-                    | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1)
-          # "4.7" -> "4.7.0", "4.6" -> "4.6.0"; leave "4.6.1" as-is
+          set -euo pipefail
+          VERSION="$(grep -oE 'features=PackedStringArray\([^)]*\)' project.godot \
+                    | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1 || true)"
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read config/features from project.godot"
+            exit 1
+          fi
+          # "4.7" -> "4.7.0"; an already complete "4.7.2" is left as-is.
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             VERSION="${VERSION}.0"
           fi
-          echo "Using Godot Version: $VERSION"
-          echo "FOUND_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Resolved Godot version: $VERSION"
+          echo "FOUND_VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      # 2. Feed the new version into the setup tool
-      - uses: chickensoft-games/setup-godot@v2
+      # 2. Install exactly that Godot build (setup-godot needs major.minor.patch).
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
         with:
           version: ${{ env.FOUND_VERSION }}
           use-dotnet: false
 
-      # 3. Run it
+      - name: Godot version
+        run: godot --version
+
+      # 3. Import assets so class_name lookups and resources resolve on a fresh
+      #    checkout (.godot/ is gitignored).
       - name: Import project
+        timeout-minutes: 5
         run: godot --headless --path . --import
-      - name: Validate xlsx
-        timeout-minutes: 3
+
+      # 4. Validate every JSON file, the DataLoader path and the workbook.
+      #    The scene quits with code 1 on any error, which fails this job.
+      #    Flags (after "--"): --json-only skips the workbook, --strict also
+      #    fails on warnings.
+      - name: Validate game data
+        timeout-minutes: 5
         run: godot --headless --path . "res://Tools/validator.tscn"
