@@ -50,9 +50,9 @@
   - Editor: `Project -> Tools -> Export game_data.xlsx to JSON`
   - CLI: `godot --headless --path . --script res://Tools/export_xlsx_to_json.gd`
   - Validate: `godot --headless --path . "res://Tools/validator.tscn"` — checks the raw JSON schema/semantics, the `DataLoader` path and the workbook, then exits `1` on any error. Add `-- --json-only` to skip the workbook or `-- --strict` to also fail on warnings.
-- **CI gates** (`.github/workflows/validate_game_data.yml`) run on every PR touching `Data/`, `Core/`, `Skills/`, `Managers/`, `Scenes/`, `GDTest/`, `Tools/`, `addons/xlsx_importPlugin/`, `project.godot` (and on every push to `main`), split into three jobs:
+- **CI gates** (`.github/workflows/validate_game_data.yml`) run on every pull request (deliberately no `paths:` filter — a required check that never runs would block every PR) and on every push to `main`, split into three jobs:
   - `version` — resolves the Godot version from `project.godot` once, for the other jobs.
-  - `data` — the validator with `--strict`, so any error **or warning** fails the build.
+  - `validate` — the data gate: the validator with `--strict`, so any error **or warning** fails the build. Keep this job id and its missing `name:`; `main` requires the `validate` status check.
   - `project` — compiles every script and runs the gdUnit4 suite.
   Errors/warnings are annotated inline on the PR, summarised on the job page, and the JUnit/HTML report is kept as the `gdunit4-reports` artifact. A red job means bad game data or a broken script — never merge past it.
 - **Local pre-flight before pushing** (the same three gates CI runs, all headless):
@@ -60,7 +60,7 @@
   - Compile every script: `godot --headless --path . --script res://Tools/check_scripts.gd`
   - Unit tests: `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
 - **Never commit `reports/`** (gdUnit4 output) or Godot's `~*` atomic-write temp files; both are gitignored.
-- **Branch protection**: `Game data` and `Scripts and tests` must be *required* status checks on `main` (Settings -> Branches -> main), otherwise the pipeline is only advisory. Configure it in the UI or with the GitHub API (`gh api -X PATCH repos/:owner/:repo/branches/main/protection`, requires repo admin).
+- **Branch protection**: `main` requires the `validate` status check (Settings -> Branches -> main), so never rename that job id or add a `name:` to it. Add `Scripts and tests` as a second required check if you want the test gate to block merges. Configure it in the UI or with the GitHub API (`gh api -X PATCH repos/:owner/:repo/branches/main/protection`, requires repo admin).
 
 - **JSON numbers parse as `float`.** Always coerce with the typed helpers (`_to_int` / `_get_int`, `int(float_value)`) instead of `int(dict["key"])`, which is a compile error under `unsafe_call_argument`.
 

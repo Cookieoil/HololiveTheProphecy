@@ -9,18 +9,10 @@ name: Validate Game Data
 # Actions are pinned to commit SHAs on purpose: a moving major tag is a supply
 # chain risk. The trailing comment records the version each SHA was verified at.
 on:
+  # No `paths:` filter on purpose: the `validate` job is a *required* status
+  # check on main, and a required check that never runs would leave every pull
+  # request stuck on "Expected — Waiting for status to be reported".
   pull_request:
-    paths:
-      - "Data/**"
-      - "Core/**"
-      - "Skills/**"
-      - "Managers/**"
-      - "Scenes/**"
-      - "GDTest/**"
-      - "Tools/**"
-      - "addons/xlsx_importPlugin/**"
-      - "project.godot"
-      - ".github/workflows/validate_game_data.yml"
   push:
     branches: [main]
   workflow_dispatch:
@@ -67,8 +59,9 @@ jobs:
           echo "Resolved Godot version: $VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-  data:
-    name: Game data
+  # Job id stays `validate` (with no `name:`) so the branch-protection rule that
+  # requires the `validate` status check keeps matching this job.
+  validate:
     needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 15
