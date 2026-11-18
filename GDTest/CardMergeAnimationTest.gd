@@ -7,8 +7,10 @@ extends GdUnitTestSuite
 ##     and not from the slot it was dragged out of
 ##   - the two cards are never taken off screen before the merged card is on it
 ##     (they are children of the node that used to be dimmed to hide it)
-##   - the two cards fold edge on, which is what makes the hand over to the
-##     merged card invisible, and the merged card starts folded the same way
+##   - the two cards fold over and the merged card takes over from that exact pose,
+##     angle and faintness, unfolding out of it into the card they became
+##   - the fold runs all the way to edge on, but its last stretch is faded rather
+##     than drawn, so it never ends in a thin bright line
 ##   - the merged card is drawn in front of both, flat again and back on the
 ##     layout grid once it is over
 ##   - the survivors of the merge glide into the gap it left
@@ -224,9 +226,9 @@ func test_a_merge_with_no_release_starts_from_the_cards_own_slot() -> void:
 
 
 ## The two cards fold over as they arrive, and the merged card takes over from
-## that exact pose and unfolds out of it. The fold has to stop short of edge on:
-## at a near-90 degree fold all that faces the viewer is the card's own pale
-## border, which shows up as a thin white line across the slot.
+## that exact pose - the same angle and the same faintness - and unfolds out of
+## it. The fold goes all the way to edge on; the last stretch of it is faded
+## rather than drawn, because a card near edge on is a thin bright line.
 func test_the_cards_fold_over_and_the_merged_card_unfolds_out_of_the_same_pose() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var state: GameState = _ready_hand(bar, [2, 3, 5])
@@ -234,11 +236,13 @@ func test_the_cards_fold_over_and_the_merged_card_unfolds_out_of_the_same_pose()
 	var merged: Card = _merge_on_state(bar, state, 1, 2)
 	var merged_ui: CardUI = _card_ui(bar, merged)
 
-	# One pass over the whole merge: the two cards travel flat, fold over as they
-	# arrive, and the card that takes over from them unfolds back to flat.
+	# One pass over the whole merge: the two cards travel flat, fold all the way
+	# over as they arrive, and the card that takes over from them unfolds to flat.
 	var first_fold: float = -1.0
 	var deepest_fold: float = 0.0
-	var deepest_open: float = 0.0
+	var opaque_fold: float = 0.0
+	var last_plate_alpha: float = 1.0
+	var first_open_yaw: float = -1.0
 	var became_visible: bool = false
 	for _sample: int in 120:
 		await await_millis(8)
@@ -248,31 +252,56 @@ func test_the_cards_fold_over_and_the_merged_card_unfolds_out_of_the_same_pose()
 			if first_fold < 0.0:
 				first_fold = yaw
 			deepest_fold = maxf(deepest_fold, yaw)
-		if merged_ui._visual_root.visible:
+			last_plate_alpha = plates[0].modulate.a
+			if plates[0].modulate.a > 0.99:
+				opaque_fold = maxf(opaque_fold, yaw)
+		if merged_ui._visual_root.visible and not became_visible:
 			became_visible = true
-			deepest_open = maxf(deepest_open, _tilt(merged_ui, "y_rot"))
+			first_open_yaw = _tilt(merged_ui, "y_rot")
 		if not merged_ui.is_merging():
 			break
 
-	# They travel flat and only fold over as they arrive...
+	# They travel flat and fold all the way to edge on, so the fold reads as the
+	# two cards closing rather than as a card turning a little...
 	assert_float(first_fold).is_less(5.0)
 	assert_float(deepest_fold).is_equal_approx(CardUI.MERGE_FOLD_YAW, 2.0)
-	# ...and stop well short of edge on, so the fold is never a thin line: what is
-	# left facing the viewer is a narrow card, not just the card's pale border.
-	assert_float(deepest_fold).is_less(75.0)
+	# ...but they are only drawn up to the fade angle: past it they are faded out,
+	# so the edge the fold ends on is never a thin bright line, and they are gone
+	# by the time the fold is finished.
+	assert_float(opaque_fold).is_less_equal(CardUI.MERGE_FADE_FROM_YAW + 2.0)
+	assert_float(last_plate_alpha).is_less(0.15)
 
-	# The card takes over from the pose the fold finished in, so the turn carries
+	# The card takes over still folded, from that same pose, so the turn carries
 	# straight on through the hand over instead of stepping.
 	assert_bool(became_visible).is_true()
-	assert_float(deepest_open).is_greater(CardUI.MERGE_FOLD_YAW * 0.6)
+	assert_float(first_open_yaw).is_greater(40.0)
 
 	await await_millis(MERGE_SETTLE_MILLIS)
-	# ...and it lands dead flat, resting, in front, back on the layout grid.
+	# ...and it lands dead flat, fully opaque, resting, in front, on the grid.
 	assert_float(_tilt(merged_ui, "y_rot")).is_equal_approx(0.0, 0.01)
 	assert_float(_tilt(merged_ui, "x_rot")).is_equal_approx(0.0, 0.01)
+	assert_float(merged_ui.modulate.a).is_equal_approx(1.0, 0.01)
 	assert_bool(merged_ui._visual_root.visible).is_true()
 	assert_float(merged_ui._visual_root.scale.x).is_equal_approx(1.0, 0.01)
 	assert_int(_plates(merged_ui).size()).is_equal(0)
+
+
+## A card at the fold angle must not be drawn at all. This curve is the whole
+## reason the fold can run all the way to edge on without ending in a thin bright
+## line, and both sides of the hand over read it, so this is what keeps them in
+## step: at the fold angle the two cards and the card they become are all equally
+## invisible.
+func test_a_card_at_the_fold_angle_is_not_drawn_at_all() -> void:
+	assert_float(CardUI._fold_visibility(0.0)).is_equal_approx(1.0, 0.001)
+	assert_float(CardUI._fold_visibility(CardUI.MERGE_FADE_FROM_YAW)).is_equal_approx(1.0, 0.001)
+	assert_float(CardUI._fold_visibility(CardUI.MERGE_FOLD_YAW)).is_equal_approx(0.0, 0.001)
+	# A ramp, not a switch: half way between the two angles it is half drawn.
+	var middle: float = (CardUI.MERGE_FADE_FROM_YAW + CardUI.MERGE_FOLD_YAW) * 0.5
+	var half_way: float = CardUI._fold_visibility(middle)
+	assert_float(half_way).is_greater(0.3)
+	assert_float(half_way).is_less(0.7)
+	# And it is symmetric, so a card unfolding reads the same as one folding.
+	assert_float(CardUI._fold_visibility(-middle)).is_equal_approx(half_way, 0.001)
 
 
 func test_the_merged_card_settles_flat_and_the_merge_is_cleaned_up() -> void:
@@ -480,11 +509,13 @@ func test_the_two_cards_are_never_hidden_before_the_merged_card() -> void:
 	var became_visible: bool = false
 	for _sample: int in 80:
 		await await_millis(5)
-		# Dimming this node would take the two cards down with it, and the merge
-		# would read as two cards vanishing into a third one from nowhere.
-		if merged_ui.modulate.a < 1.0:
-			dimmed_frames += 1
+		# Dimming this node while the two cards are mounted would take them down
+		# with it, and the merge would read as two cards vanishing into a third one
+		# from nowhere. The card's own fade while it unfolds happens later, once
+		# the two cards have already been freed.
 		var plates: Array[ForgePlate] = _plates(merged_ui)
+		if merged_ui.modulate.a < 1.0 and not plates.is_empty():
+			dimmed_frames += 1
 		if merged_ui._visual_root.visible:
 			became_visible = true
 			continue
