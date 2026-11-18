@@ -371,20 +371,8 @@ func can_merge(card_a: Card, card_b: Card) -> bool:
 	return not card_a.is_double_merged and not card_b.is_double_merged
 
 
-## Zero-argument method for the DebugCardSpawn button in QueueUI
-func spawn_debug_card() -> void:
-	var random_val := randi_range(1, 6)
-	var new_card := Card.new(random_val)
-
-	var state := _get_game_state()
-	if state != null:
-		state.hand.append(new_card)
-	else:
-		push_warning("HandBar: Could not find GameState. Debug card is visual only!")
-
-	add_card(new_card)
-
-
+## Falls back to walking the scene for the live GameState when the scene has not
+## pushed one down yet. Also used by CardUI to re-show a card it did not consume.
 func _get_game_state() -> GameState:
 	if game_state != null and is_instance_valid(game_state):
 		return game_state

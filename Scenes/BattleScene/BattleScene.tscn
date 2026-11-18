@@ -245,23 +245,23 @@ layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="QueueUI" type="CanvasLayer" parent="." unique_id=200497709]
+[node name="DebugLayer" type="CanvasLayer" parent="." unique_id=200497709]
+layer = 20
 
-[node name="DebugCardSpawn" type="Button" parent="QueueUI" unique_id=1712277854]
+[node name="DebugButton" type="Button" parent="DebugLayer" unique_id=1712277854]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 18.0
 offset_top = -50.0
-offset_right = 132.0
+offset_right = 354.0
 offset_bottom = -15.0
 grow_vertical = 0
-text = "+ Debug Card"
+text = "Debug ▴"
+tooltip_text = "Open the tester debug menu (F1)"
 
 [node name="BattleOverlay" type="Node" parent="."]
 script = ExtResource("5_ovl")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1553560504]
 environment = SubResource("Environment_hqvvd")
-
-[connection signal="pressed" from="QueueUI/DebugCardSpawn" to="HUD/HandBar" method="spawn_debug_card"]

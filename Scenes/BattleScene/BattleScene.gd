@@ -7,6 +7,8 @@ extends GameUI
 @export var tooltip_icon_catalog: TooltipIconCatalog
 @export var unit_ui_scene: PackedScene = preload("res://Scenes/BattleUnit/UnitUI.tscn")
 @export var turn_dice_progression: Array[int] = []
+## Tester tools (the Debug button + F1). Turn off for a build that must not show them.
+@export var debug_menu_enabled: bool = true
 
 @onready var hand_bar: HandBar = $HUD/HandBar
 @onready var allies_container: HBoxContainer = $EntityOverlay/AlliesRow
@@ -23,7 +25,15 @@ extends GameUI
 @onready var end_turn_button: Button = $HUD/TopBar/Margin/HBox/RightGroup/EndTurnButton
 @onready var log_label: Label = $HUD/MessageLog
 
+@onready var debug_layer: CanvasLayer = $DebugLayer
+@onready var debug_button: Button = $DebugLayer/DebugButton
+
 var game_manager: GameManager
+## Tester overlay, built in code and mounted on `debug_layer`.
+var debug_menu: DebugMenuPopup
+## True only while GameManager awaits a player action: the one window in which a
+## debug tool may be applied, because the turn loop is sitting on the action queue.
+var _awaiting_player_action: bool = false
 var _intent_cache: Dictionary[Unit, Dictionary] = {}
 
 signal action_decided(action_dict: Dictionary)
@@ -41,6 +51,7 @@ func _ready() -> void:
 	end_turn_button.pressed.connect(func() -> void: action_decided.emit({"type": "end_turn"}))
 	convert_button.pressed.connect(func() -> void: action_decided.emit({"type": "convert"}))
 	hand_bar.merge_requested.connect(_on_merge_requested)
+	_setup_debug_menu()
 
 	game_manager = GameManager.new()
 	add_child(game_manager)
@@ -116,12 +127,14 @@ func show_game_state(state: GameState) -> void:
 	_sync_unit_row(enemies_container, state.enemies, false)
 	_sync_unit_row(allies_container, state.allies, true)
 	_sync_overlay_units()   # refresh A1/A2/A3 & E1/E2/E3 rails
+	_refresh_debug_menu(state)
 
 
 func show_hand_and_resources(state: GameState) -> void:
 	_update_top_bar(state)
 	hand_bar.game_state = state
 	hand_bar.set_hand(state.hand)
+	_refresh_debug_menu(state)
 
 
 func _update_top_bar(state: GameState) -> void:
@@ -182,15 +195,22 @@ func _apply_intent_to(u_ui: UnitUI) -> void:
 
 # NOTE: GameUI calls this `ask_player_action` in the wiring brief;
 # in this file it is already named `get_player_action`. Behaviour is unchanged.
-func get_player_action(_state: GameState) -> Dictionary:
+func get_player_action(state: GameState) -> Dictionary:
 	end_turn_button.disabled = false
 	convert_button.disabled = false
 
 	# enable A1/A2/A3 orbs while awaiting player input
 	battle_overlay.set_player_turn_interactive(true)
+	# Debug tools unlock here and nowhere else: this is the one moment the turn
+	# loop is parked on the action queue and can accept another action.
+	_awaiting_player_action = true
+	_set_debug_interactive(true)
+	_refresh_debug_menu(state)
 
 	var action: Dictionary = await action_decided
 
+	_awaiting_player_action = false
+	_set_debug_interactive(false)
 	battle_overlay.set_player_turn_interactive(false)
 	end_turn_button.disabled = true
 	convert_button.disabled = true
@@ -346,4 +366,121 @@ func _sync_unit_row(container: HBoxContainer, units: Array[Unit], is_ally: bool)
 			_apply_intent_to(card_ui)
 		card_ui.unit_clicked.connect(_on_unit_clicked)
 
+#endregion
+
+
+#region Debug Menu
+## Tester overlay (Debug button + F1). Everything it asks for is routed through the
+## normal action queue, so a debug tool is handled by exactly the same turn-loop code
+## as a real action and can never desynchronise the wave machine, the enemy intents
+## or the HUD.
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not debug_menu_enabled:
+		return
+	var key_event: InputEventKey = event as InputEventKey
+	if key_event == null or not key_event.pressed or key_event.echo:
+		return
+	if key_event.keycode != KEY_F1:
+		return
+	get_viewport().set_input_as_handled()
+	_on_debug_button_pressed()
+
+
+## Builds the tester overlay. The panel is created in code, so the battle scene has
+## no extra nodes to keep in sync and the .tscn only carries the toggle button.
+func _setup_debug_menu() -> void:
+	if not debug_menu_enabled:
+		debug_layer.visible = false
+		return
+
+	debug_menu = DebugMenuPopup.new()
+	debug_menu.debug_command_requested.connect(_on_debug_command_requested)
+	debug_menu.menu_closed.connect(_sync_debug_toggle)
+	debug_layer.add_child(debug_menu)
+
+	debug_button.pressed.connect(_on_debug_button_pressed)
+	_sync_debug_toggle()
+
+
+func _on_debug_button_pressed() -> void:
+	if debug_menu == null:
+		return
+	debug_menu.toggle_menu()
+	_sync_debug_toggle()
+	_refresh_debug_menu()
+
+
+## The panel can close itself, so the toggle's arrow always matches its state.
+func _sync_debug_toggle() -> void:
+	if debug_menu == null or debug_button == null:
+		return
+	debug_button.text = "Debug ▾" if debug_menu.is_open() else "Debug ▴"
+
+
+func _set_debug_interactive(interactive: bool) -> void:
+	if debug_menu != null:
+		debug_menu.set_gameplay_enabled(interactive)
+
+
+## A tool was pressed. It goes onto the action queue as a normal "debug" action,
+## which the turn loop then validates and applies (see GameManager).
+func _on_debug_command_requested(command: String, args: Dictionary) -> void:
+	if debug_menu == null or not _awaiting_player_action:
+		return
+	action_decided.emit({"type": "debug", "command": command, "args": args})
+
+
+func _refresh_debug_menu(state: GameState = null) -> void:
+	if debug_menu == null:
+		return
+	var live_state: GameState = state if state != null else _debug_state()
+	if live_state == null:
+		return
+	debug_menu.refresh(_debug_snapshot(live_state), _build_debug_targets(live_state))
+
+
+func _debug_state() -> GameState:
+	if game_manager == null or not is_instance_valid(game_manager):
+		return null
+	return game_manager.state
+
+
+## Read-only numbers for the panel, built here so the panel needs no game access.
+func _debug_snapshot(state: GameState) -> Dictionary:
+	return {
+		"hand": state.hand.size(),
+		"max_hand": state.max_hand_size,
+		"deck": state.deck.size(),
+		"discard": state.discard.size(),
+		"actions": state.actions_left,
+		"merges": state.merges_left,
+		"turn": state.turn_number + 1,
+		"wave": state.current_wave + 1,
+		"waves": state.wave_definitions.size(),
+		"dice_size": state.get_dice_size(state.turn_number),
+		"next_bonus": state.next_skill_bonus,
+	}
+
+
+## Target list for the Units tab: both rows plus every individual slot. The payload
+## is scope + slot, so the panel never holds a Unit reference that a wave respawn
+## could leave stale.
+func _build_debug_targets(state: GameState) -> Array[Dictionary]:
+	var targets: Array[Dictionary] = []
+	targets.append({"label": "All allies", "scope": DebugMenuPopup.Scope.ALLIES, "slot": -1})
+	targets.append({"label": "All enemies", "scope": DebugMenuPopup.Scope.ENEMIES, "slot": -1})
+	targets.append({"label": "Every unit", "scope": DebugMenuPopup.Scope.ALL, "slot": -1})
+	for i: int in state.allies.size():
+		targets.append(_debug_target_entry("A%d" % (i + 1), state.allies[i], i, true))
+	for i: int in state.enemies.size():
+		targets.append(_debug_target_entry("E%d" % (i + 1), state.enemies[i], i, false))
+	return targets
+
+
+func _debug_target_entry(code: String, unit: Unit, slot: int, is_ally: bool) -> Dictionary:
+	return {
+		"label": "%s %s%s" % [code, unit.data.display_name, " (dead)" if unit.is_dead else ""],
+		"scope": DebugMenuPopup.Scope.ALLIES if is_ally else DebugMenuPopup.Scope.ENEMIES,
+		"slot": slot,
+	}
 #endregion

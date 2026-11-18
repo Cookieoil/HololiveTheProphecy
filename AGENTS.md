@@ -10,6 +10,7 @@
 - `res://Data/` — Game data, resources, and configuration.
 - `res://Managers/` — Global game managers (`EventBus`, `ColorUtils`, `GameManager`).
 - `res://Scenes/` — All UI, flat, one level deep (the old `GameUI/GraphicalUI` nesting is gone): `BattleScene/` (main scene + `Assets/`), `BattleUnit/`, `Cards/`, `HUD/`, `Textures/`.
+- `res://Scenes/HUD/DebugMenuPopup.gd` — tester-only tool palette behind the `Debug` button / `F1` (card overflow spawns, resources, unit HP/status/Moxie, wave tools). It is view-only: it emits `debug_command_requested`, and `GameManager._handle_debug_command()` applies each tool as a `"debug"` action inside the normal player-action loop, so a debug tool can never desync the turn machine.
 - `res://Shaders/` — Shared shaders (`FakeCard3D.gdshader`, preloaded by the card UI).
 - `res://Skills/` — Ability and skill logic.
 - `res://Tools/` — Editor tools, Python scripts, and utilities.
