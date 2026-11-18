@@ -26,7 +26,12 @@ func show_game_state(_state: GameState) -> void:
 func focus_input() -> void:
 	pass
 	
-func play_unit_skill(_unit: Unit, _skill_index: int, _rank: int = 0) -> void:
+## Plays the unit's skill animation and waits for the caller's turn to continue.
+## `lead` is the fraction of the animation the caller waits for: 1.0 (default)
+## waits for the whole animation. Lower values return once the attack has passed
+## its impact beat, which lets chained actors (enemy turns) overlap their
+## animations instead of paying one full animation tail per actor.
+func play_unit_skill(_unit: Unit, _skill_index: int, _rank: int = 0, _lead: float = 1.0) -> void:
 	push_warning("GameUI.play_unit_skill() not overridden.")
 	
 func play_unit_ultimate(_unit: Unit) -> void:

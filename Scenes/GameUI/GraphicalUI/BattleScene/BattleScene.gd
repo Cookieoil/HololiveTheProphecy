@@ -85,12 +85,15 @@ func on_cards_merged(source_a: Card, source_b: Card, result: Card, state: GameSt
 func flash_auto_selected_cards(cards: Array[Card], hostile: bool = false) -> void:
 	await hand_bar.flash_auto_selected(cards, hostile)
 
-func play_unit_skill(unit: Unit, skill_index: int, rank: int = 0) -> void:
+## `lead` is the fraction of the skill animation to wait for: 1.0 for the
+## player's own actions, lower for chained enemy turns that overlap their
+## animations (see GameManager.ENEMY_SKILL_OVERLAP_LEAD).
+func play_unit_skill(unit: Unit, skill_index: int, rank: int = 0, lead: float = 1.0) -> void:
 	var unit_ui := _get_unit_ui(unit)
 	if unit_ui == null:
 		push_warning("BattleScene.play_unit_skill(): no UnitUI found for %s" % unit)
 		return
-	await unit_ui.play_skill_animation(skill_index, rank)
+	await unit_ui.play_skill_animation(skill_index, rank, lead)
 
 # GameUI ultimate override
 func play_unit_ultimate(unit: Unit) -> void:

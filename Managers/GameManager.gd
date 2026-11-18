@@ -18,6 +18,13 @@ const WAVE_MODE_MAP: Dictionary = {
 	"full_turn": GameState.WaveTransition.FULL_TURN,
 	"immediate_skip": GameState.WaveTransition.IMMEDIATE_SKIP,
 }
+
+## Fraction of an enemy's skill animation that plays before the next enemy may
+## start its own. Below 1.0 the previous enemy's wind-down overlaps the next
+## one's wind-up (the "fast mode" feel), so a three-enemy phase no longer costs
+## three full animation tails back to back. 1.0 restores strictly sequential
+## turns. Enemy Ultimates always play in full, so the dramatic beat stays intact.
+const ENEMY_SKILL_OVERLAP_LEAD: float = 0.6
 #endregion
 
 #region Helpers
@@ -607,7 +614,9 @@ func _resolve_enemy_turns() -> void:
 		var skill_index: int = 1 if intent.effective_value % 2 == 1 else 2
 		var rank: int = 1 if intent.condition_met else 0
 	
-		await ui.play_unit_skill(intent.enemy, skill_index, rank)
+		# Return at the impact beat instead of the end of the animation, so the
+		# next enemy starts its attack while this one is still winding down.
+		await ui.play_unit_skill(intent.enemy, skill_index, rank, ENEMY_SKILL_OVERLAP_LEAD)
 	
 		# Clear value modifiers after this enemy's action resolves
 		intent.enemy.clear_value_modifier()

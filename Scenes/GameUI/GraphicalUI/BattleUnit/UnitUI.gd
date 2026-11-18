@@ -521,13 +521,18 @@ func _reset_preview() -> void:
 
 ## skill_index: 1 for odd, 2 for even.
 ## rank: 0 normal, 1 merged/condition met, 2 double merged.
-func play_skill_animation(skill_index: int, rank: int = 0) -> void:
+## lead: fraction of the skill animation to wait for before returning. 1.0 waits
+##       for the whole animation, which is what the player's own turn needs;
+##       chained turns pass less so the next actor may start while this one
+##       finishes its follow-through (see SpinePortrait.play_skill_and_wait).
+func play_skill_animation(skill_index: int, rank: int = 0, lead: float = 1.0) -> void:
 	if sprite == null:
 		return
 	var spine_portrait: SpinePortrait = sprite as SpinePortrait
 	if spine_portrait != null:
-		await spine_portrait.play_skill_and_wait(skill_index, rank)
+		await spine_portrait.play_skill_and_wait(skill_index, rank, lead)
 	elif sprite.has_method("play_skill_and_wait"):
+		# Unknown sprite type: it has no overlap support, so it plays in full.
 		await sprite.call("play_skill_and_wait", skill_index, rank)
 	elif sprite.has_method("play_skill"):
 		sprite.call("play_skill", skill_index, rank)

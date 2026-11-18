@@ -3,6 +3,11 @@ extends Control
 
 signal action_finished(anim_name: StringName)
 signal action_started(anim_name: StringName)
+## Emitted once per lead-armed action when the caller may hand control to the
+## next actor, i.e. the action played far enough to overlap with it. It also
+## fires when an armed action ends early (death, queue clear, watchdog), so an
+## awaiting caller can never hang.
+signal action_lead_reached(anim_name: StringName)
 
 const FALLBACK_ICON: Texture2D = preload("res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon.svg")
 const PORTRAIT_SHADER: Shader = preload("res://Scenes/GameUI/GraphicalUI/BattleUnit/SpinePortrait.gdshader")
@@ -63,6 +68,13 @@ var _active_action: StringName = &""
 var _next_action_order: int = 0
 var _action_watchdog: float = 0.0
 
+## Seconds left until the running action reaches its overlap beat.
+var _action_lead: float = 0.0
+## True while an overlap wait is armed for the running action. Kept separate from
+## the counter so "already elapsed" (negative time) can never be confused with
+## "no lead requested".
+var _action_lead_armed: bool = false
+
 ## Cancels pending hit reactions when the queue is cleared (death/reload).
 var _hit_cancel_token: int = 0
 
@@ -79,7 +91,19 @@ func _ready() -> void:
 	resized.connect(_fit_sprite)
 
 func _process(delta: float) -> void:
-	if not _action_running or _dead:
+	if not _action_running:
+		return
+
+	# Deterministic delta counter instead of a timer: the overlap beat is a
+	# slice of the animation itself, so it follows Engine.time_scale for free.
+	# It keeps counting while dying, so a chained caller is released instead of
+	# waiting for the death delay to clear the queue.
+	if _action_lead_armed:
+		_action_lead -= delta
+		if _action_lead <= 0.0:
+			_emit_action_lead()
+
+	if _dead:
 		return
 
 	_action_watchdog -= delta
@@ -114,7 +138,14 @@ func set_hit_flash(strength: float) -> void:
 
 ## Requests an animation without immediately interrupting another action.
 ## Lower beat values play first. Requests with the same beat remain FIFO.
-func request_action(anim_name: StringName, beat: ActionBeat = ActionBeat.ATTACK) -> bool:
+## @param lead_seconds - seconds into the action after which `action_lead_reached`
+##                       fires. -1 (default) never arms a lead, so callers wait
+##                       for the action to finish in full.
+func request_action(
+	anim_name: StringName,
+	beat: ActionBeat = ActionBeat.ATTACK,
+	lead_seconds: float = -1.0
+) -> bool:
 	if _dead or _animation_state == null or anim_name.is_empty():
 		return false
 	if not has_animation(anim_name):
@@ -125,6 +156,7 @@ func request_action(anim_name: StringName, beat: ActionBeat = ActionBeat.ATTACK)
 		"anim": anim_name,
 		"beat": int(beat),
 		"order": _next_action_order,
+		"lead": lead_seconds,
 	})
 	_next_action_order += 1
 
@@ -182,12 +214,37 @@ func _get_skill_anim(skill_index: int, rank: int) -> StringName:
 func play_skill(skill_index: int, rank: int = 0) -> void:
 	request_action(_get_skill_anim(skill_index, rank), ActionBeat.ATTACK)
 
-func play_skill_and_wait(skill_index: int, rank: int = 0) -> void:
+## Plays a skill action and waits for the caller's turn to continue.
+## @param lead - fraction of the animation the caller waits for. 1.0 (default)
+##               waits for the whole animation plus its blend back to idle, which
+##               is what the player's own turn needs. Lower values return once the
+##               attack has passed its impact beat, so the next actor can start
+##               while this one plays out its wind-down (chained enemy turns).
+func play_skill_and_wait(skill_index: int, rank: int = 0, lead: float = 1.0) -> void:
 	var anim := _get_skill_anim(skill_index, rank)
-	if not request_action(anim, ActionBeat.ATTACK):
+	var lead_seconds: float = lead_wait_seconds(_get_animation_duration(anim), lead)
+	if not request_action(anim, ActionBeat.ATTACK, lead_seconds):
 		return
-	while (await action_finished) != anim:
+	if lead_seconds < 0.0:
+		while (await action_finished) != anim:
+			pass
+		return
+	while (await action_lead_reached) != anim:
 		pass
+
+## Seconds the caller waits before the next actor may start, for an action that
+## lasts `duration` and an overlap request of `lead_fraction`.
+##
+## -1.0 means "wait for the whole animation" (a fraction of 1.0 or more). Below
+## that the wait is a slice of the animation itself, so longer or slower
+## animations keep their natural proportions instead of a fixed wall-clock gap.
+##
+## Static and pure, so the overlap policy stays unit-testable without a Spine
+## setup and stays independent of any timer.
+static func lead_wait_seconds(duration: float, lead_fraction: float) -> float:
+	if lead_fraction >= 1.0:
+		return -1.0
+	return maxf(0.0, duration) * clampf(lead_fraction, 0.0, 1.0)
 
 func _get_ultimate_anim() -> StringName:
 	for candidate: StringName in [anim_unique_1, anim_unique, anim_skill1_2, anim_skill1]:
@@ -222,8 +279,11 @@ func _pump_action_queue() -> void:
 
 	var next_action: Dictionary = _action_queue.pop_front()
 	var next_anim: StringName = next_action["anim"]
+	var next_lead: float = next_action["lead"]
 	_active_action = next_anim
 	_action_running = true
+	_action_lead = maxf(0.0, next_lead)
+	_action_lead_armed = next_lead >= 0.0
 
 	_animation_state.call(
 		"set_animation",
@@ -278,9 +338,13 @@ func _clear_action_queue() -> void:
 	_action_running = false
 	_active_action = &""
 	_action_watchdog = 0.0
+	_action_lead = 0.0
+	_action_lead_armed = false
 	_hit_cancel_token += 1
 	for anim: StringName in cancelled:
 		action_finished.emit(anim)
+		# Overlap waiters of a cancelled action must not be left hanging.
+		action_lead_reached.emit(anim)
 		
 ## Check if the current skeleton actually has the animation
 func has_animation(anim_name: StringName) -> bool:
@@ -510,12 +574,26 @@ func _finish_active_action() -> void:
 	if not _action_running:
 		return
 	var finished := _active_action
-	
+
+	# A chained caller may still be waiting on this action's overlap beat (a very
+	# short animation can end before the lead elapses), so release it first.
+	_emit_action_lead()
+
 	_action_running = false
 	_active_action = &""
 	_action_watchdog = 0.0
 	_schedule_action_pump()
 	action_finished.emit(finished)
+
+
+## Releases a pending overlap wait. Safe to call when nothing is armed, and it
+## never fires twice for the same action because it always disarms first.
+func _emit_action_lead() -> void:
+	if not _action_lead_armed:
+		return
+	_action_lead_armed = false
+	_action_lead = 0.0
+	action_lead_reached.emit(_active_action)
 
 ## True for animations where the character leaves its idle spot.
 func is_skill_animation(anim_name: StringName) -> bool:
