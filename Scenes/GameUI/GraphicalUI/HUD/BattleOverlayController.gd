@@ -33,12 +33,11 @@ func _ready() -> void:
 		tooltip_icon_catalog = TooltipIconCatalog.new()
 	_build_rails()
 	_build_tooltip()
-	if EventBus.has_signal("ultimate_cast"):
-		EventBus.connect("ultimate_cast", _on_ultimate_cast)
-	if EventBus.has_signal("wave_started"):
-		EventBus.connect("wave_started", _on_wave_or_turn_changed)
-	if EventBus.has_signal("turn_started"):
-		EventBus.connect("turn_started", _on_wave_or_turn_changed)
+	# Typed signal connections (EventBus is the autoload), matching the rest of
+	# the codebase. No string-based connect() and no has_signal() guards needed.
+	EventBus.ultimate_cast.connect(_on_ultimate_cast)
+	EventBus.wave_started.connect(_on_wave_or_turn_changed)
+	EventBus.turn_started.connect(_on_wave_or_turn_changed)
 	call_deferred("_auto_bind_scene_rows")
 
 

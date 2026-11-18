@@ -25,6 +25,7 @@ signal shield_gained(target: Unit, amount: int)
 signal shield_reduced(target: Unit, amount: int)
 signal unit_healed(target: Unit, amount: int)
 signal unit_died(target: Unit)
+#endregion
 
 #region Skill Events
 signal skill_resolved(caster: Unit, skill_name: String)
