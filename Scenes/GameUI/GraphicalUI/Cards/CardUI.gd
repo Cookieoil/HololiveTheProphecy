@@ -75,6 +75,7 @@ var card: Card
 var hand_bar: HandBar
 
 var _hover_tween: Tween
+var _slide_tween: Tween
 var _draw_tween: Tween
 var _is_hovered: bool = false
 ## True while the cursor sits inside the slot, even if the card is still flying
@@ -215,6 +216,7 @@ func mark_consumed() -> void:
 	# Drop any deal still in flight: a card that is leaving the hand must not
 	# keep flying towards a slot that no longer exists.
 	_stop_pose_tweens()
+	_stop_slide()
 	_is_drawing = false
 	_cancel_return_animation(false)
 	modulate.a = 0.0
@@ -235,6 +237,7 @@ func _gui_input(event: InputEvent) -> void:
 		
 func _exit_tree() -> void:
 	_stop_pose_tweens()
+	_stop_slide()
 
 	if _value_tween != null and _value_tween.is_valid():
 		_value_tween.kill()
@@ -436,6 +439,34 @@ func _reset_hover_immediate() -> void:
 		_visual_root.position = Vector2.ZERO
 		_visual_root.rotation = 0.0
 	_set_tilt(0.0, 0.0)
+#endregion
+
+#region Row layout
+
+## Glides this card's layout slot to `target` (row-local), so the hand closes up
+## or opens smoothly when another card leaves or arrives instead of snapping.
+func slide_to(target: Vector2, duration: float) -> void:
+	if _is_consumed or not is_inside_tree():
+		return
+
+	if _slide_tween != null and _slide_tween.is_valid():
+		_slide_tween.kill()
+
+	var from: Vector2 = position
+	_slide_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_slide_tween.tween_method(
+		func(weight: float) -> void:
+			position = from.lerp(target, weight),
+		0.0,
+		1.0,
+		duration
+	)
+
+
+func _stop_slide() -> void:
+	if _slide_tween != null and _slide_tween.is_valid():
+		_slide_tween.kill()
+	_slide_tween = null
 #endregion
 
 #region Fake-3D pose

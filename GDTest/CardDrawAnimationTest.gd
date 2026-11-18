@@ -178,20 +178,20 @@ func test_a_resting_card_renders_on_the_pixel_grid_of_its_slot() -> void:
 	assert_vector(Vector2(ui._card_surface.size)).is_equal(CardUI.QUAD_SIZE)
 
 
-func test_removed_card_collapses_out_of_the_row() -> void:
+func test_removed_card_leaves_the_row_at_once() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var kept: Card = Card.new(2)
 	var dropped: Card = Card.new(3)
 	bar.set_hand([kept, dropped])
-	var kept_ui: CardUI = _row(bar)[0]
 	var dropped_ui: CardUI = _row(bar)[1]
 
 	bar.set_hand([kept])
 
 	var row: Array[CardUI] = _row(bar)
-	assert_int(row.size()).is_equal(2)
-	assert_object(row[0]).is_same(kept_ui)
-	# The dropped card is consumed at once and collapses away on its own.
+	# The dropped card is consumed and taken out of the row straight away, so the
+	# survivors can glide into the gap it left.
+	assert_int(row.size()).is_equal(1)
+	assert_object(row[0].card).is_same(kept)
 	assert_bool(dropped_ui.is_consumed()).is_true()
 
 
@@ -209,12 +209,36 @@ func test_merged_card_is_placed_at_its_model_slot() -> void:
 	bar.set_hand([first, merged, last])
 
 	var row: Array[CardUI] = _row(bar)
-	# Two survivors, the merged card, and the one card still collapsing.
-	assert_int(row.size()).is_equal(4)
+	assert_int(row.size()).is_equal(3)
 	assert_object(row[0].card).is_same(first)
 	assert_object(row[1].card).is_same(merged)
 	assert_object(row[2].card).is_same(last)
-	assert_bool(row[3].is_consumed()).is_true()
+
+
+func test_survivors_glide_instead_of_snapping_into_place() -> void:
+	# A card leaving must not teleport the others: they have to travel to their
+	# new slot over SLIDE_TIME.
+	var bar: HandBar = _make_hand_bar()
+	var first: Card = Card.new(2)
+	var second: Card = Card.new(3)
+	var third: Card = Card.new(5)
+	bar.set_hand([first, second, third])
+
+	# Let the row settle first, so the starting slots are the real ones.
+	await await_millis(60)
+	var last_ui: CardUI = _row(bar)[2]
+	var start_x: float = last_ui.position.x
+
+	bar.remove_card(second)
+	await await_millis(30)
+	var early_x: float = last_ui.position.x
+	await await_millis(400)
+	var settled_x: float = last_ui.position.x
+
+	# It is on its way after a couple of frames...
+	assert_float(early_x).is_less(start_x)
+	# ...and it is still travelling, i.e. it did not snap there in one step.
+	assert_float(settled_x).is_less(early_x)
 
 
 func test_the_card_footprint_matches_its_layout_slot() -> void:

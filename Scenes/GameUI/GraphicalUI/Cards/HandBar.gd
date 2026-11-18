@@ -9,8 +9,9 @@ signal drag_ended(card: Card)
 signal card_clicked(card: Card)
 
 const CARD_SCENE: PackedScene = preload("res://Scenes/GameUI/GraphicalUI/Cards/CardUI.tscn")
-const REMOVE_TWEEN_TIME: float = 0.18
 const ENTER_TWEEN_TIME: float = 0.22
+## How long a card takes to glide to its new slot when the hand changes.
+const SLIDE_TIME: float = 0.22
 const CARD_WIDTH: float = 100.0
 const CARD_HEIGHT: float = 145.0
 ## How long auto-selected cards stay lit before the flash fades out.
@@ -40,6 +41,10 @@ var _pick_candidates: Array[Card] = []
 ## frame is over, so a later, separate draw always starts at zero again.
 var _deal_slot: int = 0
 var _deal_slot_queued: bool = false
+
+## True once the row has been laid out at least once. Until then a card's
+## position is meaningless, so nothing may be animated away from it.
+var _row_laid_out: bool = false
 
 @onready var cards_row: HBoxContainer = $MarginContainer/VBox/CardsRow
 
@@ -115,22 +120,27 @@ func _apply_pick_candidates() -> void:
 ## survive the refreshes BattleScene fires after every action.
 ## Cards that are new to the row are dealt in from the right; merged cards are
 ## forged in hand, so they simply fade into the gap that opens for them.
+## Cards that left the hand slide the rest of the row into place instead of
+## letting the layout snap them there.
 func set_hand(cards: Array[Card]) -> void:
+	var before: Dictionary[CardUI, Vector2] = _snapshot_slots()
+
 	for ui: CardUI in _live_card_uis():
 		if not cards.has(ui.card):
-			remove_card(ui.card)
+			_consume_card(ui.card)
 
 	for card: Card in cards:
 		if _find_card_ui(card) == null:
 			_spawn_card(card, true)
 
-	# Keep the row in model order. Cards that are still collapsing keep their
-	# slot; moving the live ones around them is enough to line them up.
+	# The container is the layout authority, so the row still has to be put in
+	# model order; the glide below hides the jump that reordering would cause.
 	for index: int in cards.size():
 		var ui: CardUI = _find_card_ui(cards[index])
 		if ui != null and ui.get_index() != index:
 			cards_row.move_child(ui, index)
 
+	_glide_to_new_slots(before)
 	_apply_pick_candidates()
 
 
@@ -140,28 +150,65 @@ func set_hand(cards: Array[Card]) -> void:
 func add_card(card: Card) -> void:
 	if _find_card_ui(card) != null:
 		return
+	var before: Dictionary[CardUI, Vector2] = _snapshot_slots()
 	_spawn_card(card, true)
+	_glide_to_new_slots(before)
 	# Keep any in-progress pick highlight correct for the rebuilt row.
 	_apply_pick_candidates()
 
 
+## A card left the hand: it drops out of the row at once and the cards around it
+## glide into the gap it left.
 func remove_card(card: Card) -> void:
+	var before: Dictionary[CardUI, Vector2] = _snapshot_slots()
+	if _consume_card(card):
+		_glide_to_new_slots(before)
+
+
+## Locks a card against further interaction and takes it out of the row, so the
+## layout closes the gap it left. Returns false when it was already gone.
+func _consume_card(card: Card) -> bool:
 	var ui: CardUI = _find_card_ui(card)
 	if ui == null:
-		return
+		return false
+
 	ui.mark_consumed()
-	var tween: Tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	tween.tween_property(ui, "custom_minimum_size:x", 0.0, REMOVE_TWEEN_TIME)
-	tween.parallel().tween_property(ui, "modulate:a", 0.0, REMOVE_TWEEN_TIME)
-	tween.tween_callback(ui.queue_free)
+	# The card is invisible from here on, so it can leave the row immediately:
+	# the cards around it then glide into the space it used to hold.
+	cards_row.remove_child(ui)
+	ui.queue_free()
+	return true
 
 
-func replace_card(old_card: Card, new_card: Card) -> void:
-	## Merge result: the consumed card collapses away, the target refreshes.
-	remove_card(old_card)
-	var target: CardUI = _find_card_ui(new_card)
-	if target != null:
-		target._refresh()
+## The slot every card currently occupies, so a layout change can glide from it.
+func _snapshot_slots() -> Dictionary[CardUI, Vector2]:
+	var snapshot: Dictionary[CardUI, Vector2] = {}
+	for ui: CardUI in _live_card_uis():
+		snapshot[ui] = ui.position
+	return snapshot
+
+
+## Lets the container re-sort the row, then glides every card that was already on
+## screen from the slot it had to the slot it now belongs in. The sort and this
+## callback both run before the frame is drawn, so the snap never shows.
+func _glide_to_new_slots(before: Dictionary[CardUI, Vector2]) -> void:
+	var glide: bool = _row_laid_out and not before.is_empty()
+	_row_laid_out = true
+	cards_row.queue_sort()
+	if glide:
+		_apply_glide.call_deferred(before)
+
+
+func _apply_glide(before: Dictionary[CardUI, Vector2]) -> void:
+	for ui: CardUI in before:
+		if not is_instance_valid(ui) or ui.is_consumed():
+			continue
+		var target: Vector2 = ui.position
+		var from: Vector2 = before[ui]
+		if from.is_equal_approx(target):
+			continue
+		ui.position = from
+		ui.slide_to(target, SLIDE_TIME)
 
 
 func _spawn_card(card: Card, animate: bool) -> CardUI:
@@ -169,24 +216,18 @@ func _spawn_card(card: Card, animate: bool) -> CardUI:
 	cards_row.add_child(ui)
 	ui.setup(card, self)
 
-	ui.custom_minimum_size.y = CARD_HEIGHT
+	ui.custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 
 	if not animate:
-		ui.custom_minimum_size.x = CARD_WIDTH
 		ui.modulate.a = 1.0
 		return ui
 
-	# The slot opens up from zero width, so the cards already in hand glide
-	# leftwards to make room while the new card is still in the air.
-	ui.custom_minimum_size.x = 0.0
-	var slot_tween: Tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	slot_tween.tween_property(ui, "custom_minimum_size:x", CARD_WIDTH, ENTER_TWEEN_TIME)
-
 	if card.is_merged:
 		# A merged card is forged in hand rather than dealt from the deck, so it
-		# simply fades into the gap that opens up for it.
+		# simply fades into the slot that opened up for it.
 		ui.modulate.a = 0.0
-		slot_tween.parallel().tween_property(ui, "modulate:a", 1.0, ENTER_TWEEN_TIME)
+		var fade: Tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		fade.tween_property(ui, "modulate:a", 1.0, ENTER_TWEEN_TIME)
 		return ui
 
 	var slot: int = _next_deal_slot()
