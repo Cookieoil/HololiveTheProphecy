@@ -9,11 +9,15 @@ extends GameUI
 @onready var output: RichTextLabel = $Output
 @onready var input: LineEdit = $Input
 
+## Generic skill-mark icon used for every inline category token. This art used
+## to live at res://Trash/AttackSkillMark.png and was moved to the Assests
+## folder as icon2.png, so the text UI points at the canonical location now.
+const ICON_TEXTURE_PATH: String = "res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon2.png"
 const ICON_MAP: Dictionary[String, String] = {
-	"damage": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
-	"shield": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
-	"heal":   "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
-	"action": "[img=16x16]res://Trash/AttackSkillMark.png[/img]",
+	"damage": "[img=16x16]%s[/img]" % ICON_TEXTURE_PATH,
+	"shield": "[img=16x16]%s[/img]" % ICON_TEXTURE_PATH,
+	"heal":   "[img=16x16]%s[/img]" % ICON_TEXTURE_PATH,
+	"action": "[img=16x16]%s[/img]" % ICON_TEXTURE_PATH,
 }
 
 ## Internal signal that bridges LineEdit.text_submitted -> await
