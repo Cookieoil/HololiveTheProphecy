@@ -16,12 +16,30 @@ const CARD_HEIGHT: float = 145.0
 ## How long auto-selected cards stay lit before the flash fades out.
 const AUTO_FLASH_HOLD: float = 0.55
 
+#region Deal choreography
+## Seconds between two cards of the same deal, so a full opening hand fans out in
+## well under a second instead of arriving as one block.
+const DEAL_STAGGER: float = 0.068
+## Deck origin as an offset from the card's own slot: beyond the right edge of
+## the hand, so every drawn card is dealt in from off-screen straight to its
+## place instead of drifting in through the middle of the screen.
+const DECK_DROP: float = 42.0
+## Alternating deck position, so a multi-card deal looks like it comes off a
+## small pile rather than a single point.
+const DECK_STACK_STEP: Vector2 = Vector2(16.0, 8.0)
+#endregion
+
 var game_state: GameState
 
 # While _pick_active is true the game is waiting for the player to click cards
 # in hand, so every candidate keeps its pick highlight on.
 var _pick_active: bool = false
 var _pick_candidates: Array[Card] = []
+
+## Stagger slot handed to each card dealt within the same frame. Reset once the
+## frame is over, so a later, separate draw always starts at zero again.
+var _deal_slot: int = 0
+var _deal_slot_queued: bool = false
 
 @onready var cards_row: HBoxContainer = $MarginContainer/VBox/CardsRow
 
@@ -31,6 +49,12 @@ var _pick_candidates: Array[Card] = []
 func _ready() -> void:
 	if EventBus.has_signal("card_played"):
 		EventBus.card_played.connect(_on_event_card_played)
+	# Skill-driven draws / discards happen mid-turn, while the hand UI is alive:
+	# react to them right away instead of waiting for the next full refresh.
+	if EventBus.has_signal("card_drawn"):
+		EventBus.card_drawn.connect(_on_event_card_drawn)
+	if EventBus.has_signal("card_discarded"):
+		EventBus.card_discarded.connect(_on_event_card_discarded)
 
 #endregion
 
@@ -86,21 +110,39 @@ func _apply_pick_candidates() -> void:
 		ui.set_pick_selectable(_pick_active and _pick_candidates.has(ui.card))
 
 
+## Rebuilds the row from the model, reusing every CardUI that is still valid.
+## A deal that is still in flight, a hover, or a pick highlight therefore all
+## survive the refreshes BattleScene fires after every action.
+## Cards that are new to the row are dealt in from the right; merged cards pop
+## in place, because they are forged in hand rather than drawn from the deck.
 func set_hand(cards: Array[Card]) -> void:
-	for child: Node in cards_row.get_children():
-		cards_row.remove_child(child)
-		child.queue_free()
-	for c: Card in cards:
-		_spawn_card(c, false)
+	for ui: CardUI in _live_card_uis():
+		if not cards.has(ui.card):
+			remove_card(ui.card)
+
+	for card: Card in cards:
+		if _find_card_ui(card) == null:
+			_spawn_card(card, true)
+
+	# Keep the row in model order. Cards that are still collapsing keep their
+	# slot; moving the live ones around them is enough to line them up.
+	for index: int in cards.size():
+		var ui: CardUI = _find_card_ui(cards[index])
+		if ui != null and ui.get_index() != index:
+			cards_row.move_child(ui, index)
+
 	_apply_pick_candidates()
 
 
+## Appends one newly drawn card to the right end of the row, matching the model
+## (which also appends), and deals it in from the deck. Safe to call twice for
+## the same card: a refresh that already added it is a no-op.
 func add_card(card: Card) -> void:
-	## New cards enter from the LEFT, sliding existing cards right.
-	var ui: CardUI = _spawn_card(card, true)
+	if _find_card_ui(card) != null:
+		return
+	_spawn_card(card, true)
 	# Keep any in-progress pick highlight correct for the rebuilt row.
 	_apply_pick_candidates()
-	cards_row.move_child(ui, 0)
 
 
 func remove_card(card: Card) -> void:
@@ -127,20 +169,63 @@ func _spawn_card(card: Card, animate: bool) -> CardUI:
 	cards_row.add_child(ui)
 	ui.setup(card, self)
 
-	var target_width: float = CARD_WIDTH if CARD_WIDTH > 0.0 else ui.custom_minimum_size.x
 	ui.custom_minimum_size.y = CARD_HEIGHT
 
-	if animate:
-		ui.custom_minimum_size.x = 0.0
-		ui.modulate.a = 0.0
-		var tween: Tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-		tween.tween_property(ui, "custom_minimum_size:x", target_width, ENTER_TWEEN_TIME)
-		tween.parallel().tween_property(ui, "modulate:a", 1.0, ENTER_TWEEN_TIME)
-	else:
-		ui.custom_minimum_size.x = target_width
+	if not animate:
+		ui.custom_minimum_size.x = CARD_WIDTH
 		ui.modulate.a = 1.0
+		return ui
+
+	# The slot opens up from zero width, so the cards already in hand glide
+	# leftwards to make room while the new card is still in the air.
+	ui.custom_minimum_size.x = 0.0
+	var slot_tween: Tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	slot_tween.tween_property(ui, "custom_minimum_size:x", CARD_WIDTH, ENTER_TWEEN_TIME)
+
+	var slot: int = _next_deal_slot()
+	if card.is_merged:
+		# Merged cards are forged in hand: they pop rather than fly in from the
+		# deck, so a merge reads differently from a draw.
+		ui.play_merge_animation()
+	else:
+		ui.play_draw_animation(_deck_offset(slot), DEAL_STAGGER * float(slot), slot)
 
 	return ui
+
+
+## Hands out the next stagger slot for cards dealt in the same frame. The counter
+## resets once the frame is over, so a later, unrelated draw starts at zero again.
+func _next_deal_slot() -> int:
+	var slot: int = _deal_slot
+	_deal_slot += 1
+	if not _deal_slot_queued:
+		_deal_slot_queued = true
+		_reset_deal_slots.call_deferred()
+	return slot
+
+
+func _reset_deal_slots() -> void:
+	_deal_slot_queued = false
+	_deal_slot = 0
+
+
+## Deck origin for a dealt card, in CardUI-local pixels. Drawn cards always land
+## at the right end of the row, so half the hand bar plus one card width is
+## always beyond the visible hand area, whatever the window size.
+func _deck_offset(slot: int) -> Vector2:
+	var bar_width: float = maxf(get_global_rect().size.x, CARD_WIDTH * 6.0)
+	var origin := Vector2(bar_width * 0.5 + CARD_WIDTH, DECK_DROP)
+	return origin + DECK_STACK_STEP * float(slot % 2)
+
+
+## Every CardUI in the row that is still alive and not already collapsing.
+func _live_card_uis() -> Array[CardUI]:
+	var result: Array[CardUI] = []
+	for child: Node in cards_row.get_children():
+		var ui: CardUI = child as CardUI
+		if ui != null and not ui.is_queued_for_deletion() and not ui.is_consumed():
+			result.append(ui)
+	return result
 
 
 func can_merge(card_a: Card, card_b: Card) -> bool:
@@ -205,6 +290,18 @@ func _find_card_ui(card: Card) -> CardUI:
 ## Played cards collapse immediately on play — before play_unit_skill() even
 ## starts — so the hand doesn't visibly hold a "used" card during the animation.
 func _on_event_card_played(card: Card, _ally: Unit) -> void:
+	remove_card(card)
+
+
+## A skill drew a card mid-turn. Deal it in right away, so the player can see it
+## (and pick it, when the same skill asks for a card) before the action resolves.
+func _on_event_card_drawn(card: Card) -> void:
+	add_card(card)
+
+
+## A skill discarded a card. Collapse it right away instead of waiting for the
+## post-action refresh.
+func _on_event_card_discarded(card: Card) -> void:
 	remove_card(card)
 
 #endregion

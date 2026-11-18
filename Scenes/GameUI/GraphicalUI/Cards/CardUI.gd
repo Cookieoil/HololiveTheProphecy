@@ -3,6 +3,11 @@ class_name CardUI
 extends PanelContainer
 ## Visual representation of one Card in hand.
 ## Drag source (play / merge) and drop target (merge only).
+##
+## The card is rendered into an offscreen SubViewport and that texture is
+## perspective-warped by a per-instance fake-3D shader (see
+## res://Shaders/FakeCard3D.gdshader), so drawing and hovering read as genuine
+## 3D while the layout slot, hit box and hand ordering stay perfectly flat.
 
 signal play_requested(card: Card)
 
@@ -18,6 +23,64 @@ const HOVER_LIFT: float = 18.0
 const HOVER_TWEEN_TIME: float = 0.12
 const HOVER_Z_INDEX: int = 20
 
+#region Fake-3D rig
+const CARD_SIZE: Vector2 = Vector2(100, 145)
+const CARD_CORNER_RADIUS: float = 6.0
+## Transparent padding around the card body, so a strongly tilted card has room
+## to stretch its near corners inside the quad instead of being clipped.
+const CARD_PADDING: Vector2 = Vector2(20, 20)
+## Padded quad (and matching SubViewport logical size) in logical pixels.
+const QUAD_SIZE: Vector2 = Vector2(140, 185)
+## Offscreen supersampling: text and borders stay crisp under the hover zoom and
+## the perspective warp.
+const RENDER_SUPERSAMPLE: float = 2.0
+const FAKE_3D_SHADER: Shader = preload("res://Shaders/FakeCard3D.gdshader")
+const ART_PARALLAX_SHADER: Shader = preload("res://Shaders/CardArtParallax.gdshader")
+#endregion
+
+#region Draw animation
+## A drawn card is dealt in from beyond the right edge of the hand and flips
+## from back to front in mid-air, landing straight in its slot: it never stops
+## in the middle of the screen first.
+const DRAW_FLIGHT_TIME: float = 0.42
+## Fraction of the flight spent face down before the flip begins.
+const DRAW_ROTATION_DELAY: float = 0.22
+const DRAW_START_YAW: float = 168.0
+const DRAW_START_PITCH: float = 20.0
+const DRAW_MID_PITCH: float = -7.0
+const DRAW_START_BANK: float = 15.0
+const DRAW_START_SCALE: float = 0.74
+const DRAW_POP_SCALE: float = 0.035
+const DRAW_FADE_IN: float = 0.12
+const DRAW_ARC_BASE: float = 78.0
+const DRAW_ARC_STEP: float = 10.0
+## How far along the straight line the Bezier control point is pulled.
+const DRAW_ARC_SWING: float = 0.34
+const DRAW_Z_BASE: int = 30
+## Critically damped settle, so the flip arrives with a small natural overshoot
+## instead of a dead stop.
+const SETTLE_FREQUENCY: float = 7.0
+const SETTLE_DAMPING: float = 6.5
+#endregion
+
+#region Merge animation
+## A merged card is forged in hand rather than dealt from the deck, so it pops
+## and flips in place instead of flying in from the right.
+const MERGE_POP_TIME: float = 0.28
+const MERGE_START_YAW: float = 26.0
+const MERGE_START_PITCH: float = -18.0
+const MERGE_START_SCALE: float = 0.88
+#endregion
+
+#region Hover tilt
+## Maximum fake-3D tilt while the cursor moves across a hovered card.
+const HOVER_TILT_MAX: float = 13.0
+const HOVER_TILT_TIME: float = 0.18
+const HOVER_TILT_RELEASE: float = 0.45
+## Art parallax strength, in normalised tilt units.
+const PARALLAX_TILT_SCALE: float = 0.55
+#endregion
+
 @export var icon_catalog: CardIconCatalog
 
 @export_group("Value Change Timing")
@@ -30,7 +93,14 @@ var card: Card
 var hand_bar: HandBar
 
 var _hover_tween: Tween
+var _tilt_tween: Tween
+var _draw_tween: Tween
 var _is_hovered: bool = false
+## True while the cursor sits inside the slot, even if the card is still flying
+## in from the deck. The hover is applied the moment it lands.
+var _hover_wanted: bool = false
+## True while the fake-3D draw / merge animation owns the card transform.
+var _is_drawing: bool = false
 var _pick_selectable: bool = false
 var _flash_active: bool = false
 ## True when the flash was caused by an enemy, so the glow turns red.
@@ -44,6 +114,15 @@ var _glow: OutlineGlow
 ## Pending delayed re-render of the value label after a runtime value change.
 var _value_tween: Tween
 
+## Fake-3D rig, built in _ready() so CardUI.tscn stays a plain flat layout.
+var _visual_root: Control
+var _card_quad: TextureRect
+var _card_surface: SubViewport
+var _card_material: ShaderMaterial
+var _art_material: ShaderMaterial
+## -1..1 tilt fed to the art parallax shader.
+var _parallax: Vector2 = Vector2.ZERO
+
 @onready var hover_visual: PanelContainer = $Bounds/HoverVisual
 @onready var icon_row: HBoxContainer = $Bounds/HoverVisual/Margin/VBox/IconRow
 @onready var art: TextureRect = $Bounds/HoverVisual/Margin/VBox/Art
@@ -53,29 +132,30 @@ var _value_tween: Tween
 
 
 func _ready() -> void:
-	# The scaled visual must be allowed to draw outside the fixed slot.
+	# The tilted visual must be allowed to draw outside the fixed slot.
 	clip_contents = false
 
-	# This root is now only the stable layout/input slot.
+	# This root is only the stable layout/input slot: the card itself lives on
+	# _visual_root, so tilting it can never disturb the hand layout or hit boxes.
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
 	_style_card_panel()
 	_style_merge_glow()
+	_build_fake_3d_rig()
 
 	if merge_glow != null:
 		merge_glow.self_modulate.a = 0.0
-		_glow = OutlineGlow.attach_to(bounds, 6.0, 13.0)
+		_glow = OutlineGlow.attach_to(_visual_root, CARD_CORNER_RADIUS, 13.0)
 
 	# None of the visual children should participate in GUI hit-testing.
-	_set_mouse_filter_recursive(hover_visual)
-	
-	# None of the visual children should participate in GUI hit-testing.
-	# Consequently, the enlarged drawing cannot obstruct neighboring cards.
+	# Consequently, the enlarged / tilted drawing cannot obstruct neighbouring
+	# cards.
+	_set_mouse_filter_recursive(_visual_root)
 	_set_mouse_filter_recursive(hover_visual)
 
 	_update_hover_pivot()
-	hover_visual.resized.connect(_update_hover_pivot)
+	_visual_root.resized.connect(_update_hover_pivot)
 
 	mouse_entered.connect(_on_card_mouse_entered)
 	mouse_exited.connect(_on_card_mouse_exited)
@@ -145,6 +225,7 @@ func set_flash_active(active: bool, hostile: bool = false) -> void:
 ## target, hover restore, return animation) can revive a dying card.
 func mark_consumed() -> void:
 	_is_consumed = true
+	_hover_wanted = false
 	# A dying card must never keep (or gain) a pick highlight while it collapses.
 	_pick_selectable = false
 	_flash_active = false
@@ -153,6 +234,10 @@ func mark_consumed() -> void:
 		merge_glow.visible = false
 	_refresh_glow()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Drop any deal still in flight: a card that is leaving the hand must not
+	# keep flying towards a slot that no longer exists.
+	_stop_pose_tweens()
+	_is_drawing = false
 	_cancel_return_animation(false)
 	modulate.a = 0.0
 
@@ -162,6 +247,13 @@ func is_consumed() -> bool:
 
 
 func _gui_input(event: InputEvent) -> void:
+	# Balatro / Runeterra style cursor tilt: moving the pointer across a hovered
+	# card leans it towards the pointer and drifts the art the other way.
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion != null:
+		_update_cursor_tilt(motion.position)
+		return
+
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if _pick_selectable and mb != null \
 			and mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -171,10 +263,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 		
 func _exit_tree() -> void:
-	if _hover_tween != null and _hover_tween.is_valid():
-		_hover_tween.kill()
-
-	_hover_tween = null
+	_stop_pose_tweens()
 
 	if _value_tween != null and _value_tween.is_valid():
 		_value_tween.kill()
@@ -223,35 +312,124 @@ func _style_merge_glow() -> void:
 #region Hover Animation
 
 func _update_hover_pivot() -> void:
-	if not is_instance_valid(hover_visual):
+	if not is_instance_valid(_visual_root):
 		return
 
 	# Scaling around the bottom-center makes the card grow primarily upward
-	# instead of appearing to expand equally in every direction.
-	hover_visual.pivot_offset = Vector2(
-		hover_visual.size.x * 0.5,
-		hover_visual.size.y
+	# instead of appearing to expand equally in every direction. The outline glow
+	# is a child of _visual_root, so it follows automatically.
+	_visual_root.pivot_offset = Vector2(
+		_visual_root.size.x * 0.5,
+		_visual_root.size.y
 	)
-	if is_instance_valid(_glow):
-		var b := _glow.glow_bleed
-		_glow.pivot_offset = hover_visual.pivot_offset + Vector2(b, b)
+#endregion
 
+#region Fake-3D rig
+
+## Builds the offscreen card surface and its fake-3D quad.
+##
+##   Bounds
+##   +- VisualRoot (100x145, pivot bottom-centre)  <- scale / lift / bank
+##      +- CardQuad   (140x185 quad, FakeCard3D material)
+##      +- CardSurface (SubViewport, supersampled)
+##         +- HoverVisual (100x145 card face)       <- the real card content
+##
+## The card face renders into the SubViewport, so the shader only ever sees one
+## fully composited texture to warp. Everything is created here rather than in
+## CardUI.tscn so the scene stays a plain, editor-friendly flat layout and the
+## hand layout / hit box can never be disturbed by the 3D warp.
+func _build_fake_3d_rig() -> void:
+	_visual_root = Control.new()
+	_visual_root.name = "VisualRoot"
+	_visual_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_visual_root.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_visual_root.position = Vector2.ZERO
+	_visual_root.size = CARD_SIZE
+	bounds.add_child(_visual_root)
+
+	# The card face is laid out in padded quad space, so the padding around it
+	# stays transparent and the quad itself never has to move or resize.
+	_card_surface = SubViewport.new()
+	_card_surface.name = "CardSurface"
+	_card_surface.transparent_bg = true
+	_card_surface.gui_disable_input = true
+	_card_surface.disable_3d = true
+	_card_surface.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_visual_root.add_child(_card_surface)
+
+	bounds.remove_child(hover_visual)
+	_card_surface.add_child(hover_visual)
+	hover_visual.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	hover_visual.position = CARD_PADDING
+	hover_visual.size = CARD_SIZE
+
+	# Resolution and 2x canvas scale are applied only once the surface actually
+	# holds a canvas item: until then the rendering server has no canvas to
+	# transform and silently rejects the transform.
+	_card_surface.size = Vector2i(
+		int(QUAD_SIZE.x * RENDER_SUPERSAMPLE),
+		int(QUAD_SIZE.y * RENDER_SUPERSAMPLE)
+	)
+	_card_surface.canvas_transform = Transform2D(
+		0.0, Vector2.ONE * RENDER_SUPERSAMPLE, 0.0, Vector2.ZERO
+	)
+
+	# Per-card material: a shared one would tilt every card in hand at once.
+	_card_material = ShaderMaterial.new()
+	_card_material.shader = FAKE_3D_SHADER
+	_card_material.set_shader_parameter("quad_size", QUAD_SIZE)
+	_card_material.set_shader_parameter("card_size", CARD_SIZE)
+	_card_material.set_shader_parameter("corner_radius", CARD_CORNER_RADIUS)
+	_card_material.set_shader_parameter("x_rot", 0.0)
+	_card_material.set_shader_parameter("y_rot", 0.0)
+
+	# The quad maps the supersampled surface back onto the card's own pixels:
+	# the card face sits at CARD_PADDING inside quad space, so a quad positioned
+	# at -CARD_PADDING lines the card up exactly with the layout slot.
+	_card_quad = TextureRect.new()
+	_card_quad.name = "CardQuad"
+	_card_quad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_quad.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_card_quad.stretch_mode = TextureRect.STRETCH_SCALE
+	_card_quad.texture = _card_surface.get_texture()
+	_card_quad.material = _card_material
+	_card_quad.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_card_quad.position = -CARD_PADDING
+	_card_quad.size = QUAD_SIZE
+	_visual_root.add_child(_card_quad)
+
+	_art_material = ShaderMaterial.new()
+	_art_material.shader = ART_PARALLAX_SHADER
+	_art_material.set_shader_parameter("tilt", Vector2.ZERO)
+	art.material = _art_material
+#endregion
+
+#region Hover Animation
 
 func _on_card_mouse_entered() -> void:
+	_hover_wanted = true
 	if _drag_in_progress or get_viewport().gui_is_dragging():
+		return
+	# A card that is still flying in lands into its hover, so a deal never looks
+	# like it ignores the cursor that is already sitting on the slot.
+	if _is_drawing:
 		return
 
 	_animate_hover(true)
 
 
 func _on_card_mouse_exited() -> void:
-	if _drag_in_progress:
+	_hover_wanted = false
+	if _drag_in_progress or _is_drawing:
 		return
 
 	_animate_hover(false)
 
 
 func _animate_hover(active: bool) -> void:
+	if _is_drawing or _is_consumed:
+		return
+
 	_is_hovered = active
 
 	if _hover_tween != null and _hover_tween.is_valid():
@@ -266,32 +444,23 @@ func _animate_hover(active: bool) -> void:
 	_hover_tween.set_ease(Tween.EASE_OUT)
 	_hover_tween.set_trans(Tween.TRANS_CUBIC)
 
+	# The fake-3D quad and the outline glow are both children of _visual_root, so
+	# one tween moves the whole card as a rigid unit.
 	_hover_tween.tween_property(
-		hover_visual,
+		_visual_root,
 		"scale",
 		target_scale,
 		HOVER_TWEEN_TIME
 	)
 	_hover_tween.parallel().tween_property(
-		hover_visual,
+		_visual_root,
 		"position:y",
 		target_y,
 		HOVER_TWEEN_TIME
 	)
-	if is_instance_valid(_glow):
-		var b := _glow.glow_bleed
-		_hover_tween.parallel().tween_property(
-			_glow,
-			"scale",
-			target_scale,
-			HOVER_TWEEN_TIME
-		)
-		_hover_tween.parallel().tween_property(
-			_glow,
-			"position:y",
-			-b + target_y,
-			HOVER_TWEEN_TIME
-		)
+
+	if not active:
+		_tween_tilt(0.0, 0.0, HOVER_TILT_RELEASE)
 
 
 func _reset_hover_immediate() -> void:
@@ -303,14 +472,240 @@ func _reset_hover_immediate() -> void:
 
 	_hover_tween = null
 
-	if is_instance_valid(hover_visual):
-		hover_visual.scale = Vector2.ONE
-		hover_visual.position = Vector2.ZERO
-	if is_instance_valid(_glow):
-		var b := _glow.glow_bleed
-		_glow.scale = Vector2.ONE
-		_glow.position = Vector2(-b, -b)
-		
+	if is_instance_valid(_visual_root):
+		_visual_root.scale = Vector2.ONE
+		_visual_root.position = Vector2.ZERO
+		_visual_root.rotation = 0.0
+	_set_tilt(0.0, 0.0)
+#endregion
+
+#region Fake-3D tilt
+
+## Balatro / Runeterra style cursor tilt: the hovered card leans towards the
+## pointer, and the illustration inside drifts the other way.
+func _update_cursor_tilt(local_position: Vector2) -> void:
+	if _is_drawing or _drag_in_progress or _is_consumed or not _is_hovered:
+		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+
+	var normalised := Vector2(
+		clampf(local_position.x / size.x, 0.0, 1.0),
+		clampf(local_position.y / size.y, 0.0, 1.0)
+	)
+	var lean: Vector2 = (normalised - Vector2(0.5, 0.5)) * 2.0
+	_tween_tilt(-HOVER_TILT_MAX * lean.x, -HOVER_TILT_MAX * lean.y, HOVER_TILT_TIME)
+
+
+func _tween_tilt(target_yaw: float, target_pitch: float, duration: float) -> void:
+	if _card_material == null:
+		return
+
+	var from_yaw: float = _shader_float("y_rot")
+	var from_pitch: float = _shader_float("x_rot")
+
+	if _tilt_tween != null and _tilt_tween.is_valid():
+		_tilt_tween.kill()
+
+	_tilt_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_tilt_tween.tween_method(
+		func(weight: float) -> void:
+			_set_tilt(
+				lerpf(from_yaw, target_yaw, weight),
+				lerpf(from_pitch, target_pitch, weight)
+			),
+		0.0,
+		1.0,
+		duration
+	)
+
+
+## Pushes a fake-3D orientation into the warp shader and mirrors it into the art
+## parallax, so the illustration lags slightly behind the frame.
+func _set_tilt(yaw: float, pitch: float) -> void:
+	if _card_material != null:
+		_card_material.set_shader_parameter("y_rot", yaw)
+		_card_material.set_shader_parameter("x_rot", pitch)
+
+	if _art_material != null:
+		_art_material.set_shader_parameter(
+			"tilt",
+			Vector2(
+				clampf(-yaw / 30.0, -1.0, 1.0),
+				clampf(-pitch / 30.0, -1.0, 1.0)
+			)
+		)
+
+
+func _shader_float(param: StringName) -> float:
+	if _card_material == null:
+		return 0.0
+	var raw: Variant = _card_material.get_shader_parameter(param)
+	if raw is float:
+		var value: float = raw
+		return value
+	return 0.0
+#endregion
+#region Fake-3D draw animation
+
+## True while the fake-3D deal / merge animation owns the card transform.
+func is_drawing() -> bool:
+	return _is_drawing
+
+
+## Deals this card in from the deck: one fast swoop from `start_offset`
+## (CardUI-local pixels) straight into the slot, flipping from the card back to
+## the printed face while it is still in the air.
+## `delay` staggers a multi-card deal and `stagger_index` fans the arcs out.
+func play_draw_animation(start_offset: Vector2, delay: float = 0.0, stagger_index: int = 0) -> void:
+	if _is_consumed or not is_instance_valid(_visual_root):
+		return
+
+	_stop_pose_tweens()
+	_is_drawing = true
+	_is_hovered = false
+	modulate.a = 0.0
+	z_index = DRAW_Z_BASE + stagger_index
+
+	var arc: float = -(DRAW_ARC_BASE + DRAW_ARC_STEP * float(stagger_index))
+	# Pose the first frame by hand, otherwise the card would flash flat for one
+	# frame before the tween takes over.
+	_apply_draw_pose(0.0, start_offset, arc)
+
+	_draw_tween = create_tween()
+	_draw_tween.set_trans(Tween.TRANS_LINEAR)
+	if delay > 0.0:
+		_draw_tween.tween_interval(delay)
+	_draw_tween.tween_method(
+		_apply_draw_pose.bind(start_offset, arc), 0.0, 1.0, DRAW_FLIGHT_TIME
+	)
+	_draw_tween.tween_callback(_finish_draw)
+
+
+## Forged-in-hand pop for a freshly merged card: it stays in its slot and flips
+## and swells in place, so a merge never looks like a card dealt from the deck.
+func play_merge_animation() -> void:
+	if _is_consumed or not is_instance_valid(_visual_root):
+		return
+
+	_stop_pose_tweens()
+	_is_drawing = true
+	_is_hovered = false
+	z_index = DRAW_Z_BASE
+	_apply_merge_pose(0.0)
+
+	_draw_tween = create_tween()
+	_draw_tween.set_trans(Tween.TRANS_LINEAR)
+	_draw_tween.tween_method(_apply_merge_pose, 0.0, 1.0, MERGE_POP_TIME)
+	_draw_tween.tween_callback(_finish_draw)
+
+
+## Snaps a card that is still settling flat, so a fast player can grab it.
+func _finish_draw_immediate() -> void:
+	if not _is_drawing:
+		return
+	if _draw_tween != null and _draw_tween.is_valid():
+		_draw_tween.kill()
+	_draw_tween = null
+	_is_drawing = false
+	_apply_flat_pose()
+	_refresh_glow()
+
+
+func _stop_pose_tweens() -> void:
+	if _draw_tween != null and _draw_tween.is_valid():
+		_draw_tween.kill()
+	_draw_tween = null
+	if _hover_tween != null and _hover_tween.is_valid():
+		_hover_tween.kill()
+	_hover_tween = null
+	if _tilt_tween != null and _tilt_tween.is_valid():
+		_tilt_tween.kill()
+	_tilt_tween = null
+
+
+## One frame of the deal-in flight. `t` is raw 0..1 progress.
+func _apply_draw_pose(t: float, start_offset: Vector2, arc: float) -> void:
+	# Travel is heavily front-loaded, so the card bursts in from the right edge,
+	# while the rotation settles on a damped spring with a small overshoot.
+	var travel: float = _ease_out_quart(t)
+	var settle: float = _settle(
+		clampf((t - DRAW_ROTATION_DELAY) / (1.0 - DRAW_ROTATION_DELAY), 0.0, 1.0)
+	)
+
+	var control := Vector2(start_offset.x * DRAW_ARC_SWING, arc)
+	_visual_root.position = _quadratic_bezier(start_offset, control, Vector2.ZERO, travel)
+
+	var yaw: float = lerpf(DRAW_START_YAW, 0.0, settle)
+	var pitch: float = lerpf(DRAW_START_PITCH, 0.0, settle) + DRAW_MID_PITCH * sin(PI * t)
+	_set_tilt(yaw, pitch)
+
+	_visual_root.rotation = deg_to_rad(lerpf(DRAW_START_BANK, 0.0, _ease_out_cubic(t)))
+	_visual_root.scale = Vector2.ONE * (
+		lerpf(DRAW_START_SCALE, 1.0, settle) + DRAW_POP_SCALE * sin(PI * t)
+	)
+	modulate.a = clampf(t / DRAW_FADE_IN, 0.0, 1.0)
+
+
+## One frame of the merge forge pop.
+func _apply_merge_pose(t: float) -> void:
+	var settle: float = _settle(t)
+	_visual_root.position = Vector2.ZERO
+	_visual_root.rotation = 0.0
+	_visual_root.scale = Vector2.ONE * (
+		lerpf(MERGE_START_SCALE, 1.0, settle) + DRAW_POP_SCALE * sin(PI * t)
+	)
+	_set_tilt(
+		lerpf(MERGE_START_YAW, 0.0, settle),
+		lerpf(MERGE_START_PITCH, 0.0, settle)
+	)
+
+
+func _finish_draw() -> void:
+	_draw_tween = null
+	_is_drawing = false
+	_apply_flat_pose()
+	_refresh_glow()
+	if _hover_wanted and not _drag_in_progress and not get_viewport().gui_is_dragging():
+		_animate_hover(true)
+
+
+func _apply_flat_pose() -> void:
+	modulate.a = 1.0
+	z_index = 0
+	if not is_instance_valid(_visual_root):
+		return
+	_visual_root.position = Vector2.ZERO
+	_visual_root.rotation = 0.0
+	_visual_root.scale = Vector2.ONE
+	_set_tilt(0.0, 0.0)
+
+
+## Critically damped spring step: 0 at x = 0, 1 at x = 1, with a small natural
+## overshoot on the way instead of a dead stop.
+static func _settle(x: float) -> float:
+	var decay: float = exp(-SETTLE_DAMPING * x)
+	return 1.0 - decay * (
+		cos(SETTLE_FREQUENCY * x)
+		+ (SETTLE_DAMPING / SETTLE_FREQUENCY) * sin(SETTLE_FREQUENCY * x)
+	)
+
+
+static func _ease_out_cubic(x: float) -> float:
+	var inverse: float = 1.0 - x
+	return 1.0 - inverse * inverse * inverse
+
+
+static func _ease_out_quart(x: float) -> float:
+	var inverse: float = 1.0 - x
+	return 1.0 - inverse * inverse * inverse * inverse
+
+
+static func _quadratic_bezier(a: Vector2, control: Vector2, b: Vector2, t: float) -> Vector2:
+	var inverse: float = 1.0 - t
+	return inverse * inverse * a + 2.0 * inverse * t * control + t * t * b
+#endregion
+
 func setup(p_card: Card, p_hand_bar: HandBar = null) -> void:
 	card = p_card
 	hand_bar = p_hand_bar if p_hand_bar != null else _find_hand_bar()
@@ -367,6 +762,10 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	if hb == null:
 		return null
 
+	# A card that is still settling into hand is snapped flat first, so a fast
+	# player never has to wait out a deal animation before grabbing a card.
+	_finish_draw_immediate()
+
 	# A previous return animation may still be running if the player
 	# quickly starts another drag.
 	_cancel_return_animation()
@@ -403,39 +802,33 @@ func _make_drag_preview() -> Control:
 
 	return preview_root
 
-# Reuse the real card appearance instead of maintaining a second,
-# simplified preview layout that can drift out of sync with CardUI.
+# Reuse the real card appearance instead of maintaining a second, simplified
+# preview layout that can drift out of sync with CardUI. Only the flat card face
+# is copied: the fake-3D quad and its SubViewport stay behind, so a drag preview
+# costs nothing extra and is already correct on the first frame of the drag.
 func _make_visual_copy() -> PanelContainer:
-	var visual := duplicate() as PanelContainer
-	visual.set_script(null)
+	var visual := hover_visual.duplicate() as PanelContainer
 	visual.name = "DragCardVisual"
 
-	visual.custom_minimum_size = DRAG_PREVIEW_SIZE
+	visual.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	visual.position = Vector2.ZERO
 	visual.size = DRAG_PREVIEW_SIZE
+	visual.custom_minimum_size = DRAG_PREVIEW_SIZE
+	visual.pivot_offset = DRAG_PREVIEW_SIZE * 0.5
 	visual.modulate = Color.WHITE
 	visual.self_modulate = Color.WHITE
 	visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visual.z_index = 0
 
-	var copied_hover := visual.get_node_or_null("Bounds/HoverVisual") as Control
-	if copied_hover != null:
-		copied_hover.position = Vector2.ZERO
-		copied_hover.scale = Vector2.ONE
-		copied_hover.pivot_offset = Vector2(
-			DRAG_PREVIEW_SIZE.x * 0.5,
-			DRAG_PREVIEW_SIZE.y
-		)
-	
-	var copied_glow := visual.get_node_or_null(
-		"Bounds/HoverVisual/MergeGlow"
-	) as Control
-	if copied_glow != null:
-		copied_glow.hide()
-	
-	var copied_outline := visual.get_node_or_null("Bounds/OutlineGlow") as Control
-	if copied_outline != null:
-		copied_outline.hide()
-	
+	var copied_merge := visual.get_node_or_null("MergeGlow") as Control
+	if copied_merge != null:
+		copied_merge.hide()
+
+	# The preview is never tilted, so it does not need the parallax material.
+	var copied_art := visual.get_node_or_null("Margin/VBox/Art") as TextureRect
+	if copied_art != null:
+		copied_art.material = null
+
 	_set_mouse_filter_recursive(visual)
 	return visual
 

@@ -8,7 +8,10 @@ export_presets.cfg
 
 # --- Third-Party Addons ---
 # The AI shouldn't read the source code of your plugins (gdUnit4, godotsize, etc.)
-addons/
+addons/GDQuest_GDScript_formatter
+addons/gdUnit4
+addons/godotsize
+addons/kanban_tasks
 
 # --- Project Specific Folders ---
 # Ignore test reports, temporary trash, and raw design spreadsheets

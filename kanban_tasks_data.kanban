@@ -24,7 +24,8 @@
 			"tasks": [
 				"1123dfaa-782d-4cfc-8237-d490a01e159d",
 				"591fc37c-7d63-4f48-a283-d9feabaa7cdd",
-				"2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295"
+				"2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295",
+				"a3ca0e61-e7ba-4a0d-9290-ba24b0e29c59"
 			]
 		},
 		{
@@ -230,6 +231,13 @@
 			"uuid": "2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295",
 			"title": "tooltip des fix",
 			"description": "change the tooltip description Chain ultimate to only Ultimate:",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "a3ca0e61-e7ba-4a0d-9290-ba24b0e29c59",
+			"title": "Fix the game validation",
+			"description": "",
 			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
 			"steps": []
 		}
