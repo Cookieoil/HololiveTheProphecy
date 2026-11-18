@@ -37,6 +37,14 @@ var game_state: GameState
 var _pick_active: bool = false
 var _pick_candidates: Array[Card] = []
 
+## Where the card the player was carrying was let go of, if the merge about to be
+## played was driven by a real drag. Recorded by the card it was dropped on and
+## consumed by `play_merge`, so a merge can start from the point of release
+## rather than from the slot the card was dragged out of.
+var _release_card: Card
+var _release_centre: Vector2 = Vector2.ZERO
+var _has_merge_release: bool = false
+
 ## Stagger slot handed to each card dealt within the same frame. Reset once the
 ## frame is over, so a later, separate draw always starts at zero again.
 var _deal_slot: int = 0
@@ -157,21 +165,39 @@ func add_card(card: Card) -> void:
 	_apply_pick_candidates()
 
 
-## Forges a merged card in hand with the kintsugi weld: the two source cards are
-## struck together above the target slot and fused into the forged card, while
-## the survivors glide into the gap the merge left.
+## Records where a card was let go of, so the merge it triggers can start that card
+## from that exact point on screen instead of from the slot it was dragged out of.
+## Called by the card the drop landed on, immediately before the merge is
+## requested; consumed by `play_merge`.
+func note_merge_release(card: Card, global_centre: Vector2) -> void:
+	_release_card = card
+	_release_centre = global_centre
+	_has_merge_release = true
+
+
+## Merges two cards in hand where the player left them: the card they were
+## carrying drifts out of the point they released it at into the card they
+## dropped it on, the two fold closed into a single edge, and the merged card
+## opens back out of that edge.
 ##
-## `card_a` is the card that was dragged and `card_b` the card it was dropped
-## on; the forged card takes the target's slot, exactly like GameState.try_merge.
-## The reconciliation happens here so the forge is already mounted on the frame
-## the row changes, and the hand refresh that follows reuses the forged card
-## instead of tearing the weld down.
+## `card_a` is the card that was dragged and `card_b` the card it was dropped on;
+## the merged card takes the target's slot, exactly like GameState.try_merge. The
+## reconciliation happens here so the two cards are already mounted on the frame
+## the row changes, and the hand refresh that follows reuses the merged card
+## instead of tearing the merge down.
 func play_merge(
 	card_a: Card,
 	card_b: Card,
 	merged_card: Card,
 	new_hand: Array[Card]
 ) -> void:
+	# The release point is taken up front and cleared whatever happens next, so a
+	# stale one can never be picked up by a later merge.
+	var released_here: bool = _has_merge_release and _release_card == card_a
+	var release_centre: Vector2 = _release_centre
+	_release_card = null
+	_has_merge_release = false
+
 	if merged_card == null or not is_inside_tree():
 		set_hand(new_hand)
 		return
@@ -179,32 +205,23 @@ func play_merge(
 	var ui_a: CardUI = _find_card_ui(card_a)
 	var ui_b: CardUI = _find_card_ui(card_b)
 	if ui_a == null or ui_b == null:
-		# The row does not hold the two source cards (e.g. a merge driven
-		# straight on the model), so there is nothing to strike together.
+		# The row does not hold the two source cards (e.g. a merge driven straight
+		# on the model), so there is nothing to move together.
 		set_hand(new_hand)
 		return
 
-	# The anvil is the slot the merge produced: GameState.try_merge inserts the
-	# forged card where the target sits once the dragged card in front of it has
-	# been removed. Every card is laid out here (the player has just dropped one
-	# onto the other), so the anvil can be read straight off the row.
-	var index_a: int = ui_a.get_index()
-	var index_b: int = ui_b.get_index()
-	var anvil_index: int = index_b - 1 if index_a < index_b else index_b
-	anvil_index = clampi(anvil_index, 0, maxi(cards_row.get_child_count() - 1, 0))
-	var anvil_node: Control = cards_row.get_child(anvil_index) as Control
-	var anvil_local: Vector2 = anvil_node.position if anvil_node != null else ui_b.position
-	var anvil_global: Vector2 = cards_row.global_position + anvil_local
+	# Where the two cards are on screen as the player lets go: the one they were
+	# carrying is wherever they released it, drawn at the size of the drag
+	# preview, and the one it landed on is simply sitting in its slot.
+	var start_centre_a: Vector2 = release_centre if released_here else ui_a.centre()
+	var start_scale_a: float = CardUI.DRAG_PREVIEW_SCALE if released_here else 1.0
+	var start_centre_b: Vector2 = ui_b.centre()
 
-	# Where each plate sat, in the forged card's own local pixels.
-	var offset_a: Vector2 = ui_a.global_position - anvil_global
-	var offset_b: Vector2 = ui_b.global_position - anvil_global
-
-	# Snapshots have to be taken before the plates are consumed, and the flat
-	# faces have to be copied while their source cards are still alive.
+	# Snapshots have to be taken before the cards are consumed, and the plates have
+	# to be built while their source cards are still alive.
 	var before: Dictionary[CardUI, Vector2] = _snapshot_slots()
-	var ghost_a: Control = ui_a.make_ghost()
-	var ghost_b: Control = ui_b.make_ghost()
+	var plate_a: ForgePlate = ui_a.make_merge_plate()
+	var plate_b: ForgePlate = ui_b.make_merge_plate()
 
 	# Both source cards left the model, so they leave the row at once and the
 	# survivors glide into the gap they opened.
@@ -224,7 +241,8 @@ func play_merge(
 	_apply_pick_candidates()
 
 	merged_ui.play_merge_animation(
-		ghost_a, ghost_b, offset_a, offset_b, merged_card.is_double_merged
+		plate_a, plate_b, start_centre_a, start_centre_b, start_scale_a,
+		merged_card.is_double_merged
 	)
 
 
