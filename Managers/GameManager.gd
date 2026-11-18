@@ -432,9 +432,8 @@ func _handle_merge(a: Card, b: Card) -> void:
 		ui.show_message("Invalid merge.")
 		return
 	state.merges_left -= 1
-	# Presentation first: the hand plays the kintsugi forge, then the counters
-	# refresh. The forged card is reused by that refresh, so the weld is not
-	# interrupted by it.
+	# Presentation first: the hand plays the merge, then the counters refresh. The
+	# merged card is reused by that refresh, so the merge is not interrupted by it.
 	ui.on_cards_merged(a, b, result, state)
 	var result_str: String = _color_card_value(result)
 	ui.show_message("Merged → %s" % result_str)

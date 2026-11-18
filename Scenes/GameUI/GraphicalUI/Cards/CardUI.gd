@@ -63,16 +63,14 @@ const SETTLE_FREQUENCY: float = 7.0
 const SETTLE_DAMPING: float = 6.5
 #endregion
 
-#region Kintsugi forge animation
+#region Merge animation
 ## Two cards are merged where the player let go of them. The card they were
 ## carrying picks up from the exact point it was released at, the card it was
 ## dropped on picks up from its own slot, and the two drift into each other,
 ## banking and folding closed as they meet. Folded edge on a card is a hair line,
 ## so that hair line is where the merged card takes over: it starts folded the
 ## same way and swings open into the card the two of them made. See
-## res://Shaders/FakeCard3D.gdshader for the warp and
-## res://Shaders/KintsugiWeld.gdshader for the seam that burns across it.
-const KINTSUGI_SHADER: Shader = preload("res://Shaders/KintsugiWeld.gdshader")
+## res://Shaders/FakeCard3D.gdshader for the warp that does the folding.
 
 ## Node names the two cards are mounted under, so they stay distinguishable from
 ## each other and from the merged card's own visual rig.
@@ -103,15 +101,14 @@ const MERGE_BRAND_TIME: float = 0.16
 const MERGE_Z_INDEX: int = 45
 #endregion
 
-#region Card rank styling
-## A resting card's frame reads its forge rank, so a merged card looks forged
-## and a double-merged (free-play) card is unmistakable at a glance.
-const BASE_BG_COLOR: Color = Color(0.16, 0.18, 0.22, 0.96)
-const BASE_BORDER_COLOR: Color = Color(0.75, 0.78, 0.85, 1.0)
-const MERGE_BG_COLOR: Color = Color(0.19, 0.17, 0.14, 0.96)
-const MERGE_BORDER_COLOR: Color = Color(0.96, 0.78, 0.34, 1.0)
-const DOUBLE_MERGE_BG_COLOR: Color = Color(0.13, 0.19, 0.23, 0.96)
-const DOUBLE_MERGE_BORDER_COLOR: Color = Color(0.48, 0.90, 1.0, 1.0)
+#region Card frame
+## Every card wears the same frame, whatever it has been through. Merging used to
+## repaint the frame (gilded for a merge, cyan for a free-play card), which made a
+## merged card look like a different object rather than the card it came from.
+const CARD_BG_COLOR: Color = Color(0.16, 0.18, 0.22, 0.96)
+const CARD_BORDER_COLOR: Color = Color(0.75, 0.78, 0.85, 1.0)
+const CARD_BORDER_WIDTH: int = 2
+const CARD_BOX_RADIUS: int = 6
 #endregion
 
 @export var icon_catalog: CardIconCatalog
@@ -147,15 +144,10 @@ var _glow: OutlineGlow
 ## Pending delayed re-render of the value label after a runtime value change.
 var _value_tween: Tween
 
-## Stylebox the card frame is drawn with, kept so its rank colours can be
-## repainted whenever the card's merge state changes.
-var _panel_box: StyleBoxFlat
-
-## Kintsugi forge state. The forge owns the card transform while it plays, the
-## same way `_is_drawing` owns it during a deal.
+## Merge state. The merge owns the card transform while it plays, the same way
+## `_is_drawing` owns it during a deal.
 var _is_merging: bool = false
 var _merge_tween: Tween
-var _weld_tween: Tween
 var _brand_tween: Tween
 ## The two cards in the merge, each a fake-3D copy of one card's face. They are
 ## children of this card only so that they are drawn along with it; they are
@@ -168,9 +160,6 @@ var _merge_plate_b: ForgePlate
 var _merge_start_a: Vector2 = Vector2.ZERO
 var _merge_start_b: Vector2 = Vector2.ZERO
 var _merge_start_scale_a: float = 1.0
-## Molten seam overlay drawn over the card face while the weld burns.
-var _weld_overlay: ColorRect
-var _weld_material: ShaderMaterial
 
 ## Fake-3D rig, built in _ready() so CardUI.tscn stays a plain flat layout.
 var _visual_root: Control
@@ -333,38 +322,26 @@ func _style_card_panel() -> void:
 	# Prevent the unscaled root from drawing a second card background.
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
-	_panel_box = StyleBoxFlat.new()
-	_panel_box.bg_color = BASE_BG_COLOR
-	_panel_box.border_width_left = 2
-	_panel_box.border_width_top = 2
-	_panel_box.border_width_right = 2
-	_panel_box.border_width_bottom = 2
-	_panel_box.border_color = BASE_BORDER_COLOR
-	_panel_box.corner_radius_top_left = 6
-	_panel_box.corner_radius_top_right = 6
-	_panel_box.corner_radius_bottom_left = 6
-	_panel_box.corner_radius_bottom_right = 6
+	var box := StyleBoxFlat.new()
+	box.bg_color = CARD_BG_COLOR
+	box.border_width_left = CARD_BORDER_WIDTH
+	box.border_width_top = CARD_BORDER_WIDTH
+	box.border_width_right = CARD_BORDER_WIDTH
+	box.border_width_bottom = CARD_BORDER_WIDTH
+	box.border_color = CARD_BORDER_COLOR
+	box.corner_radius_top_left = CARD_BOX_RADIUS
+	box.corner_radius_top_right = CARD_BOX_RADIUS
+	box.corner_radius_bottom_left = CARD_BOX_RADIUS
+	box.corner_radius_bottom_right = CARD_BOX_RADIUS
 
-	hover_visual.add_theme_stylebox_override("panel", _panel_box)
+	hover_visual.add_theme_stylebox_override("panel", box)
 
 
-## Repaints the card frame for its forge rank: an unmerged card keeps the plain
-## steel frame, a merged card is gilded like the kintsugi seam that made it, and
-## a double-merged card (which costs no action to play) gets the prophecy cyan
-## rim so a free-play card can be spotted in hand at a glance.
-## Safe to call before `setup()`, while `card` is still null.
-func _apply_rank_style() -> void:
-	if _panel_box == null:
-		return
-	if card != null and card.is_double_merged:
-		_panel_box.bg_color = DOUBLE_MERGE_BG_COLOR
-		_panel_box.border_color = DOUBLE_MERGE_BORDER_COLOR
-	elif card != null and card.is_merged:
-		_panel_box.bg_color = MERGE_BG_COLOR
-		_panel_box.border_color = MERGE_BORDER_COLOR
-	else:
-		_panel_box.bg_color = BASE_BG_COLOR
-		_panel_box.border_color = BASE_BORDER_COLOR
+## The frame this card is drawn with. The same one for every card: a merge is
+## something a card has been through, not something that makes it a new object.
+func frame_style() -> StyleBoxFlat:
+	return hover_visual.get_theme_stylebox("panel") as StyleBoxFlat
+
 
 func _style_merge_glow() -> void:
 	if merge_glow == null:
@@ -733,9 +710,9 @@ static func _quadratic_bezier(a: Vector2, control: Vector2, b: Vector2, t: float
 	return inverse * inverse * a + 2.0 * inverse * t * control + t * t * b
 #endregion
 
-#region Kintsugi forge animation
+#region Merge animation
 
-## True while the kintsugi forge owns the card transform.
+## True while the merge owns the card transform.
 func is_merging() -> bool:
 	return _is_merging
 
@@ -774,14 +751,12 @@ func make_merge_plate() -> ForgePlate:
 ## @param start_centre_a - where the dragged card was released, on screen
 ## @param start_centre_b - where the drop target sits, on screen
 ## @param start_scale_a - the size the dragged card was released at
-## @param double_merged - a double merge is a free-play card, and says so louder
 func play_merge_animation(
 	plate_a: ForgePlate,
 	plate_b: ForgePlate,
 	start_centre_a: Vector2,
 	start_centre_b: Vector2,
-	start_scale_a: float,
-	double_merged: bool
+	start_scale_a: float
 ) -> void:
 	if _is_consumed or not is_instance_valid(_visual_root):
 		_discard_merge_plate(plate_a)
@@ -817,7 +792,6 @@ func play_merge_animation(
 	_merge_start_b = start_centre_b
 	_merge_start_scale_a = start_scale_a
 
-	_build_weld_overlay(double_merged)
 	_pose_converge(0.0)
 
 	_merge_tween = create_tween()
@@ -828,7 +802,7 @@ func play_merge_animation(
 	_merge_tween.tween_callback(_finish_merge)
 
 
-## Snaps a card whose weld is still burning flat, so a fast player can grab the
+## Snaps a card whose merge is still playing flat, so a fast player can grab the
 ## freshly merged card (or chain a second merge) without waiting it out.
 func _finish_merge_immediate() -> void:
 	if not _is_merging:
@@ -928,7 +902,6 @@ func _on_merge_folded() -> void:
 	if _glow != null:
 		_glow.set_active(true, OutlineGlow.Preset.ARCANE_GOLD)
 
-	_start_weld_burn()
 	_start_brand_pop()
 
 
@@ -956,51 +929,6 @@ func _put_forge_plates_behind_card() -> void:
 		bounds.move_child(_merge_plate_b, 0)
 	if is_instance_valid(_merge_plate_a):
 		bounds.move_child(_merge_plate_a, 1)
-
-
-## Draws the molten seam over the card face. It rides the card's own visual root,
-## so it stays welded to it however the card moves or unfolds.
-func _build_weld_overlay(double_merged: bool) -> void:
-	_clear_weld_overlay()
-	if not is_instance_valid(_visual_root):
-		return
-
-	_weld_material = ShaderMaterial.new()
-	_weld_material.shader = KINTSUGI_SHADER
-	_weld_material.set_shader_parameter("quad_size", QUAD_SIZE)
-	_weld_material.set_shader_parameter("card_size", CARD_SIZE)
-	_weld_material.set_shader_parameter("corner_radius", CARD_CORNER_RADIUS)
-	_weld_material.set_shader_parameter("is_double_merge", double_merged)
-	# A fresh fracture pattern per forge, so no two welds look alike.
-	_weld_material.set_shader_parameter("seam_seed", randf() * 37.0)
-	_weld_material.set_shader_parameter("progress", 0.0)
-
-	_weld_overlay = ColorRect.new()
-	_weld_overlay.name = "KintsugiWeld"
-	_weld_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_weld_overlay.color = Color.WHITE
-	_weld_overlay.material = _weld_material
-	_weld_overlay.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_weld_overlay.position = -CARD_PADDING
-	_weld_overlay.size = QUAD_SIZE
-	_visual_root.add_child(_weld_overlay)
-
-	# Above the warped card face, below the outline glow.
-	if is_instance_valid(_card_quad):
-		_visual_root.move_child(_weld_overlay, _card_quad.get_index() + 1)
-
-
-func _start_weld_burn() -> void:
-	if _weld_material == null:
-		return
-	_weld_tween = create_tween()
-	_weld_tween.set_trans(Tween.TRANS_LINEAR)
-	_weld_tween.tween_method(_set_weld_progress, 0.0, 1.0, MERGE_REVEAL_TIME)
-
-
-func _set_weld_progress(value: float) -> void:
-	if _weld_material != null:
-		_weld_material.set_shader_parameter("progress", value)
 
 
 ## Brands the new value and star rank onto the face with a stamp, so the number
@@ -1032,11 +960,7 @@ func _start_brand_pop() -> void:
 func _end_forge_state() -> void:
 	_is_merging = false
 	_clear_merge_plates()
-	_clear_weld_overlay()
 
-	if _weld_tween != null and _weld_tween.is_valid():
-		_weld_tween.kill()
-	_weld_tween = null
 	if _brand_tween != null and _brand_tween.is_valid():
 		_brand_tween.kill()
 	_brand_tween = null
@@ -1054,13 +978,6 @@ func _clear_merge_plates() -> void:
 	_discard_merge_plate(_merge_plate_b)
 	_merge_plate_a = null
 	_merge_plate_b = null
-
-
-func _clear_weld_overlay() -> void:
-	if is_instance_valid(_weld_overlay):
-		_weld_overlay.free()
-	_weld_overlay = null
-	_weld_material = null
 
 
 #endregion
@@ -1081,7 +998,6 @@ func _refresh() -> void:
 	)
 	value_label.text = "%d %s" % [card.get_effective_value(), suffix]
 	_build_stars_and_indicators()
-	_apply_rank_style()
 
 
 func _build_stars_and_indicators() -> void:
@@ -1124,7 +1040,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 
 	# A card that is still settling into hand is snapped flat first, so a fast
 	# player never has to wait out a deal animation before grabbing a card.
-	# The same goes for a card whose weld is still burning: a merged card can be
+	# The same goes for a card whose merge is still playing: a merged card can be
 	# played (or merged again) the instant it exists.
 	_finish_draw_immediate()
 	_finish_merge_immediate()

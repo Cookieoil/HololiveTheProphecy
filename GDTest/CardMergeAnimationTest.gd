@@ -15,7 +15,8 @@ extends GdUnitTestSuite
 ##   - the hand refresh BattleScene fires after every action reuses the merging
 ##     card instead of interrupting it
 ##   - grabbing the card mid-merge leaves it flat, visible and grabbable
-##   - a double merge (a free-play card) merges differently from a cross merge
+##   - a double merge produces a free-play card, and every card in hand wears the
+##     same frame whatever it has been through
 ##
 ## @author TheGreatJellyfish
 ## @version 11/18/2026
@@ -280,7 +281,6 @@ func test_the_merged_card_settles_flat_and_the_merge_is_cleaned_up() -> void:
 	assert_bool(merged_ui.is_merging()).is_false()
 	# Nothing of the merge survives on a card that is simply sitting in hand.
 	assert_int(_plates(merged_ui).size()).is_equal(0)
-	assert_object(merged_ui._weld_overlay).is_null()
 	# It is up, resting, and back on the same pixel grid it was drawn on.
 	assert_bool(merged_ui._visual_root.visible).is_true()
 	assert_float(merged_ui.modulate.a).is_equal_approx(1.0, 0.001)
@@ -353,11 +353,10 @@ func test_the_hand_refresh_never_slides_the_merging_card() -> void:
 	bar.set_hand([first, merged])
 	await await_millis(HALF_WAY_MILLIS)
 
-	# The merge is untouched: the seam is mounted, both cards are still travelling...
+	# The merge is untouched: both cards are still travelling, and its slot was
+	# never slid away from the slot the merge produced.
 	assert_bool(merged_ui.is_merging()).is_true()
-	assert_object(merged_ui._weld_overlay).is_not_null()
 	assert_int(_plates(merged_ui).size()).is_equal(2)
-	# ...and its slot was never slid away from the slot the merge produced.
 	assert_vector(merged_ui.position).is_equal(merged_slot)
 
 
@@ -372,7 +371,6 @@ func test_grabbing_a_merging_card_snaps_it_flat() -> void:
 
 	assert_bool(merged_ui.is_merging()).is_false()
 	assert_int(_plates(merged_ui).size()).is_equal(0)
-	assert_object(merged_ui._weld_overlay).is_null()
 	# The card is visible and grabbable instead of being left hidden mid-flight,
 	# and it is flat instead of left part way through a fold.
 	assert_bool(merged_ui._visual_root.visible).is_true()
@@ -428,10 +426,9 @@ func test_a_double_merge_merges_a_free_play_card() -> void:
 
 	var merged_ui: CardUI = _card_ui(bar, doubled)
 	assert_bool(merged_ui.is_merging()).is_true()
-	# The seam shader is told this merge is a double one, so it fractures the face
-	# into crystal facets and turns the seam dual tone.
-	assert_object(merged_ui._weld_material).is_not_null()
-	assert_bool(merged_ui._weld_material.get_shader_parameter("is_double_merge")).is_true()
+	# A double merge is a free-play card, and the only thing that has to say so is
+	# the card itself: 13 DMV, which costs no action.
+	assert_int(_plates(merged_ui).size()).is_equal(2)
 
 	await await_millis(MERGE_SETTLE_MILLIS)
 	assert_bool(merged_ui.is_merging()).is_false()
@@ -439,7 +436,10 @@ func test_a_double_merge_merges_a_free_play_card() -> void:
 	assert_bool(merged_ui.card.costs_action()).is_false()
 
 
-func test_a_resting_card_frame_reads_its_forge_rank() -> void:
+## Every card wears the same frame, whatever it has been through. Merging used to
+## repaint the frame, which made a merged card look like a different object
+## rather than the card it came from.
+func test_every_card_wears_the_same_frame() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var base: Card = Card.new(3)
 	var merged: Card = Card.new(8)
@@ -449,21 +449,12 @@ func test_a_resting_card_frame_reads_its_forge_rank() -> void:
 	doubled.is_double_merged = true
 	bar.set_hand([base, merged, doubled])
 
-	# A cross merge is gilded like the kintsugi seam that made it...
-	assert_bool(
-		_card_ui(bar, merged)._panel_box.border_color.is_equal_approx(CardUI.MERGE_BORDER_COLOR)
-	).is_true()
-	# ...and a free-play card gets the prophecy cyan rim, so it can be spotted in
-	# hand at a glance.
-	assert_bool(
-		_card_ui(bar, doubled)._panel_box.border_color.is_equal_approx(
-			CardUI.DOUBLE_MERGE_BORDER_COLOR
-		)
-	).is_true()
-	# A card that has never been merged keeps the plain steel frame.
-	assert_bool(
-		_card_ui(bar, base)._panel_box.border_color.is_equal_approx(CardUI.BASE_BORDER_COLOR)
-	).is_true()
+	for card: Card in [base, merged, doubled]:
+		var frame: StyleBoxFlat = _card_ui(bar, card).frame_style()
+		assert_object(frame).is_not_null()
+		assert_bool(frame.bg_color.is_equal_approx(CardUI.CARD_BG_COLOR)).is_true()
+		assert_bool(frame.border_color.is_equal_approx(CardUI.CARD_BORDER_COLOR)).is_true()
+		assert_int(frame.border_width_left).is_equal(CardUI.CARD_BORDER_WIDTH)
 
 
 ## The user-visible contract: the two cards must never be taken off screen before

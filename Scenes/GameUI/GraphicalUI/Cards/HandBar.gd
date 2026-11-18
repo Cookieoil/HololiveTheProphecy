@@ -241,8 +241,7 @@ func play_merge(
 	_apply_pick_candidates()
 
 	merged_ui.play_merge_animation(
-		plate_a, plate_b, start_centre_a, start_centre_b, start_scale_a,
-		merged_card.is_double_merged
+		plate_a, plate_b, start_centre_a, start_centre_b, start_scale_a
 	)
 
 
@@ -292,8 +291,8 @@ func _apply_glide(before: Dictionary[CardUI, Vector2]) -> void:
 	for ui: CardUI in before:
 		if not is_instance_valid(ui) or ui.is_consumed():
 			continue
-		# A card that is being forged owns its own transform: sliding its layout
-		# slot would drag the weld out from under the strike.
+		# A card that is being merged owns its own transform: sliding its layout
+		# slot would drag the two cards out from under that.
 		if ui.is_merging():
 			continue
 		var target: Vector2 = ui.position
