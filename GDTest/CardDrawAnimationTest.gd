@@ -12,7 +12,7 @@ extends GdUnitTestSuite
 ## @author TheGreatJellyfish
 ## @version 11/17/2026
 
-const CARD_UI_SCENE_PATH: String = "res://Scenes/GameUI/GraphicalUI/Cards/CardUI.tscn"
+const CARD_UI_SCENE_PATH: String = "res://Scenes/Cards/CardUI.tscn"
 ## Comfortably longer than CardUI.DRAW_FLIGHT_TIME plus the largest deal stagger.
 const FLIGHT_SETTLE_MILLIS: int = 900
 

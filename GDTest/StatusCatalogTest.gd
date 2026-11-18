@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## @author TheGreatJellyfish
 ## @version 11/16/2026
 
-const CATALOG_PATH: String = "res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/StatusIcons.tres"
+const CATALOG_PATH: String = "res://Scenes/BattleScene/Assets/StatusIcons.tres"
 
 ## Builds a throwaway unit for status tests.
 func _make_unit(max_hp: int = 20) -> Unit:

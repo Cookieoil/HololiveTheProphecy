@@ -9,7 +9,7 @@ extends GdUnitTestSuite
 ## @author TheGreatJellyfish
 ## @version 11/17/2026
 
-const UNIT_UI_SCENE_PATH: String = "res://Scenes/GameUI/GraphicalUI/BattleUnit/UnitUI.tscn"
+const UNIT_UI_SCENE_PATH: String = "res://Scenes/BattleUnit/UnitUI.tscn"
 
 ## Mid colours of the OutlineGlow presets (see OutlineGlow.apply_preset).
 const CRIMSON_MID: Color = Color(0.98, 0.26, 0.24)        # THREAT_CRIMSON

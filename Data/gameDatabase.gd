@@ -1,10 +1,6 @@
 class_name GameDatabase
 extends Resource
 
-func _init() -> void:
-	if Engine.is_editor_hint():
-		print("[GameDatabase] _init, script path = ", get_script().resource_path if get_script() else "NONE")
-		
 ## Skill definitions keyed by skill_id (effects embedded).
 @export var skills: Dictionary = {}
 ## Ally unit templates keyed by unit_id (from allies.json).

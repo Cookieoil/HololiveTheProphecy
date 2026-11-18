@@ -1,0 +1,16 @@
+[remap]
+
+importer="spine.atlas"
+type="SpineAtlasResource"
+uid="uid://tqq1c0plb3kw"
+path="res://.godot/imported/300402_hongnujian.atlas-d70ed105e1f387a7aac89bed1e6e8d66.spatlas"
+
+[deps]
+
+source_file="res://Scenes/BattleUnit/Spine/300402_hongnujian/300402_hongnujian.atlas"
+dest_files=["res://.godot/imported/300402_hongnujian.atlas-d70ed105e1f387a7aac89bed1e6e8d66.spatlas"]
+
+[params]
+
+normal_map_prefix="n"
+specular_map_prefix="s"

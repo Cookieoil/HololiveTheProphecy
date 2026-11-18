@@ -6,10 +6,11 @@
 - The project uses an **EventBus** autoload for global signals. Use it instead of creating hard references between unrelated nodes.
 
 ## Project Map
-- `res://Core/` — Core game loops and base classes.
+- `res://Core/` — Core game loops and base classes, including `GameUI.gd` (the abstract UI contract `BattleScene` implements).
 - `res://Data/` — Game data, resources, and configuration.
-- `res://Managers/` — Global game managers.
-- `res://Scenes/` — Game scenes (`.tscn`), UI, and related assets.
+- `res://Managers/` — Global game managers (`EventBus`, `ColorUtils`, `GameManager`).
+- `res://Scenes/` — All UI, flat, one level deep (the old `GameUI/GraphicalUI` nesting is gone): `BattleScene/` (main scene + `Assets/`), `BattleUnit/`, `Cards/`, `HUD/`, `Textures/`.
+- `res://Shaders/` — Shared shaders (`FakeCard3D.gdshader`, preloaded by the card UI).
 - `res://Skills/` — Ability and skill logic.
 - `res://Tools/` — Editor tools, Python scripts, and utilities.
 
