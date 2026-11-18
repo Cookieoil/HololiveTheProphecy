@@ -1,24 +1,26 @@
 class_name CardMergeAnimationTest
 extends GdUnitTestSuite
-## Locks in the kintsugi forge that plays when two cards are merged:
-##   - the two source plates are struck together above the target slot, and every
-##     trace of the forge is gone once the weld has burned
-##   - the forged card lands in the slot the merge produced, never at the far right
+## Locks in the merge: the two cards fly at each other, are born into the merged
+## card where they collide, and are then flung out through each other.
+##   - the two source cards are never taken off screen before the merged card is
+##     on it (they are children of the node that used to be dimmed to hide it)
+##   - the merged card is born small between them and grows out of the collision
+##   - the survivors of the merge glide into the gap it left
 ##   - the hand refresh BattleScene fires after every action reuses the forging
-##     card instead of interrupting the weld
-##   - grabbing the card mid-burn snaps it flat, so a fast player is never blocked
-##   - a double merge (a free-play card) forges differently from a cross merge
+##     card instead of interrupting it
+##   - grabbing the card mid-merge leaves it flat, visible and grabbable
+##   - a double merge (a free-play card) merges differently from a cross merge
 ##
 ## @author TheGreatJellyfish
-## @version 11/17/2026
+## @version 11/18/2026
 
 ## Comfortably longer than CardUI's recoil + collide + hitstop + burn.
 const FORGE_SETTLE_MILLIS: int = 1100
 ## Long enough for the hand layout to settle, so slot positions are real.
 const LAYOUT_SETTLE_MILLIS: int = 60
-## Recoil (0.10s) + strike (0.12s): just past the frame the two plates land on the
-## anvil, and comfortably before they have finished melting into the card.
-const STRIKE_MILLIS: int = 260
+## Recoil (0.12s) + charge (0.07s): just past the frame the two cards collide, and
+## comfortably before the two are flung off.
+const STRIKE_MILLIS: int = 240
 
 
 ## Minimal HandBar: the real one lives inside BattleScene, which would start a
@@ -74,15 +76,6 @@ func _tilt(ui: CardUI, param: StringName) -> float:
 	return value
 
 
-## The rectangle a control actually draws into, in its parent's coordinates,
-## taking its scale about its pivot into account. Used to prove a plate really
-## does sit over the forged card.
-func _drawn_rect(control: Control) -> Rect2:
-	var origin: Vector2 = control.position \
-		+ control.pivot_offset * (Vector2.ONE - control.scale)
-	return Rect2(origin, control.size * control.scale)
-
-
 ## Builds a hand of the given values in the row and on the model.
 func _ready_hand(bar: HandBar, values: Array[int]) -> GameState:
 	var state: GameState = GameState.new()
@@ -122,13 +115,17 @@ func test_the_two_plates_are_mounted_and_the_layout_never_moves() -> void:
 
 	var forged_ui: CardUI = _card_ui(bar, merged)
 	assert_bool(forged_ui.is_merging()).is_true()
-	# The forged card is revealed out of the seam, so it starts out of sight...
-	assert_float(forged_ui.modulate.a).is_equal_approx(0.0, 0.001)
-	# ...and the forged card takes the slot the merge produced.
+	# The card itself is hidden while the two source cards fly in...
+	assert_bool(forged_ui._visual_root.visible).is_false()
+	# ...but the node carrying those two cards is never dimmed. Dimming it here
+	# would take the two source cards down with it, and the merge would read as
+	# two cards vanishing into a third one that appeared out of nowhere.
+	assert_float(forged_ui.modulate.a).is_equal_approx(1.0, 0.001)
+	# The forged card takes the slot the merge produced.
 	assert_int(forged_ui.get_index()).is_equal(0)
 
-	# Both plates are mounted on that slot, starting exactly where they sat in
-	# hand: plate A on the anvil, plate B one slot to its right.
+	# Both source cards are mounted on that slot, starting exactly where they sat
+	# in hand: plate A on the anvil, plate B one slot to its right.
 	var ghosts: Array[Control] = _ghosts(forged_ui)
 	assert_int(ghosts.size()).is_equal(2)
 	assert_float(absf(ghosts[0].position.x)).is_less(1.0)
@@ -160,8 +157,8 @@ func test_the_forged_card_settles_flat_and_the_weld_is_cleaned_up() -> void:
 	assert_float(forged_ui._visual_root.position.y).is_equal_approx(0.0, 0.01)
 	assert_float(forged_ui._visual_root.scale.x).is_equal_approx(1.0, 0.01)
 	# It is warped back to dead flat by the fake-3D shader...
-	assert_float(forged_ui._card_material.get_shader_parameter("x_rot")).is_equal_approx(0.0, 0.01)
-	assert_float(forged_ui._card_material.get_shader_parameter("y_rot")).is_equal_approx(0.0, 0.01)
+	assert_float(_tilt(forged_ui, "x_rot")).is_equal_approx(0.0, 0.01)
+	assert_float(_tilt(forged_ui, "y_rot")).is_equal_approx(0.0, 0.01)
 	# ...and back on the resting pixel grid, lined up with its slot.
 	assert_vector(forged_ui._card_surface.canvas_transform.get_scale()).is_equal(Vector2.ONE)
 	assert_vector(Vector2(forged_ui._card_surface.size)).is_equal(CardUI.QUAD_SIZE)
@@ -245,10 +242,12 @@ func test_grabbing_a_forging_card_snaps_it_flat() -> void:
 	assert_bool(forged_ui.is_merging()).is_false()
 	assert_int(_ghosts(forged_ui).size()).is_equal(0)
 	assert_object(forged_ui._weld_overlay).is_null()
-	# The card is visible and grabbable instead of being left mid-burn.
-	assert_float(forged_ui.modulate.a).is_equal_approx(1.0, 0.001)
+	# The card is visible and grabbable instead of being left hidden mid-flight,
+	# and it is flat instead of left part way through unfolding.
+	assert_bool(forged_ui._visual_root.visible).is_true()
 	assert_float(forged_ui._visual_root.position.x).is_equal_approx(0.0, 0.001)
-	assert_float(forged_ui._card_material.get_shader_parameter("x_rot")).is_equal_approx(0.0, 0.001)
+	assert_float(forged_ui._visual_root.scale.x).is_equal_approx(1.0, 0.001)
+	assert_float(_tilt(forged_ui, "x_rot")).is_equal_approx(0.0, 0.001)
 
 
 func test_the_survivors_glide_into_the_gap_the_merge_left() -> void:
@@ -333,67 +332,107 @@ func test_a_resting_card_frame_reads_its_forge_rank() -> void:
 	).is_true()
 
 
-## The complaint this guards against: the two source cards used to be taken away
-## before the forged card arrived, so the merge blinked. The card is now switched
-## on underneath the plates at the strike, so from that frame on there is always
-## a face on screen - the plates are simply melting into it.
-func test_the_strike_hands_straight_over_to_the_forged_card() -> void:
+## The user-visible contract: the two source cards must never be taken off screen
+## before the merged card is on it. They are children of the very node that used
+## to be dimmed to hide the forged card, so this samples the whole merge and
+## checks that neither the dimming nor an early hand-off can come back.
+func test_the_two_source_cards_are_never_hidden_before_the_merged_card() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var state: GameState = _ready_hand(bar, [2, 3, 5])
 	await await_millis(LAYOUT_SETTLE_MILLIS)
 	var merged: Card = _merge_on_state(bar, state, 1, 2)
 	var forged_ui: CardUI = _card_ui(bar, merged)
 
-	# Hidden while the two plates are still in the air...
-	assert_float(forged_ui.modulate.a).is_equal_approx(0.0, 0.001)
+	var dimmed_frames: int = 0
+	var blank_frames: int = 0
+	var born: bool = false
+	var born_with_both_plates: bool = false
+	for _sample: int in 80:
+		await await_millis(5)
+		if forged_ui.modulate.a < 1.0:
+			dimmed_frames += 1
+		var plates: Array[Control] = _ghosts(forged_ui)
+		if forged_ui._visual_root.visible:
+			if not born:
+				born = true
+				# The first frame the merged card is up, both source cards are
+				# still on screen at full strength.
+				born_with_both_plates = plates.size() == 2 \
+					and plates[0].modulate.a > 0.99 and plates[1].modulate.a > 0.99
+		elif plates.is_empty():
+			# Card hidden and both source cards already gone: the dead frame the
+			# merge used to blink through.
+			blank_frames += 1
 
-	await await_millis(STRIKE_MILLIS)
+	assert_bool(born).is_true()
+	assert_bool(born_with_both_plates).is_true()
+	assert_int(dimmed_frames).is_equal(0)
+	assert_int(blank_frames).is_equal(0)
 
-	# ...and fully on screen the instant the strike lands, not fading in.
-	assert_float(forged_ui.modulate.a).is_equal_approx(1.0, 0.001)
-	# The two source cards are still drawn, part way through melting into it, so
-	# nothing blinks out at the hand-off either.
+
+## The merged card is born between the two cards that make it and grows out of
+## their collision, so the first size it is ever seen at is a fraction of a card
+## rather than a full-size card switched on where two used to be.
+func test_the_merged_card_is_born_small_between_the_two_cards() -> void:
+	var bar: HandBar = _make_hand_bar()
+	var state: GameState = _ready_hand(bar, [2, 3, 5])
+	await await_millis(LAYOUT_SETTLE_MILLIS)
+	var merged: Card = _merge_on_state(bar, state, 1, 2)
+	var forged_ui: CardUI = _card_ui(bar, merged)
+
+	# Hidden while the two cards fly in.
+	assert_bool(forged_ui._visual_root.visible).is_false()
+
+	# Sampling catches the size it is first shown at, which is roughly the start
+	# scale rather than a full card.
+	var smallest: float = 99.0
+	for _sample: int in 60:
+		await await_millis(4)
+		if forged_ui._visual_root.visible:
+			smallest = minf(smallest, forged_ui._visual_root.scale.x)
+	assert_float(smallest).is_less(0.75)
+
+	# It does reach full size and land flat in its slot.
+	await await_millis(FORGE_SETTLE_MILLIS)
+	assert_float(forged_ui._visual_root.scale.x).is_equal_approx(1.0, 0.01)
+	assert_float(forged_ui._card_material.get_shader_parameter("x_rot")).is_equal_approx(0.0, 0.01)
+
+
+## The card that comes out of the merge has to be the thing the player watches,
+## so both cards that made it are parked behind it in the draw order.
+func test_the_merged_card_is_drawn_in_front_of_the_two_cards_that_made_it() -> void:
+	var bar: HandBar = _make_hand_bar()
+	var state: GameState = _ready_hand(bar, [2, 3, 5])
+	var merged: Card = _merge_on_state(bar, state, 1, 2)
+	var forged_ui: CardUI = _card_ui(bar, merged)
+
 	var plates: Array[Control] = _ghosts(forged_ui)
 	assert_int(plates.size()).is_equal(2)
-	assert_float(plates[0].modulate.a).is_greater(0.0)
-	assert_float(plates[0].modulate.a).is_less(1.0)
+	for plate: Control in plates:
+		assert_int(plate.get_index()).is_less(forged_ui._visual_root.get_index())
 
 
-## Switching the forged card on underneath the plates only works if the pair
-## really does cover it: every pixel of the card body has to be behind a plate,
-## or the card would show through mid-strike as a sliver out of nowhere.
-func test_the_two_plates_are_drawn_over_the_forged_card_while_they_melt() -> void:
+func test_the_two_cards_are_flung_out_through_each_other_and_then_gone() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var state: GameState = _ready_hand(bar, [2, 3, 5])
 	await await_millis(LAYOUT_SETTLE_MILLIS)
 	var merged: Card = _merge_on_state(bar, state, 1, 2)
 	var forged_ui: CardUI = _card_ui(bar, merged)
 
+	# Just after the collision they are still on screen at full strength, and the
+	# two have been fired through each other onto opposite sides of the anvil.
 	await await_millis(STRIKE_MILLIS)
-
 	var plates: Array[Control] = _ghosts(forged_ui)
 	assert_int(plates.size()).is_equal(2)
-	var covered: Rect2 = _drawn_rect(plates[0]).merge(_drawn_rect(plates[1]))
-	assert_bool(covered.encloses(_drawn_rect(forged_ui._visual_root))).is_true()
+	assert_float(plates[0].modulate.a).is_equal_approx(1.0, 0.01)
+	assert_float(plates[0].position.x * plates[1].position.x).is_less(0.0)
+	var crossed_gap: float = absf(plates[0].position.x - plates[1].position.x)
 
+	await await_millis(FORGE_SETTLE_MILLIS)
 
-## A plate is a flat card face, so any fake-3D warp of the card would stretch its
-## own silhouette out past the plates covering it. The forge therefore never
-## tilts the card: the press is a pure scale, and the weld carries the rest.
-func test_the_forge_never_warps_the_card_out_from_under_the_plates() -> void:
-	var bar: HandBar = _make_hand_bar()
-	var state: GameState = _ready_hand(bar, [2, 3, 5])
-	await await_millis(LAYOUT_SETTLE_MILLIS)
-	var merged: Card = _merge_on_state(bar, state, 1, 2)
-	var forged_ui: CardUI = _card_ui(bar, merged)
-
-	var warped_frames: int = 0
-	for _sample: int in 17:
-		await await_millis(30)
-		if absf(_tilt(forged_ui, "y_rot")) > 0.001:
-			warped_frames += 1
-		if absf(_tilt(forged_ui, "x_rot")) > 0.001:
-			warped_frames += 1
-
-	assert_int(warped_frames).is_equal(0)
-	assert_bool(forged_ui.is_merging()).is_false()
+	# ...and by the end they have been carried well clear and freed, leaving the
+	# card they made resting in the slot.
+	assert_int(_ghosts(forged_ui).size()).is_equal(0)
+	assert_bool(forged_ui._visual_root.visible).is_true()
+	assert_float(crossed_gap).is_greater(0.0)
+	assert_object(_card_ui(bar, merged)).is_same(forged_ui)
