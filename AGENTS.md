@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Engine & Environment
-- Engine: **Godot 4.6** (GDScript 2.0).
+- Engine: **Godot 4.7** (GDScript 2.0).
 - Never use Godot 3 syntax (`yield`, `KinematicBody2D`, `Spatial`, string-based `connect()`). Use `await`, `CharacterBody2D`/`CharacterBody3D`, and `signal_name.connect(_on_handler)`.
 - The project uses an **EventBus** autoload for global signals. Use it instead of creating hard references between unrelated nodes.
 
