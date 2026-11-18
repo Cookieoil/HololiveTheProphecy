@@ -18,9 +18,12 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Godot atomic-write temp files (e.g. ~libspine_godot.dll~RF1a2b.TMP)
+# Godot atomic-write temp files. Covers the editor's '~' backups and the
+# scene/resource writer's leftovers (e.g. ~libspine_godot.dll~RF1a2b.TMP and
+# BattleScene.tscn447100594.tmp). Both cases are matched, upper or lower.
 ~*
 *.TMP
+*.tmp
 
 # gdUnit4 test reports: regenerated on every test run, never commit them
 reports/
