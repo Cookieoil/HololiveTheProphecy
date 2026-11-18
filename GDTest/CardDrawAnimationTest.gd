@@ -95,6 +95,33 @@ func test_dealt_card_starts_face_down_and_lands_flat() -> void:
 	assert_float(ui.modulate.a).is_equal_approx(1.0, 0.001)
 
 
+func test_card_back_wears_the_emblem_image() -> void:
+	# The back a deal flips past is drawn by the shader, and the middle of it is
+	# the emblem image rather than the shader's own drawn star. The rig has to
+	# hand the shader both the texture and the go-ahead to draw it, or the flip
+	# would show a back nobody asked for.
+	var ui: CardUI = _make_card_ui(Card.new(3))
+	var material: ShaderMaterial = ui._card_material
+
+	var raw_logo: Variant = material.get_shader_parameter("back_logo")
+	assert_bool(raw_logo is Texture2D).is_true()
+	var logo: Texture2D = raw_logo
+	assert_object(logo).is_same(CardUI.CARD_BACK_LOGO)
+
+	# Drawn far smaller than its source on a moving card, so it has to carry
+	# mipmaps: the Compatibility renderer draws a mipmap-filtered texture that
+	# has none as solid black.
+	assert_bool(logo.get_image().has_mipmaps()).is_true()
+
+	var raw_draw: Variant = material.get_shader_parameter("draw_logo")
+	assert_bool(raw_draw is bool).is_true()
+	assert_bool(raw_draw).is_true()
+
+	var raw_size: Variant = material.get_shader_parameter("back_logo_size")
+	assert_bool(raw_size is float).is_true()
+	assert_float(raw_size).is_equal_approx(CardUI.CARD_BACK_LOGO_SIZE, 0.001)
+
+
 func test_grabbing_a_card_mid_flight_snaps_it_flat() -> void:
 	var ui: CardUI = _make_card_ui(Card.new(6))
 	ui.play_draw_animation(Vector2(740.0, 42.0), 0.0, 0)

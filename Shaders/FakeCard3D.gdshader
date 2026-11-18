@@ -22,7 +22,9 @@ render_mode unshaded;
 //
 // The printed side samples TEXTURE (the SubViewport holding the whole card).
 // The back side paints an ornate procedural card back on the very same 3D
-// plane, so flipping past 90 degrees never seams, pops or z-fights.
+// plane, so flipping past 90 degrees never seams, pops or z-fights. The middle
+// of that back is the `back_logo` image, of any size, shape or format, which
+// the shader fits and blends itself.
 // ---------------------------------------------------------------------------
 
 // Field of view measured across the card width. Lower = stronger perspective.
@@ -48,6 +50,17 @@ uniform vec4 back_deep : source_color = vec4(0.035, 0.042, 0.105, 1.0);
 uniform vec4 back_mid : source_color = vec4(0.115, 0.135, 0.295, 1.0);
 uniform vec4 back_gold : source_color = vec4(0.965, 0.795, 0.400, 1.0);
 uniform vec4 back_cyan : source_color = vec4(0.470, 0.890, 1.000, 1.0);
+
+// Emblem painted in the middle of the back. Any resolution, any aspect ratio
+// and any format is accepted: the image is contained inside a centred square of
+// `back_logo_size` card pixels - letterboxed rather than squashed - and blended
+// by its own alpha. While `draw_logo` is false, or no texture is set at all,
+// the back keeps the drawn prophecy star, so a missing emblem is never a hole.
+uniform sampler2D back_logo : source_color, filter_linear_mipmap, repeat_disable;
+uniform bool draw_logo = false;
+// Side of the square, in card pixels, the emblem is fitted into.
+uniform float back_logo_size : hint_range(0.0, 145.0) = 34.0;
+uniform float back_logo_strength : hint_range(0.0, 1.0) = 1.0;
 
 // The built-in fragment COLOR already has TEXTURE baked in, and the card is
 // sampled at a warped UV, so the CanvasItem modulate (and every inherited one)
@@ -90,6 +103,50 @@ void vertex() {
 	v_ray = transpose(card_rotation()) * vec3((UV - 0.5) * quad_size, camera_depth());
 }
 
+// The emblem image, painted in the middle of the back. `card_uv` is the 0..1
+// coordinate across the card body, so the emblem is measured in card pixels:
+// that keeps its box square and centred whatever the card's own aspect ratio
+// is. The image is contained inside that box - letterboxed rather than squashed
+// - whatever shape it arrives in, and it is blended by its own alpha, so any
+// resolution and any format lands as an emblem instead of a pasted rectangle.
+vec4 card_back_logo(vec2 card_uv, float glint) {
+	float box = max(back_logo_size, 0.0);
+	if (box <= 0.0) {
+		return vec4(0.0);
+	}
+
+	// Card-local pixels -> 0..1 across the emblem box.
+	vec2 box_uv = ((card_uv - 0.5) * card_size) / box + 0.5;
+
+	// Contain fit. A texture the renderer cannot measure (0 x 0, e.g. an unset
+	// uniform) falls back to a square instead of dividing by zero.
+	vec2 tex_px = max(vec2(textureSize(back_logo, 0)), vec2(1.0));
+	float aspect = tex_px.x / tex_px.y;
+	vec2 logo_uv = box_uv;
+	if (aspect >= 1.0) {
+		// Wider than the box: fills the width, letterboxed top and bottom.
+		logo_uv.y = (box_uv.y - 0.5) * aspect + 0.5;
+	} else {
+		// Taller than the box: fills the height, letterboxed left and right.
+		logo_uv.x = (box_uv.x - 0.5) / aspect + 0.5;
+	}
+
+	// Anything outside the image is empty letterbox, not a smear of its edge.
+	vec2 inside = step(vec2(0.0), logo_uv) * step(logo_uv, vec2(1.0));
+	vec4 tex = texture(back_logo, logo_uv);
+	float alpha = tex.a * inside.x * inside.y;
+
+	// A one-pixel fade at the rim of the box, so an image that carries no alpha
+	// of its own still reads as an emblem rather than a hard-edged rectangle.
+	float rim = min(min(box_uv.x, 1.0 - box_uv.x), min(box_uv.y, 1.0 - box_uv.y)) * box;
+	alpha *= smoothstep(0.0, 1.0, rim);
+
+	// The same lacquer sheen the rest of the back wears, so the emblem reads as
+	// varnished onto the card rather than floating above it.
+	vec3 rgb = tex.rgb + vec3(1.0, 0.98, 0.92) * (glint * 0.8);
+	return vec4(rgb, alpha * back_logo_strength);
+}
+
 // Ornate lacquered back, drawn directly on the warped plane.
 // `p` is the card-local pixel offset, `card_uv` the matching 0..1 coordinate.
 vec4 card_back_color(vec2 p, vec2 card_uv, float glint) {
@@ -118,13 +175,21 @@ vec4 card_back_color(vec2 p, vec2 card_uv, float glint) {
 	col = mix(col, back_gold.rgb, (1.0 - smoothstep(0.003, 0.012, ring_outer)) * 0.55);
 	col = mix(col, back_gold.rgb, (1.0 - smoothstep(0.002, 0.010, ring_inner)) * 0.40);
 
-	// Eight-point prophecy star in the middle.
-	float angle = atan(shaped.y, shaped.x);
-	float petals = abs(cos(angle * 4.0));
-	float star_radius = 0.052 + 0.125 * petals * petals * petals;
-	float star = 1.0 - smoothstep(star_radius - 0.008, star_radius + 0.008, radial);
-	col = mix(col, mix(back_cyan.rgb, back_gold.rgb, 0.35), star * 0.90);
-	col += back_cyan.rgb * (1.0 - smoothstep(0.0, 0.055, radial)) * 0.45;
+	// Centre emblem: the supplied image when there is one, and the drawn
+	// prophecy star when there is not, so a back without an emblem is never a
+	// blank hole.
+	if (draw_logo) {
+		vec4 logo = card_back_logo(card_uv, glint);
+		col = mix(col, logo.rgb, logo.a);
+	} else {
+		// Eight-point prophecy star in the middle.
+		float angle = atan(shaped.y, shaped.x);
+		float petals = abs(cos(angle * 4.0));
+		float star_radius = 0.052 + 0.125 * petals * petals * petals;
+		float star = 1.0 - smoothstep(star_radius - 0.008, star_radius + 0.008, radial);
+		col = mix(col, mix(back_cyan.rgb, back_gold.rgb, 0.35), star * 0.90);
+		col += back_cyan.rgb * (1.0 - smoothstep(0.0, 0.055, radial)) * 0.45;
+	}
 
 	// Corner diamonds.
 	vec2 corner = abs(cc) - vec2(0.355, 0.395);

@@ -117,6 +117,21 @@ const CARD_BORDER_WIDTH: int = 2
 const CARD_BOX_RADIUS: int = 6
 #endregion
 
+#region Card back
+## Emblem painted in the middle of the card back - the side a card shows while it
+## flips over on its way out of the deck. The back itself is drawn by
+## res://Shaders/FakeCard3D.gdshader, which fits this image into a centred square
+## and blends it by its own alpha, so it may be any picture: any resolution, any
+## aspect ratio, any format, and no import setting of its own.
+const CARD_BACK_LOGO: Texture2D = preload(
+	"res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/icon2.png"
+)
+## Side of the square, in card pixels, the emblem is fitted into.
+const CARD_BACK_LOGO_SIZE: float = 34.0
+## Built once and shared by every card: the emblem is the same picture for all.
+static var _back_logo_texture: Texture2D = null
+#endregion
+
 @export var icon_catalog: CardIconCatalog
 
 @export_group("Value Change Timing")
@@ -435,6 +450,14 @@ func _build_fake_3d_rig() -> void:
 	_card_material.set_shader_parameter("x_rot", 0.0)
 	_card_material.set_shader_parameter("y_rot", 0.0)
 
+	# The back the flip shows. The shader fits and blends the emblem itself, so
+	# only the texture is handed over; a card whose emblem texture is missing
+	# keeps the shader's own drawn star instead of showing a hole.
+	var back_logo: Texture2D = _card_back_logo_texture()
+	_card_material.set_shader_parameter("back_logo", back_logo)
+	_card_material.set_shader_parameter("draw_logo", back_logo != null)
+	_card_material.set_shader_parameter("back_logo_size", CARD_BACK_LOGO_SIZE)
+
 	# The quad maps the supersampled surface back onto the card's own pixels:
 	# the card face sits at CARD_PADDING inside quad space, so a quad positioned
 	# at -CARD_PADDING lines the card up exactly with the layout slot.
@@ -449,6 +472,32 @@ func _build_fake_3d_rig() -> void:
 	_card_quad.position = -CARD_PADDING
 	_card_quad.size = QUAD_SIZE
 	_visual_root.add_child(_card_quad)
+
+
+## The card-back emblem, guaranteed to carry mipmaps.
+##
+## The back is only ever seen while a card is flipping over, so the emblem is
+## always drawn far smaller than its source: without mipmaps a large image
+## aliases into noise, and the Compatibility renderer samples a mipmap-filtered
+## texture that has none as solid black. Godot imports textures without mipmaps
+## by default, so one that arrives without them is rebuilt here - once, whatever
+## its resolution or colour format - and every card shares the result.
+static func _card_back_logo_texture() -> Texture2D:
+	if _back_logo_texture != null:
+		return _back_logo_texture
+	if CARD_BACK_LOGO == null:
+		return null
+	var image: Image = CARD_BACK_LOGO.get_image()
+	if image == null or image.is_empty() or image.has_mipmaps():
+		_back_logo_texture = CARD_BACK_LOGO
+		return _back_logo_texture
+	if image.is_compressed():
+		image.decompress()
+	if image.generate_mipmaps() != OK:
+		_back_logo_texture = CARD_BACK_LOGO
+		return _back_logo_texture
+	_back_logo_texture = ImageTexture.create_from_image(image)
+	return _back_logo_texture
 #endregion
 
 #region Hover Animation
