@@ -67,10 +67,10 @@ const SETTLE_DAMPING: float = 6.5
 ## Two cards are merged where the player let go of them. The card they were
 ## carrying picks up from the exact point it was released at, the card it was
 ## dropped on picks up from its own slot, and the two drift into each other,
-## banking and folding closed as they meet. Folded edge on a card is a hair line,
-## so that hair line is where the merged card takes over: it starts folded the
-## same way and swings open into the card the two of them made. See
-## res://Shaders/FakeCard3D.gdshader for the warp that does the folding.
+## banking and folding closed as they meet. The fold stops short of edge on, so
+## the two end as a narrow card rather than a line, and the merged card takes over
+## from exactly that pose and unfolds out of it into the card the two of them made.
+## See res://Shaders/FakeCard3D.gdshader for the warp that does the folding.
 
 ## Node names the two cards are mounted under, so they stay distinguishable from
 ## each other and from the merged card's own visual rig.
@@ -82,17 +82,18 @@ const FORGE_PLATE_B: String = "ForgePlateB"
 const MERGE_CONVERGE_TIME: float = 0.30
 ## How long the card they became takes to swing open out of that fold.
 const MERGE_REVEAL_TIME: float = 0.26
-## How far each card folds over as it arrives. At this angle the warp has all but
-## gone, which is what lets the two hand over to the merged card unseen.
-const MERGE_FOLD_YAW: float = 88.0
+## How far each card folds over as it arrives. Deliberately short of edge on: at
+## 88 degrees all that is left facing the viewer is the card's own pale border,
+## which reads as a thin white line across the slot rather than as a card turning.
+## At this angle the two cards are a narrow card - still clearly a card - and the
+## merged card takes over from exactly that pose.
+const MERGE_FOLD_YAW: float = 60.0
 ## A lean into the fold, so it reads as a card rolling over rather than a page
-## being closed. It is back to flat by the time the cards are edge on.
+## being closed. It is back to flat by the time the cards reach the fold.
 const MERGE_FOLD_PITCH: float = 12.0
-## The merged card starts folded away from the viewer and swings out flat, so it
-## comes out of the same fold the two cards went into. Never past 90 degrees, so
-## the printed back never gets a chance to show.
-const MERGE_UNFOLD_YAW: float = -88.0
-const MERGE_UNFOLD_PITCH: float = -10.0
+## A lean through the unfold, on top of the yaw. Zero at both ends, so the card
+## starts from the pose the two cards finished in and lands dead flat.
+const MERGE_UNFOLD_PITCH: float = 10.0
 ## How far past full size the card swells as it settles flat.
 const MERGE_POP_SCALE: float = 0.10
 const MERGE_BRAND_SCALE: float = 1.32
@@ -736,12 +737,12 @@ func make_merge_plate() -> ForgePlate:
 ## Merges this card out of the two cards it was made from: the card the player
 ## was carrying at the point they released it, and the card it was dropped on.
 ##
-## The two drift into each other, banking and folding closed as they meet, and
-## fold away edge on - at which angle a card is a hair line. This card starts
-## folded the same way and swings open out of that hair line, so the hand over is
-## invisible: what was a folded-away card and what is a folded card are the same
-## line. The molten seam then burns across the face while the new value is
-## branded on, and the card settles flat in its slot.
+## The two drift into each other, banking and folding closed as they meet, and the
+## fold stops short of edge on so the two end as a narrow card rather than a line.
+## This card is set to that exact pose - same yaw, same pitch - and unfolds out of
+## it to flat, so the hand over happens on a silhouette that is already there and
+## the fold reads as one continuous turn. The new value is branded on as it
+## settles, and the card comes to rest in its slot.
 ##
 ## The two cards are plain children of this card's slot, so the hand spacing and
 ## every hit box stay exactly where they were.
@@ -881,22 +882,26 @@ func _pose_merge_plate(
 	plate.set_tilt(MERGE_FOLD_YAW * fold, MERGE_FOLD_PITCH * sin(PI * fold))
 
 
-## The two cards have folded away to a single edge, and this card takes over from
-## that edge. It starts folded the same way, so the hand over happens on a line
-## that is already there: nothing appears out of nowhere and nothing blinks out.
-## The two cards are left where they are - behind this card, edge on - and are
-## only freed once the merge is over, so there is no frame in which both of them
-## are gone and this card is not up yet.
+## The two cards have folded to a narrow card, and this card takes over from that
+## exact pose - it is set to the same yaw and pitch - so the hand over happens on
+## a silhouette that is already there: nothing appears out of nowhere and nothing
+## blinks out.
+##
+## The two cards are freed here rather than left folded behind the card: they have
+## been carried through the travel and the fold, and the card now owns the pose
+## they ended in, so there is nothing left for them to show.
 func _on_merge_folded() -> void:
+	_clear_merge_plates()
+
 	if is_instance_valid(_visual_root):
 		_visual_root.position = Vector2.ZERO
 		_visual_root.scale = Vector2.ONE
 		_visual_root.visible = true
 	# The card comes out of the fold, and the warp is what carries it, so it is
-	# rendered supersampled from here. It is edge on at this instant, so the
-	# resolution switch is invisible.
+	# rendered supersampled from here. It is folded to the same angle at this
+	# instant, so the resolution switch is invisible.
 	_set_surface_scale(RENDER_SUPERSAMPLE)
-	_set_tilt(MERGE_UNFOLD_YAW, MERGE_UNFOLD_PITCH)
+	_set_tilt(MERGE_FOLD_YAW, 0.0)
 
 	# The merge itself lights the card up gold as it opens.
 	if _glow != null:
@@ -905,9 +910,9 @@ func _on_merge_folded() -> void:
 	_start_brand_pop()
 
 
-## One frame of the card swinging open out of the fold: the warp unwinds to flat
-## while the card swells back to its resting size, the molten seam runs across it
-## and the new value is branded on.
+## One frame of the card swinging open out of the fold: it continues the same
+## fold the two cards went into, all the way to flat, while the card swells back
+## to its resting size and the new value is branded on.
 func _pose_reveal(u: float) -> void:
 	var eased: float = _ease_out_cubic(u)
 	var settle: float = clampf(_settle(u), 0.0, 1.0)
@@ -916,8 +921,8 @@ func _pose_reveal(u: float) -> void:
 	_visual_root.position = Vector2.ZERO
 	_visual_root.scale = Vector2.ONE * (1.0 + MERGE_POP_SCALE * (1.0 - settle))
 	_set_tilt(
-		lerpf(MERGE_UNFOLD_YAW, 0.0, eased),
-		lerpf(MERGE_UNFOLD_PITCH, 0.0, eased)
+		lerpf(MERGE_FOLD_YAW, 0.0, eased),
+		MERGE_UNFOLD_PITCH * sin(PI * eased)
 	)
 
 
