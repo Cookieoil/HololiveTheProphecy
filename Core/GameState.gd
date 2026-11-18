@@ -292,17 +292,47 @@ func double_merge(merged_card: Card, other_card: Card) -> Card:
 ## 2. if that merge is valid, merge the cards 
 ##    and returns the merged card.
 ## 3. don't merge if there's no valid merge.
-## @param a - the first card to merge
-## @param b - the second card to merge
+##
+## The merged card takes the slot of the card the player merged *into* (`b`, the
+## drop target), so a merge never teleports the result to the far right of hand.
+## @param a - the card that was dragged
+## @param b - the card it was dropped onto
 ## @return Card - the merged card
 func try_merge(a: Card, b: Card) -> Card:
+	# Where the target sat, counted among the cards that survive the merge.
+	var slot: int = _merge_slot(a, b)
+
+	var merged: Card = null
 	if can_cross_merge(a, b):
-		return cross_merge(a, b)
-	if can_double_merge(a, b):
-		return double_merge(a, b)
-	if can_double_merge(b, a):
-		return double_merge(b, a)
-	return null
+		merged = cross_merge(a, b)
+	elif can_double_merge(a, b):
+		merged = double_merge(a, b)
+	elif can_double_merge(b, a):
+		merged = double_merge(b, a)
+
+	if merged == null:
+		return null
+
+	# The merge helpers append their result; slide it back into the target slot.
+	hand.erase(merged)
+	hand.insert(clampi(slot, 0, hand.size()), merged)
+	return merged
+
+
+## Insert slot for a merged card: how many cards in front of the merge target `b`
+## survive the merge, i.e. exactly the index `b` would occupy afterwards.
+## @param a - the card that was dragged (removed by the merge)
+## @param b - the merge target (removed by the merge)
+## @return int - index the merged card should be inserted at
+func _merge_slot(a: Card, b: Card) -> int:
+	var slot: int = 0
+	for card: Card in hand:
+		if card == b:
+			break
+		if card == a:
+			continue
+		slot += 1
+	return slot
 #endregion
 
 #region Hand Queries

@@ -195,6 +195,28 @@ func test_removed_card_collapses_out_of_the_row() -> void:
 	assert_bool(dropped_ui.is_consumed()).is_true()
 
 
+func test_merged_card_is_placed_at_its_model_slot() -> void:
+	# A merge replaces two cards with one, and the row has to show the result
+	# where the merge happened, not at the far right.
+	var bar: HandBar = _make_hand_bar()
+	var first: Card = Card.new(2)
+	var eaten: Card = Card.new(3)
+	var last: Card = Card.new(5)
+	bar.set_hand([first, eaten, last])
+
+	var merged: Card = Card.new(8)
+	merged.is_merged = true
+	bar.set_hand([first, merged, last])
+
+	var row: Array[CardUI] = _row(bar)
+	# Two survivors, the merged card, and the one card still collapsing.
+	assert_int(row.size()).is_equal(4)
+	assert_object(row[0].card).is_same(first)
+	assert_object(row[1].card).is_same(merged)
+	assert_object(row[2].card).is_same(last)
+	assert_bool(row[3].is_consumed()).is_true()
+
+
 func test_the_card_footprint_matches_its_layout_slot() -> void:
 	# The fake-3D rig must not change how big a card is, or the hand spacing
 	# would drift. The padded quad has to be exactly the card plus its padding,
