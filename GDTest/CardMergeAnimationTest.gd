@@ -16,6 +16,9 @@ extends GdUnitTestSuite
 const FORGE_SETTLE_MILLIS: int = 1100
 ## Long enough for the hand layout to settle, so slot positions are real.
 const LAYOUT_SETTLE_MILLIS: int = 60
+## Recoil (0.10s) + strike (0.12s): just past the frame the two plates land on the
+## anvil, and comfortably before they have finished melting into the card.
+const STRIKE_MILLIS: int = 260
 
 
 ## Minimal HandBar: the real one lives inside BattleScene, which would start a
@@ -59,6 +62,25 @@ func _ghosts(ui: CardUI) -> Array[Control]:
 			if control != null:
 				result.append(control)
 	return result
+
+
+## Reads one of the fake-3D uniforms, so a test can assert on the card's pose.
+func _tilt(ui: CardUI, param: StringName) -> float:
+	var material: ShaderMaterial = ui._card_material
+	assert_object(material).is_not_null()
+	var raw: Variant = material.get_shader_parameter(param)
+	assert_bool(raw is float).is_true()
+	var value: float = raw
+	return value
+
+
+## The rectangle a control actually draws into, in its parent's coordinates,
+## taking its scale about its pivot into account. Used to prove a plate really
+## does sit over the forged card.
+func _drawn_rect(control: Control) -> Rect2:
+	var origin: Vector2 = control.position \
+		+ control.pivot_offset * (Vector2.ONE - control.scale)
+	return Rect2(origin, control.size * control.scale)
 
 
 ## Builds a hand of the given values in the row and on the model.
@@ -309,3 +331,69 @@ func test_a_resting_card_frame_reads_its_forge_rank() -> void:
 	assert_bool(
 		_card_ui(bar, base)._panel_box.border_color.is_equal_approx(CardUI.BASE_BORDER_COLOR)
 	).is_true()
+
+
+## The complaint this guards against: the two source cards used to be taken away
+## before the forged card arrived, so the merge blinked. The card is now switched
+## on underneath the plates at the strike, so from that frame on there is always
+## a face on screen - the plates are simply melting into it.
+func test_the_strike_hands_straight_over_to_the_forged_card() -> void:
+	var bar: HandBar = _make_hand_bar()
+	var state: GameState = _ready_hand(bar, [2, 3, 5])
+	await await_millis(LAYOUT_SETTLE_MILLIS)
+	var merged: Card = _merge_on_state(bar, state, 1, 2)
+	var forged_ui: CardUI = _card_ui(bar, merged)
+
+	# Hidden while the two plates are still in the air...
+	assert_float(forged_ui.modulate.a).is_equal_approx(0.0, 0.001)
+
+	await await_millis(STRIKE_MILLIS)
+
+	# ...and fully on screen the instant the strike lands, not fading in.
+	assert_float(forged_ui.modulate.a).is_equal_approx(1.0, 0.001)
+	# The two source cards are still drawn, part way through melting into it, so
+	# nothing blinks out at the hand-off either.
+	var plates: Array[Control] = _ghosts(forged_ui)
+	assert_int(plates.size()).is_equal(2)
+	assert_float(plates[0].modulate.a).is_greater(0.0)
+	assert_float(plates[0].modulate.a).is_less(1.0)
+
+
+## Switching the forged card on underneath the plates only works if the pair
+## really does cover it: every pixel of the card body has to be behind a plate,
+## or the card would show through mid-strike as a sliver out of nowhere.
+func test_the_two_plates_are_drawn_over_the_forged_card_while_they_melt() -> void:
+	var bar: HandBar = _make_hand_bar()
+	var state: GameState = _ready_hand(bar, [2, 3, 5])
+	await await_millis(LAYOUT_SETTLE_MILLIS)
+	var merged: Card = _merge_on_state(bar, state, 1, 2)
+	var forged_ui: CardUI = _card_ui(bar, merged)
+
+	await await_millis(STRIKE_MILLIS)
+
+	var plates: Array[Control] = _ghosts(forged_ui)
+	assert_int(plates.size()).is_equal(2)
+	var covered: Rect2 = _drawn_rect(plates[0]).merge(_drawn_rect(plates[1]))
+	assert_bool(covered.encloses(_drawn_rect(forged_ui._visual_root))).is_true()
+
+
+## A plate is a flat card face, so any fake-3D warp of the card would stretch its
+## own silhouette out past the plates covering it. The forge therefore never
+## tilts the card: the press is a pure scale, and the weld carries the rest.
+func test_the_forge_never_warps_the_card_out_from_under_the_plates() -> void:
+	var bar: HandBar = _make_hand_bar()
+	var state: GameState = _ready_hand(bar, [2, 3, 5])
+	await await_millis(LAYOUT_SETTLE_MILLIS)
+	var merged: Card = _merge_on_state(bar, state, 1, 2)
+	var forged_ui: CardUI = _card_ui(bar, merged)
+
+	var warped_frames: int = 0
+	for _sample: int in 17:
+		await await_millis(30)
+		if absf(_tilt(forged_ui, "y_rot")) > 0.001:
+			warped_frames += 1
+		if absf(_tilt(forged_ui, "x_rot")) > 0.001:
+			warped_frames += 1
+
+	assert_int(warped_frames).is_equal(0)
+	assert_bool(forged_ui.is_merging()).is_false()

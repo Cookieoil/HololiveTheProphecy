@@ -91,18 +91,22 @@ const MERGE_LIFT: float = 22.0
 const MERGE_STAGE_GAP: float = 30.0
 ## 2D bank of the plates' inner edges, which lift towards each other.
 const MERGE_INNER_TILT: float = 7.0
-## How far the two plates scissor past each other at the moment of impact: just
-## enough that the seam they leave runs down the middle of the forged card.
-const MERGE_IMPACT_GAP: float = 14.0
-const MERGE_IMPACT_ROT: float = 3.5
+## How far each plate stays off the anvil centre once the two are pressed
+## together. At that offset the pair still covers the whole card body, so the
+## forged card underneath them is never exposed while they melt away.
+const MERGE_PRESS_GAP: float = 14.0
+## How far the two plates are pressed down as they meet. The forged card sits at
+## exactly this size underneath them, so the strike hands straight over to the
+## card and the card is what springs back out of the press.
+const MERGE_PRESS_SCALE: float = 0.88
 ## Fraction of the lift the anvil still holds when the plates strike.
 const MERGE_IMPACT_LIFT: float = 0.4
-## The forged card drops into its slot out of the seam, folded forward in 3D.
-const MERGE_IMPACT_PITCH: float = 12.0
-## Press-and-spring: the card compresses onto the anvil and rebounds.
+## Share of the burn over which the two pressed plates melt into the card they
+## were pressed into. The card face is on screen from the strike onwards - the
+## plates are simply drawn over it and dissolve - so nothing ever blinks out.
+const MERGE_DISSOLVE_FRACTION: float = 0.45
+## Press-and-release overshoot: the welded card rebounds out of the press.
 const MERGE_POP_SCALE: float = 0.14
-## How much of the burn is spent revealing the card out of the seam.
-const MERGE_REVEAL_FRACTION: float = 0.3
 const MERGE_BRAND_SCALE: float = 1.32
 const MERGE_BRAND_DELAY: float = 0.10
 const MERGE_BRAND_TIME: float = 0.16
@@ -744,9 +748,10 @@ func make_ghost() -> Control:
 
 
 ## Forges this card out of the two cards that were merged into it. Two flat
-## copies of the source plates are pulled in from where they sat in hand, cocked
-## apart like flint and steel, struck edge to edge above the slot, and fused
-## along a molten seam (see res://Shaders/KintsugiWeld.gdshader) while the new
+## copies of the source plates fly up from where they sat in hand, cock apart
+## like flint and steel, and are struck together over this card's own slot. This
+## card is switched on underneath them at that instant and they melt into it
+## over a molten seam (see res://Shaders/KintsugiWeld.gdshader) while the new
 ## value is branded onto the face.
 ##
 ## The ghosts are plain card faces mounted inside the fixed layout slot, so the
@@ -775,7 +780,8 @@ func play_merge_animation(
 	_is_merging = true
 	_is_hovered = false
 	_hover_wanted = false
-	# The forged card is revealed out of the seam, so it starts out of sight.
+	# The card is switched on under the plates at the strike, so it is hidden for
+	# the flight and then revealed by the plates themselves melting away.
 	modulate.a = 0.0
 	z_index = MERGE_Z_INDEX
 	_set_surface_scale(RENDER_SUPERSAMPLE)
@@ -805,7 +811,13 @@ func play_merge_animation(
 		_merge_tween.tween_interval(MERGE_HITSTOP)
 	_merge_tween.tween_method(_pose_collide, 0.0, 1.0, MERGE_COLLIDE_TIME)
 	_merge_tween.tween_callback(_on_merge_impact)
-	_merge_tween.tween_method(_pose_burn, 0.0, 1.0, MERGE_BURN_TIME)
+	# The burn runs as one method across two segments so the spent plates can be
+	# freed the moment they have finished melting into the card.
+	_merge_tween.tween_method(_pose_burn, 0.0, MERGE_DISSOLVE_FRACTION,
+		MERGE_BURN_TIME * MERGE_DISSOLVE_FRACTION)
+	_merge_tween.tween_callback(_clear_forge_ghosts)
+	_merge_tween.tween_method(_pose_burn, MERGE_DISSOLVE_FRACTION, 1.0,
+		MERGE_BURN_TIME * (1.0 - MERGE_DISSOLVE_FRACTION))
 	_merge_tween.tween_callback(_finish_merge)
 
 
@@ -848,7 +860,9 @@ func _mount_forge_ghost(ghost: Control, offset: Vector2, plate_name: String) -> 
 	ghost.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	ghost.size = CARD_SIZE
 	ghost.custom_minimum_size = CARD_SIZE
-	ghost.pivot_offset = CARD_SIZE * 0.5
+	# Same bottom-centre pivot as the card's own visual root, so a plate and the
+	# forged card stay perfectly registered at any press scale.
+	ghost.pivot_offset = Vector2(CARD_SIZE.x * 0.5, CARD_SIZE.y)
 	ghost.position = offset
 	ghost.scale = Vector2.ONE
 	ghost.rotation = 0.0
@@ -875,23 +889,26 @@ func _pose_recoil(u: float) -> void:
 		0.0, -cock, eased)
 
 
-## The strike: both plates slam inward onto the anvil, scissored just past each
-## other. The seam they meet along runs down the middle of the card body, which
-## is exactly where the weld shader paints it.
+## The strike: both plates slam inward, straighten out, and press down onto the
+## anvil. They come to rest *over the forged card's own footprint*, pressed to
+## `MERGE_PRESS_SCALE`, which is exactly where the card is switched on underneath
+## them - so the strike hands straight over to the card with nothing blinking.
 func _pose_collide(u: float) -> void:
 	var eased: float = _ease_in_quart(u)
 	var dir: float = _merge_recoil_dir
 	var cock: float = dir * MERGE_INNER_TILT
 	var anvil_y: float = -MERGE_LIFT * MERGE_IMPACT_LIFT
+	var pressed: float = lerpf(1.0, MERGE_PRESS_SCALE, eased)
 
 	_pose_forge_ghost(_forge_ghost_a,
 		Vector2(dir * MERGE_STAGE_GAP, -MERGE_LIFT),
-		Vector2(dir * MERGE_IMPACT_GAP, anvil_y),
-		cock, dir * MERGE_IMPACT_ROT, eased)
+		Vector2(dir * MERGE_PRESS_GAP, anvil_y),
+		cock, 0.0, eased)
 	_pose_forge_ghost(_forge_ghost_b,
 		Vector2(-dir * MERGE_STAGE_GAP, -MERGE_LIFT),
-		Vector2(-dir * MERGE_IMPACT_GAP, anvil_y),
-		-cock, -dir * MERGE_IMPACT_ROT, eased)
+		Vector2(-dir * MERGE_PRESS_GAP, anvil_y),
+		-cock, 0.0, eased)
+	_set_forge_plates_scale(pressed)
 
 
 ## One frame of a forge ghost, gliding from one pose to the next.
@@ -909,35 +926,90 @@ func _pose_forge_ghost(
 	ghost.rotation = lerpf(from_rotation, to_rotation, u)
 
 
-## The forged card comes out of the seam, folds forward in 3D out of the strike,
-## presses onto the anvil and springs back to its resting transform while the
-## molten seam cools across its face.
+## Squeezes both plates together. The forged card starts the burn at exactly this
+## size, which is what makes the hand-off from plates to card invisible.
+func _set_forge_plates_scale(value: float) -> void:
+	var plate_scale := Vector2.ONE * value
+	if is_instance_valid(_forge_ghost_a):
+		_forge_ghost_a.scale = plate_scale
+	if is_instance_valid(_forge_ghost_b):
+		_forge_ghost_b.scale = plate_scale
+
+
+## Rides both spent plates and the weld on the forged card's own transform, so
+## the whole merge moves as a single object while the plates melt away.
+## `plate_alpha` fades them out; the card underneath is already opaque by then.
+func _pose_forge_stack(position: Vector2, p_scale: float, plate_alpha: float) -> void:
+	var dir: float = _merge_recoil_dir
+	_pose_forge_plate(_forge_ghost_a, position + Vector2(dir * MERGE_PRESS_GAP, 0.0),
+		p_scale, plate_alpha)
+	_pose_forge_plate(_forge_ghost_b, position + Vector2(-dir * MERGE_PRESS_GAP, 0.0),
+		p_scale, plate_alpha)
+
+	# The molten seam belongs on top of the plates: it is what is welding them.
+	if is_instance_valid(_weld_overlay):
+		_weld_overlay.position = -CARD_PADDING + position
+		_weld_overlay.scale = Vector2.ONE * p_scale
+
+
+func _pose_forge_plate(plate: Control, position: Vector2, p_scale: float, alpha: float) -> void:
+	if not is_instance_valid(plate):
+		return
+	plate.position = position
+	plate.rotation = 0.0
+	plate.scale = Vector2.ONE * p_scale
+	plate.modulate.a = alpha
+
+
+## The two pressed plates melt into the card they were pressed into, while that
+## card springs back out of the press and lands on the anvil. The plates and the
+## weld ride the card's exact transform, so the strike never breaks: the only
+## thing that changes is the faces dissolving.
 func _pose_burn(u: float) -> void:
-	# A damped spring, so the card compresses past flat and rebounds a little
-	# instead of stopping dead the way a linear ease would.
+	# A damped spring, so the card presses past flat and rebounds a little instead
+	# of stopping dead the way a linear ease would.
 	var settle: float = _settle(u)
 
+	# Press, then release: the card starts the burn at exactly the size the two
+	# plates ended the strike at, so the hand-off from plates to card is seamless.
+	var released: float = clampf(settle, 0.0, 1.0)
+	var stack_scale: float = MERGE_PRESS_SCALE \
+		+ (1.0 - MERGE_PRESS_SCALE) * settle \
+		+ MERGE_POP_SCALE * released * (1.0 - released) * 4.0
+	var stack_position := Vector2(
+		0.0,
+		-MERGE_LIFT * MERGE_IMPACT_LIFT * (1.0 - settle)
+	)
+
 	if is_instance_valid(_visual_root):
-		_visual_root.position = Vector2(0.0, -MERGE_LIFT * MERGE_IMPACT_LIFT * (1.0 - settle))
-		_visual_root.scale = Vector2.ONE * (1.0 + MERGE_POP_SCALE * (1.0 - settle))
-	_set_tilt(-MERGE_IMPACT_PITCH * (1.0 - settle), 0.0)
+		_visual_root.position = stack_position
+		_visual_root.scale = Vector2.ONE * stack_scale
+	# The card is never warped in 3D while the plates are over it, so no tilted
+	# corner can ever poke out from behind them.
+	_set_tilt(0.0, 0.0)
 
-	if MERGE_REVEAL_FRACTION > 0.0:
-		modulate.a = clampf(u / MERGE_REVEAL_FRACTION, 0.0, 1.0)
-	else:
-		modulate.a = 1.0
+	# The two cards are still what they always were until the weld consumes them.
+	var dissolve: float = 1.0 - clampf(u / MERGE_DISSOLVE_FRACTION, 0.0, 1.0)
+	_pose_forge_stack(stack_position, stack_scale, dissolve)
 
 
-## The two plates are spent: what is left is the forged card, revealed out of the
-## molten seam. The weld ignites here, because that is the frame the seam has to
-## be visible on, and the new value is branded as the seam cools.
+## The strike has landed: the forged card is already sitting underneath the two
+## pressed plates, so it is simply switched on at the exact pose they ended the
+## strike in. Nothing blinks out and nothing pops - the plates then melt into it
+## over the burn, leaving the card they were pressed into.
 func _on_merge_impact() -> void:
-	_clear_forge_ghosts()
+	var stack_position := Vector2(0.0, -MERGE_LIFT * MERGE_IMPACT_LIFT)
 
+	# Same place, same size as the pressed plates, so switching the card on is
+	# invisible: from here on the dying plates are all that is left of the two
+	# source cards.
 	if is_instance_valid(_visual_root):
-		_visual_root.position = Vector2(0.0, -MERGE_LIFT * MERGE_IMPACT_LIFT)
-	modulate.a = 0.0
+		_visual_root.position = stack_position
+		_visual_root.scale = Vector2.ONE * MERGE_PRESS_SCALE
+	_set_tilt(0.0, 0.0)
+	modulate.a = 1.0
 	_set_surface_scale(RENDER_SUPERSAMPLE)
+	_pose_forge_stack(stack_position, MERGE_PRESS_SCALE, 1.0)
 
 	# The forge itself lights the card up gold for the length of the burn.
 	if _glow != null:
@@ -947,8 +1019,9 @@ func _on_merge_impact() -> void:
 	_start_brand_pop()
 
 
-## Draws the molten seam over the warped card face. The overlay is sized to the
-## padded quad so the shader can mask the seam to the card silhouette.
+## Draws the molten seam over the two pressed plates (and the forged card under
+## them). It is mounted in `bounds`, last, so it welds across the plates rather
+## than being hidden behind them.
 func _build_weld_overlay(double_merged: bool) -> void:
 	_clear_weld_overlay()
 	if not is_instance_valid(_visual_root):
@@ -972,11 +1045,12 @@ func _build_weld_overlay(double_merged: bool) -> void:
 	_weld_overlay.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_weld_overlay.position = -CARD_PADDING
 	_weld_overlay.size = QUAD_SIZE
-	_visual_root.add_child(_weld_overlay)
-
-	# Above the warped card face, below the outline glow.
-	if is_instance_valid(_card_quad):
-		_visual_root.move_child(_weld_overlay, _card_quad.get_index() + 1)
+	# Pivot on the card's bottom-centre, matching the card and the plates, so the
+	# seam stays welded to them at any press scale.
+	_weld_overlay.pivot_offset = Vector2(
+		QUAD_SIZE.x * 0.5, CARD_PADDING.y + CARD_SIZE.y
+	)
+	bounds.add_child(_weld_overlay)
 
 
 func _start_weld_burn() -> void:
