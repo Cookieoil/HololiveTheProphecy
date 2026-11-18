@@ -3,3 +3,37 @@ After you have completed a task and all tests/verifications pass, you MUST:
 1. Run `git add .`
 2. Generate a commit message using the Conventional Commits format.
 3. Run `git commit -m "your generated message"`
+
+## Commit hygiene
+- Run `git status --short` before `git add .` and confirm every staged path is intentional.
+  Untracked scratch files (logs, temp exports, download leftovers) must be deleted or added
+  to `.gitignore` — never committed.
+- One logical change per commit.
+- `reports/` (gdUnit4 output) and Godot `~*` atomic-write temp files are gitignored. Never
+  `git add -f` them.
+
+## Pre-flight gates (required before every commit)
+Run all three headless gates from the repo root — they are exactly the gates CI runs:
+
+1. Validate game data (errors **and** warnings are fatal):
+   `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
+2. Compile every script:
+   `godot --headless --path . --script res://Tools/check_scripts.gd`
+3. Unit tests:
+   `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
+
+Never commit past a red gate. If a gate fails, fix the root cause — do not weaken the gate.
+
+## Terminal environment (Windows / PowerShell 7)
+- The default integrated terminal is PowerShell 7 from `C:\Users\vmv03\Tools\PowerShell7`
+  (upgraded from PS 5.1, whose shell integration never reported command completion).
+- A freshly opened shell may carry a stale PATH. If `pwsh`, `rg`, `fd`, `uv`, `gh`, `node`,
+  `gdformat` or `jq` are "not recognized", prepend the user-space toolchain:
+  `$env:Path = "C:\Users\vmv03\Tools\PowerShell7;C:\Users\vmv03\Tools\bin;$env:USERPROFILE\.local\bin;C:\Program Files\GitHub CLI;C:\Program Files\nodejs;C:\ffmpeg;" + [Environment]::GetEnvironmentVariable('Path','Machine')`
+- `gh` is installed but **not authenticated**; run `gh auth login` once to enable
+  `gh run list`, `gh pr checks`, `gh api` and branch-protection inspection.
+- For long-running installs/downloads, start a detached process that logs to a file:
+  `Start-Process -WindowStyle Hidden -FilePath powershell.exe -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','<script.ps1>'`
+  then poll the log with the read tool. Do not block the terminal; it has no reliable
+  completion signal for long commands.
+- Prefer `curl.exe` over `Invoke-WebRequest` (PS 5.1 uses the IE engine and can hang).
