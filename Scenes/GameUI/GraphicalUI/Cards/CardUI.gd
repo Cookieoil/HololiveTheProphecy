@@ -63,6 +63,63 @@ const SETTLE_FREQUENCY: float = 7.0
 const SETTLE_DAMPING: float = 6.5
 #endregion
 
+#region Kintsugi forge animation
+## Two cards strike edge to edge above the target slot and fuse into one along a
+## molten seam, the way broken lacquerware is rejoined with kintsugi. The whole
+## forge is deliberately short: a player merges several times a turn, so it must
+## never make them wait.
+const KINTSUGI_SHADER: Shader = preload("res://Shaders/KintsugiWeld.gdshader")
+
+## Node names the two source plates are mounted under, so they stay
+## distinguishable from each other and from the card's own visual rig.
+const FORGE_PLATE_A: String = "ForgePlateA"
+const FORGE_PLATE_B: String = "ForgePlateB"
+
+## Flint-and-steel: both plates cock away from each other.
+const MERGE_RECOIL_TIME: float = 0.10
+## ...then slam back together edge to edge.
+const MERGE_COLLIDE_TIME: float = 0.12
+## A double merge (a free-play card) holds the compression for one beat longer,
+## so the extra value it is worth can be felt as well as read.
+const MERGE_HITSTOP: float = 0.035
+## The molten seam ignites, brands the new value and cools away.
+const MERGE_BURN_TIME: float = 0.22
+
+## How far the anvil sits above the resting slot.
+const MERGE_LIFT: float = 22.0
+## How far each plate cocks out from the anvil before it strikes.
+const MERGE_STAGE_GAP: float = 30.0
+## 2D bank of the plates' inner edges, which lift towards each other.
+const MERGE_INNER_TILT: float = 7.0
+## How far the two plates scissor past each other at the moment of impact: just
+## enough that the seam they leave runs down the middle of the forged card.
+const MERGE_IMPACT_GAP: float = 14.0
+const MERGE_IMPACT_ROT: float = 3.5
+## Fraction of the lift the anvil still holds when the plates strike.
+const MERGE_IMPACT_LIFT: float = 0.4
+## The forged card drops into its slot out of the seam, folded forward in 3D.
+const MERGE_IMPACT_PITCH: float = 12.0
+## Press-and-spring: the card compresses onto the anvil and rebounds.
+const MERGE_POP_SCALE: float = 0.14
+## How much of the burn is spent revealing the card out of the seam.
+const MERGE_REVEAL_FRACTION: float = 0.3
+const MERGE_BRAND_SCALE: float = 1.32
+const MERGE_BRAND_DELAY: float = 0.10
+const MERGE_BRAND_TIME: float = 0.16
+const MERGE_Z_INDEX: int = 45
+#endregion
+
+#region Card rank styling
+## A resting card's frame reads its forge rank, so a merged card looks forged
+## and a double-merged (free-play) card is unmistakable at a glance.
+const BASE_BG_COLOR: Color = Color(0.16, 0.18, 0.22, 0.96)
+const BASE_BORDER_COLOR: Color = Color(0.75, 0.78, 0.85, 1.0)
+const MERGE_BG_COLOR: Color = Color(0.19, 0.17, 0.14, 0.96)
+const MERGE_BORDER_COLOR: Color = Color(0.96, 0.78, 0.34, 1.0)
+const DOUBLE_MERGE_BG_COLOR: Color = Color(0.13, 0.19, 0.23, 0.96)
+const DOUBLE_MERGE_BORDER_COLOR: Color = Color(0.48, 0.90, 1.0, 1.0)
+#endregion
+
 @export var icon_catalog: CardIconCatalog
 
 @export_group("Value Change Timing")
@@ -95,6 +152,28 @@ var _return_layer: CanvasLayer
 var _glow: OutlineGlow
 ## Pending delayed re-render of the value label after a runtime value change.
 var _value_tween: Tween
+
+## Stylebox the card frame is drawn with, kept so its rank colours can be
+## repainted whenever the card's merge state changes.
+var _panel_box: StyleBoxFlat
+
+## Kintsugi forge state. The forge owns the card transform while it plays, the
+## same way `_is_drawing` owns it during a deal.
+var _is_merging: bool = false
+var _merge_tween: Tween
+var _weld_tween: Tween
+var _brand_tween: Tween
+## Flat copies of the two source cards, mounted in the slot for the strike.
+var _forge_ghost_a: Control
+var _forge_ghost_b: Control
+## Molten seam overlay drawn over the card face while the weld burns.
+var _weld_overlay: ColorRect
+var _weld_material: ShaderMaterial
+## Where each source plate started, in this card's own local pixels.
+var _merge_from_a: Vector2 = Vector2.ZERO
+var _merge_from_b: Vector2 = Vector2.ZERO
+## Which side of the anvil plate A came from (+1 right, -1 left).
+var _merge_recoil_dir: float = 1.0
 
 ## Fake-3D rig, built in _ready() so CardUI.tscn stays a plain flat layout.
 var _visual_root: Control
@@ -213,11 +292,13 @@ func mark_consumed() -> void:
 		merge_glow.visible = false
 	_refresh_glow()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Drop any deal still in flight: a card that is leaving the hand must not
-	# keep flying towards a slot that no longer exists.
+	# Drop any deal or forge still in flight: a card that is leaving the hand
+	# must not keep flying towards a slot that no longer exists, and it must not
+	# be left invisible by a forge that was cancelled mid-burn.
 	_stop_pose_tweens()
 	_stop_slide()
 	_is_drawing = false
+	_finish_merge_immediate()
 	_cancel_return_animation(false)
 	modulate.a = 0.0
 
@@ -239,6 +320,10 @@ func _exit_tree() -> void:
 	_stop_pose_tweens()
 	_stop_slide()
 
+	if _merge_tween != null and _merge_tween.is_valid():
+		_merge_tween.kill()
+	_merge_tween = null
+
 	if _value_tween != null and _value_tween.is_valid():
 		_value_tween.kill()
 
@@ -251,19 +336,38 @@ func _style_card_panel() -> void:
 	# Prevent the unscaled root from drawing a second card background.
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.16, 0.18, 0.22, 0.96)
-	box.border_width_left = 2
-	box.border_width_top = 2
-	box.border_width_right = 2
-	box.border_width_bottom = 2
-	box.border_color = Color(0.75, 0.78, 0.85, 1.0)
-	box.corner_radius_top_left = 6
-	box.corner_radius_top_right = 6
-	box.corner_radius_bottom_left = 6
-	box.corner_radius_bottom_right = 6
+	_panel_box = StyleBoxFlat.new()
+	_panel_box.bg_color = BASE_BG_COLOR
+	_panel_box.border_width_left = 2
+	_panel_box.border_width_top = 2
+	_panel_box.border_width_right = 2
+	_panel_box.border_width_bottom = 2
+	_panel_box.border_color = BASE_BORDER_COLOR
+	_panel_box.corner_radius_top_left = 6
+	_panel_box.corner_radius_top_right = 6
+	_panel_box.corner_radius_bottom_left = 6
+	_panel_box.corner_radius_bottom_right = 6
 
-	hover_visual.add_theme_stylebox_override("panel", box)
+	hover_visual.add_theme_stylebox_override("panel", _panel_box)
+
+
+## Repaints the card frame for its forge rank: an unmerged card keeps the plain
+## steel frame, a merged card is gilded like the kintsugi seam that made it, and
+## a double-merged card (which costs no action to play) gets the prophecy cyan
+## rim so a free-play card can be spotted in hand at a glance.
+## Safe to call before `setup()`, while `card` is still null.
+func _apply_rank_style() -> void:
+	if _panel_box == null:
+		return
+	if card != null and card.is_double_merged:
+		_panel_box.bg_color = DOUBLE_MERGE_BG_COLOR
+		_panel_box.border_color = DOUBLE_MERGE_BORDER_COLOR
+	elif card != null and card.is_merged:
+		_panel_box.bg_color = MERGE_BG_COLOR
+		_panel_box.border_color = MERGE_BORDER_COLOR
+	else:
+		_panel_box.bg_color = BASE_BG_COLOR
+		_panel_box.border_color = BASE_BORDER_COLOR
 
 func _style_merge_glow() -> void:
 	if merge_glow == null:
@@ -624,6 +728,331 @@ static func _quadratic_bezier(a: Vector2, control: Vector2, b: Vector2, t: float
 	return inverse * inverse * a + 2.0 * inverse * t * control + t * t * b
 #endregion
 
+#region Kintsugi forge animation
+
+## True while the kintsugi forge owns the card transform.
+func is_merging() -> bool:
+	return _is_merging
+
+
+## A flat, detached copy of this card's face, for use as a forge ghost. The
+## caller owns the returned node until it is mounted by `play_merge_animation`.
+## Only the flat face is copied: the fake-3D quad stays behind, so mounting a
+## ghost costs nothing extra and is already correct on the first frame.
+func make_ghost() -> Control:
+	return _make_visual_copy()
+
+
+## Forges this card out of the two cards that were merged into it. Two flat
+## copies of the source plates are pulled in from where they sat in hand, cocked
+## apart like flint and steel, struck edge to edge above the slot, and fused
+## along a molten seam (see res://Shaders/KintsugiWeld.gdshader) while the new
+## value is branded onto the face.
+##
+## The ghosts are plain card faces mounted inside the fixed layout slot, so the
+## hand spacing and every hit box stay exactly where they were.
+##
+## @param ghost_a - flat copy of the dragged plate (consumed by this call)
+## @param ghost_b - flat copy of the drop-target plate (consumed by this call)
+## @param start_offset_a - where plate A sat, in this card's local pixels
+## @param start_offset_b - where plate B sat, in this card's local pixels
+## @param double_merged - a double merge holds the strike one beat longer
+func play_merge_animation(
+	ghost_a: Control,
+	ghost_b: Control,
+	start_offset_a: Vector2,
+	start_offset_b: Vector2,
+	double_merged: bool
+) -> void:
+	if _is_consumed or not is_instance_valid(_visual_root):
+		_discard_ghost(ghost_a)
+		_discard_ghost(ghost_b)
+		return
+
+	_finish_draw_immediate()
+	_stop_pose_tweens()
+
+	_is_merging = true
+	_is_hovered = false
+	_hover_wanted = false
+	# The forged card is revealed out of the seam, so it starts out of sight.
+	modulate.a = 0.0
+	z_index = MERGE_Z_INDEX
+	_set_surface_scale(RENDER_SUPERSAMPLE)
+	_visual_root.position = Vector2.ZERO
+	_visual_root.rotation = 0.0
+	_visual_root.scale = Vector2.ONE
+	_set_tilt(0.0, 0.0)
+
+	_forge_ghost_a = ghost_a
+	_forge_ghost_b = ghost_b
+	_mount_forge_ghost(ghost_a, start_offset_a, FORGE_PLATE_A)
+	_mount_forge_ghost(ghost_b, start_offset_b, FORGE_PLATE_B)
+
+	_merge_from_a = start_offset_a
+	_merge_from_b = start_offset_b
+	# Which way plate A has to pull back to open the strike.
+	_merge_recoil_dir = 1.0 if start_offset_a.x > start_offset_b.x else -1.0
+
+	_build_weld_overlay(double_merged)
+	_pose_recoil(0.0)
+
+	_merge_tween = create_tween()
+	_merge_tween.set_trans(Tween.TRANS_LINEAR)
+	_merge_tween.tween_method(_pose_recoil, 0.0, 1.0, MERGE_RECOIL_TIME)
+	if double_merged:
+		# A free-play card is worth a beat of held tension at the moment of impact.
+		_merge_tween.tween_interval(MERGE_HITSTOP)
+	_merge_tween.tween_method(_pose_collide, 0.0, 1.0, MERGE_COLLIDE_TIME)
+	_merge_tween.tween_callback(_on_merge_impact)
+	_merge_tween.tween_method(_pose_burn, 0.0, 1.0, MERGE_BURN_TIME)
+	_merge_tween.tween_callback(_finish_merge)
+
+
+## Snaps a card whose weld is still burning flat, so a fast player can grab the
+## freshly merged card (or chain a second merge) without waiting it out.
+func _finish_merge_immediate() -> void:
+	if not _is_merging:
+		return
+	if _merge_tween != null and _merge_tween.is_valid():
+		_merge_tween.kill()
+	_merge_tween = null
+	_end_forge_state()
+
+
+func _finish_merge() -> void:
+	_merge_tween = null
+	_end_forge_state()
+	# A card that was hovered while it burned lands straight into its hover.
+	if _hover_wanted and not _drag_in_progress and not get_viewport().gui_is_dragging():
+		_animate_hover(true)
+
+
+## Frees a ghost that was handed to `play_merge_animation` but never mounted, or
+## one that is being torn down. Teardown is immediate rather than deferred: a
+## card whose weld was interrupted (grabbed mid-burn) must not keep a plate
+## drawn over it for one more frame.
+func _discard_ghost(ghost: Control) -> void:
+	if is_instance_valid(ghost):
+		ghost.free()
+
+
+## Parks a source plate inside the fixed slot so the strike can play there. The
+## ghost is a plain flat face, so the cock and the slam are a 2D bank rather than
+## the fake-3D warp, which belongs to the card that is being forged.
+## The plate is renamed, so the two of them stay distinguishable as siblings.
+func _mount_forge_ghost(ghost: Control, offset: Vector2, plate_name: String) -> void:
+	if ghost == null:
+		return
+	ghost.name = plate_name
+	ghost.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	ghost.size = CARD_SIZE
+	ghost.custom_minimum_size = CARD_SIZE
+	ghost.pivot_offset = CARD_SIZE * 0.5
+	ghost.position = offset
+	ghost.scale = Vector2.ONE
+	ghost.rotation = 0.0
+	ghost.z_index = 0
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bounds.add_child(ghost)
+
+
+## Flint and steel: both plates fly up onto the anvil and cock away from each
+## other, their inner edges lifting, so the strike that follows has somewhere to
+## come from. `dir` says which side plate A came from.
+func _pose_recoil(u: float) -> void:
+	var eased: float = _ease_out_cubic(u)
+	var dir: float = _merge_recoil_dir
+	var cock: float = dir * MERGE_INNER_TILT
+
+	_pose_forge_ghost(_forge_ghost_a,
+		_merge_from_a,
+		Vector2(dir * MERGE_STAGE_GAP, -MERGE_LIFT),
+		0.0, cock, eased)
+	_pose_forge_ghost(_forge_ghost_b,
+		_merge_from_b,
+		Vector2(-dir * MERGE_STAGE_GAP, -MERGE_LIFT),
+		0.0, -cock, eased)
+
+
+## The strike: both plates slam inward onto the anvil, scissored just past each
+## other. The seam they meet along runs down the middle of the card body, which
+## is exactly where the weld shader paints it.
+func _pose_collide(u: float) -> void:
+	var eased: float = _ease_in_quart(u)
+	var dir: float = _merge_recoil_dir
+	var cock: float = dir * MERGE_INNER_TILT
+	var anvil_y: float = -MERGE_LIFT * MERGE_IMPACT_LIFT
+
+	_pose_forge_ghost(_forge_ghost_a,
+		Vector2(dir * MERGE_STAGE_GAP, -MERGE_LIFT),
+		Vector2(dir * MERGE_IMPACT_GAP, anvil_y),
+		cock, dir * MERGE_IMPACT_ROT, eased)
+	_pose_forge_ghost(_forge_ghost_b,
+		Vector2(-dir * MERGE_STAGE_GAP, -MERGE_LIFT),
+		Vector2(-dir * MERGE_IMPACT_GAP, anvil_y),
+		-cock, -dir * MERGE_IMPACT_ROT, eased)
+
+
+## One frame of a forge ghost, gliding from one pose to the next.
+func _pose_forge_ghost(
+	ghost: Control,
+	from_position: Vector2,
+	to_position: Vector2,
+	from_rotation: float,
+	to_rotation: float,
+	u: float
+) -> void:
+	if not is_instance_valid(ghost):
+		return
+	ghost.position = from_position.lerp(to_position, u)
+	ghost.rotation = lerpf(from_rotation, to_rotation, u)
+
+
+## The forged card comes out of the seam, folds forward in 3D out of the strike,
+## presses onto the anvil and springs back to its resting transform while the
+## molten seam cools across its face.
+func _pose_burn(u: float) -> void:
+	# A damped spring, so the card compresses past flat and rebounds a little
+	# instead of stopping dead the way a linear ease would.
+	var settle: float = _settle(u)
+
+	if is_instance_valid(_visual_root):
+		_visual_root.position = Vector2(0.0, -MERGE_LIFT * MERGE_IMPACT_LIFT * (1.0 - settle))
+		_visual_root.scale = Vector2.ONE * (1.0 + MERGE_POP_SCALE * (1.0 - settle))
+	_set_tilt(-MERGE_IMPACT_PITCH * (1.0 - settle), 0.0)
+
+	if MERGE_REVEAL_FRACTION > 0.0:
+		modulate.a = clampf(u / MERGE_REVEAL_FRACTION, 0.0, 1.0)
+	else:
+		modulate.a = 1.0
+
+
+## The two plates are spent: what is left is the forged card, revealed out of the
+## molten seam. The weld ignites here, because that is the frame the seam has to
+## be visible on, and the new value is branded as the seam cools.
+func _on_merge_impact() -> void:
+	_clear_forge_ghosts()
+
+	if is_instance_valid(_visual_root):
+		_visual_root.position = Vector2(0.0, -MERGE_LIFT * MERGE_IMPACT_LIFT)
+	modulate.a = 0.0
+	_set_surface_scale(RENDER_SUPERSAMPLE)
+
+	# The forge itself lights the card up gold for the length of the burn.
+	if _glow != null:
+		_glow.set_active(true, OutlineGlow.Preset.ARCANE_GOLD)
+
+	_start_weld_burn()
+	_start_brand_pop()
+
+
+## Draws the molten seam over the warped card face. The overlay is sized to the
+## padded quad so the shader can mask the seam to the card silhouette.
+func _build_weld_overlay(double_merged: bool) -> void:
+	_clear_weld_overlay()
+	if not is_instance_valid(_visual_root):
+		return
+
+	_weld_material = ShaderMaterial.new()
+	_weld_material.shader = KINTSUGI_SHADER
+	_weld_material.set_shader_parameter("quad_size", QUAD_SIZE)
+	_weld_material.set_shader_parameter("card_size", CARD_SIZE)
+	_weld_material.set_shader_parameter("corner_radius", CARD_CORNER_RADIUS)
+	_weld_material.set_shader_parameter("is_double_merge", double_merged)
+	# A fresh fracture pattern per forge, so no two welds look alike.
+	_weld_material.set_shader_parameter("seam_seed", randf() * 37.0)
+	_weld_material.set_shader_parameter("progress", 0.0)
+
+	_weld_overlay = ColorRect.new()
+	_weld_overlay.name = "KintsugiWeld"
+	_weld_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_weld_overlay.color = Color.WHITE
+	_weld_overlay.material = _weld_material
+	_weld_overlay.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_weld_overlay.position = -CARD_PADDING
+	_weld_overlay.size = QUAD_SIZE
+	_visual_root.add_child(_weld_overlay)
+
+	# Above the warped card face, below the outline glow.
+	if is_instance_valid(_card_quad):
+		_visual_root.move_child(_weld_overlay, _card_quad.get_index() + 1)
+
+
+func _start_weld_burn() -> void:
+	if _weld_material == null:
+		return
+	_weld_tween = create_tween()
+	_weld_tween.set_trans(Tween.TRANS_LINEAR)
+	_weld_tween.tween_method(_set_weld_progress, 0.0, 1.0, MERGE_BURN_TIME)
+
+
+func _set_weld_progress(value: float) -> void:
+	if _weld_material != null:
+		_weld_material.set_shader_parameter("progress", value)
+
+
+## Brands the new value and star rank onto the face with a stamp, so the number
+## the merge produced lands after the seam does instead of appearing silently.
+func _start_brand_pop() -> void:
+	var targets: Array[Control] = []
+	if is_instance_valid(value_label):
+		targets.append(value_label)
+	if is_instance_valid(icon_row):
+		targets.append(icon_row)
+	if targets.is_empty():
+		return
+
+	for target: Control in targets:
+		target.pivot_offset = target.size * 0.5
+		target.scale = Vector2.ONE * MERGE_BRAND_SCALE
+
+	_brand_tween = create_tween()
+	_brand_tween.set_parallel(true)
+	_brand_tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	for target: Control in targets:
+		_brand_tween.tween_property(
+			target, "scale", Vector2.ONE, MERGE_BRAND_TIME
+		).set_delay(MERGE_BRAND_DELAY)
+
+
+## Tears down every temporary forge object and leaves the card resting flat, so
+## nothing of the forge survives on a card that is simply sitting in hand.
+func _end_forge_state() -> void:
+	_is_merging = false
+	_clear_forge_ghosts()
+	_clear_weld_overlay()
+
+	if _weld_tween != null and _weld_tween.is_valid():
+		_weld_tween.kill()
+	_weld_tween = null
+	if _brand_tween != null and _brand_tween.is_valid():
+		_brand_tween.kill()
+	_brand_tween = null
+
+	_apply_flat_pose()
+	_refresh_glow()
+
+
+func _clear_forge_ghosts() -> void:
+	_discard_ghost(_forge_ghost_a)
+	_discard_ghost(_forge_ghost_b)
+	_forge_ghost_a = null
+	_forge_ghost_b = null
+
+
+func _clear_weld_overlay() -> void:
+	if is_instance_valid(_weld_overlay):
+		_weld_overlay.free()
+	_weld_overlay = null
+	_weld_material = null
+
+
+## Tween-friendly accelerating slam, so the plates arrive with weight.
+static func _ease_in_quart(x: float) -> float:
+	return x * x * x * x
+#endregion
+
 func setup(p_card: Card, p_hand_bar: HandBar = null) -> void:
 	card = p_card
 	hand_bar = p_hand_bar if p_hand_bar != null else _find_hand_bar()
@@ -640,6 +1069,7 @@ func _refresh() -> void:
 	)
 	value_label.text = "%d %s" % [card.get_effective_value(), suffix]
 	_build_stars_and_indicators()
+	_apply_rank_style()
 
 
 func _build_stars_and_indicators() -> void:
@@ -682,7 +1112,10 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 
 	# A card that is still settling into hand is snapped flat first, so a fast
 	# player never has to wait out a deal animation before grabbing a card.
+	# The same goes for a card whose weld is still burning: a merged card can be
+	# played (or merged again) the instant it exists.
 	_finish_draw_immediate()
+	_finish_merge_immediate()
 
 	# A previous return animation may still be running if the player
 	# quickly starts another drag.

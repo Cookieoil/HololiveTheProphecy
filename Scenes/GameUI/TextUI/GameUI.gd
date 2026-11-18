@@ -41,6 +41,19 @@ func clear_unit_intent(_unit: Unit) -> void:
 func on_card_played(_card: Card, _state: GameState) -> void:
 	pass
 
+## Presentation cue: two cards in hand were fused into `result` by a merge.
+## `source_a` is the card that was dragged and `source_b` the card it was
+## dropped on; `result` takes the target's slot. Implementations that animate
+## should play the merge here, because the hand refresh that follows reuses the
+## forged card rather than rebuilding it.
+func on_cards_merged(
+	_source_a: Card,
+	_source_b: Card,
+	_result: Card,
+	_state: GameState
+) -> void:
+	pass
+
 ## Presentation cue: the game picked these cards out of the hand on its own
 ## (auto_top_n / auto_highest), so no prompt was shown. Briefly highlight them
 ## so the player can still see which cards were affected.

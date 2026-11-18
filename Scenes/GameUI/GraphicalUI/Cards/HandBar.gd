@@ -157,6 +157,77 @@ func add_card(card: Card) -> void:
 	_apply_pick_candidates()
 
 
+## Forges a merged card in hand with the kintsugi weld: the two source cards are
+## struck together above the target slot and fused into the forged card, while
+## the survivors glide into the gap the merge left.
+##
+## `card_a` is the card that was dragged and `card_b` the card it was dropped
+## on; the forged card takes the target's slot, exactly like GameState.try_merge.
+## The reconciliation happens here so the forge is already mounted on the frame
+## the row changes, and the hand refresh that follows reuses the forged card
+## instead of tearing the weld down.
+func play_merge(
+	card_a: Card,
+	card_b: Card,
+	merged_card: Card,
+	new_hand: Array[Card]
+) -> void:
+	if merged_card == null or not is_inside_tree():
+		set_hand(new_hand)
+		return
+
+	var ui_a: CardUI = _find_card_ui(card_a)
+	var ui_b: CardUI = _find_card_ui(card_b)
+	if ui_a == null or ui_b == null:
+		# The row does not hold the two source cards (e.g. a merge driven
+		# straight on the model), so there is nothing to strike together.
+		set_hand(new_hand)
+		return
+
+	# The anvil is the slot the merge produced: GameState.try_merge inserts the
+	# forged card where the target sits once the dragged card in front of it has
+	# been removed. Every card is laid out here (the player has just dropped one
+	# onto the other), so the anvil can be read straight off the row.
+	var index_a: int = ui_a.get_index()
+	var index_b: int = ui_b.get_index()
+	var anvil_index: int = index_b - 1 if index_a < index_b else index_b
+	anvil_index = clampi(anvil_index, 0, maxi(cards_row.get_child_count() - 1, 0))
+	var anvil_node: Control = cards_row.get_child(anvil_index) as Control
+	var anvil_local: Vector2 = anvil_node.position if anvil_node != null else ui_b.position
+	var anvil_global: Vector2 = cards_row.global_position + anvil_local
+
+	# Where each plate sat, in the forged card's own local pixels.
+	var offset_a: Vector2 = ui_a.global_position - anvil_global
+	var offset_b: Vector2 = ui_b.global_position - anvil_global
+
+	# Snapshots have to be taken before the plates are consumed, and the flat
+	# faces have to be copied while their source cards are still alive.
+	var before: Dictionary[CardUI, Vector2] = _snapshot_slots()
+	var ghost_a: Control = ui_a.make_ghost()
+	var ghost_b: Control = ui_b.make_ghost()
+
+	# Both source cards left the model, so they leave the row at once and the
+	# survivors glide into the gap they opened.
+	_consume_card(card_a)
+	_consume_card(card_b)
+
+	var merged_ui: CardUI = _find_card_ui(merged_card)
+	if merged_ui == null:
+		merged_ui = _spawn_card(merged_card, false)
+
+	for index: int in new_hand.size():
+		var ui: CardUI = _find_card_ui(new_hand[index])
+		if ui != null and ui.get_index() != index:
+			cards_row.move_child(ui, index)
+
+	_glide_to_new_slots(before)
+	_apply_pick_candidates()
+
+	merged_ui.play_merge_animation(
+		ghost_a, ghost_b, offset_a, offset_b, merged_card.is_double_merged
+	)
+
+
 ## A card left the hand: it drops out of the row at once and the cards around it
 ## glide into the gap it left.
 func remove_card(card: Card) -> void:
@@ -202,6 +273,10 @@ func _glide_to_new_slots(before: Dictionary[CardUI, Vector2]) -> void:
 func _apply_glide(before: Dictionary[CardUI, Vector2]) -> void:
 	for ui: CardUI in before:
 		if not is_instance_valid(ui) or ui.is_consumed():
+			continue
+		# A card that is being forged owns its own transform: sliding its layout
+		# slot would drag the weld out from under the strike.
+		if ui.is_merging():
 			continue
 		var target: Vector2 = ui.position
 		var from: Vector2 = before[ui]
