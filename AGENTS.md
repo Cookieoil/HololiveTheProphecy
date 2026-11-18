@@ -59,6 +59,8 @@
   - Validate data: `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
   - Compile every script: `godot --headless --path . --script res://Tools/check_scripts.gd`
   - Unit tests: `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
+  - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all three gates and exits `1` on any red gate.
+  - **Windows gotcha:** Steam's `godot.exe` is a GUI-subsystem binary, so PowerShell never waits for it and `$LASTEXITCODE` stays empty (a gate can look "failed" while it actually passed). Launch each gate with `Start-Process -Wait -PassThru` and judge `.ExitCode` — that is exactly what `Tools/preflight.ps1` does.
 - **Never commit `reports/`** (gdUnit4 output) or Godot's `~*` atomic-write temp files; both are gitignored.
 - **Branch protection**: `main` requires the `validate` status check (Settings -> Branches -> main), so never rename that job id or add a `name:` to it. Add `Scripts and tests` as a second required check if you want the test gate to block merges. Configure it in the UI or with the GitHub API (`gh api -X PATCH repos/:owner/:repo/branches/main/protection`, requires repo admin).
 
