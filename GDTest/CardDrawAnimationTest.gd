@@ -6,6 +6,8 @@ extends GdUnitTestSuite
 ##   - a dealt card leaves the deck showing its back and lands perfectly flat
 ##   - the hand reconciles incrementally, so a deal that is still in flight is
 ##     never torn down by the refresh BattleScene fires after every action
+##   - a card resting in hand is never warped, so its size and the spacing of the
+##     hand stay exactly as laid out
 ##
 ## @author TheGreatJellyfish
 ## @version 11/17/2026
@@ -170,3 +172,37 @@ func test_removed_card_collapses_out_of_the_row() -> void:
 	assert_object(row[0]).is_same(kept_ui)
 	# The dropped card is consumed at once and collapses away on its own.
 	assert_bool(dropped_ui.is_consumed()).is_true()
+
+
+func test_the_card_footprint_matches_its_layout_slot() -> void:
+	# The fake-3D rig must not change how big a card is, or the hand spacing
+	# would drift. The padded quad has to be exactly the card plus its padding,
+	# so the visible card body lines up with the 100x145 layout slot.
+	var ui: CardUI = _make_card_ui(Card.new(3))
+	assert_vector(ui._card_quad.size).is_equal(CardUI.QUAD_SIZE)
+	assert_vector(ui._card_quad.position).is_equal(-CardUI.CARD_PADDING)
+	assert_vector(CardUI.QUAD_SIZE).is_equal(CardUI.CARD_SIZE + CardUI.CARD_PADDING * 2.0)
+
+
+func test_hover_scales_the_card_without_warping_it() -> void:
+	# Hovering may only scale and lift the card. Any 3D tilt would stretch the
+	# near edge past the card's own footprint and make the size and spacing of
+	# the hand look wrong, so the warp has to stay flat.
+	var ui: CardUI = _make_card_ui(Card.new(4))
+	ui._animate_hover(true)
+
+	# Mouse motion across the card - including right at its edge - must be inert.
+	var motion := InputEventMouseMotion.new()
+	motion.position = Vector2(2.0, 2.0)
+	ui._gui_input(motion)
+
+	assert_float(_tilt(ui, "y_rot")).is_equal_approx(0.0, 0.001)
+	assert_float(_tilt(ui, "x_rot")).is_equal_approx(0.0, 0.001)
+
+	await await_millis(300)
+
+	assert_float(ui._visual_root.scale.x).is_equal_approx(CardUI.HOVER_SCALE, 0.01)
+	assert_float(ui._visual_root.scale.y).is_equal_approx(CardUI.HOVER_SCALE, 0.01)
+	assert_float(ui._visual_root.position.y).is_equal_approx(-CardUI.HOVER_LIFT, 0.5)
+	assert_float(_tilt(ui, "y_rot")).is_equal_approx(0.0, 0.001)
+	assert_float(_tilt(ui, "x_rot")).is_equal_approx(0.0, 0.001)

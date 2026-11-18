@@ -6,8 +6,9 @@ extends PanelContainer
 ##
 ## The card is rendered into an offscreen SubViewport and that texture is
 ## perspective-warped by a per-instance fake-3D shader (see
-## res://Shaders/FakeCard3D.gdshader), so drawing and hovering read as genuine
-## 3D while the layout slot, hit box and hand ordering stay perfectly flat.
+## res://Shaders/FakeCard3D.gdshader) while it is dealt in, so drawing reads as
+## genuine 3D while the layout slot, hit box and hand ordering stay perfectly
+## flat. A card that is resting in hand is never warped.
 
 signal play_requested(card: Card)
 
@@ -35,7 +36,6 @@ const QUAD_SIZE: Vector2 = Vector2(140, 185)
 ## the perspective warp.
 const RENDER_SUPERSAMPLE: float = 2.0
 const FAKE_3D_SHADER: Shader = preload("res://Shaders/FakeCard3D.gdshader")
-const ART_PARALLAX_SHADER: Shader = preload("res://Shaders/CardArtParallax.gdshader")
 #endregion
 
 #region Draw animation
@@ -72,15 +72,6 @@ const MERGE_START_PITCH: float = -18.0
 const MERGE_START_SCALE: float = 0.88
 #endregion
 
-#region Hover tilt
-## Maximum fake-3D tilt while the cursor moves across a hovered card.
-const HOVER_TILT_MAX: float = 13.0
-const HOVER_TILT_TIME: float = 0.18
-const HOVER_TILT_RELEASE: float = 0.45
-## Art parallax strength, in normalised tilt units.
-const PARALLAX_TILT_SCALE: float = 0.55
-#endregion
-
 @export var icon_catalog: CardIconCatalog
 
 @export_group("Value Change Timing")
@@ -93,7 +84,6 @@ var card: Card
 var hand_bar: HandBar
 
 var _hover_tween: Tween
-var _tilt_tween: Tween
 var _draw_tween: Tween
 var _is_hovered: bool = false
 ## True while the cursor sits inside the slot, even if the card is still flying
@@ -119,9 +109,6 @@ var _visual_root: Control
 var _card_quad: TextureRect
 var _card_surface: SubViewport
 var _card_material: ShaderMaterial
-var _art_material: ShaderMaterial
-## -1..1 tilt fed to the art parallax shader.
-var _parallax: Vector2 = Vector2.ZERO
 
 @onready var hover_visual: PanelContainer = $Bounds/HoverVisual
 @onready var icon_row: HBoxContainer = $Bounds/HoverVisual/Margin/VBox/IconRow
@@ -247,13 +234,6 @@ func is_consumed() -> bool:
 
 
 func _gui_input(event: InputEvent) -> void:
-	# Balatro / Runeterra style cursor tilt: moving the pointer across a hovered
-	# card leans it towards the pointer and drifts the art the other way.
-	var motion: InputEventMouseMotion = event as InputEventMouseMotion
-	if motion != null:
-		_update_cursor_tilt(motion.position)
-		return
-
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if _pick_selectable and mb != null \
 			and mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -397,11 +377,6 @@ func _build_fake_3d_rig() -> void:
 	_card_quad.position = -CARD_PADDING
 	_card_quad.size = QUAD_SIZE
 	_visual_root.add_child(_card_quad)
-
-	_art_material = ShaderMaterial.new()
-	_art_material.shader = ART_PARALLAX_SHADER
-	_art_material.set_shader_parameter("tilt", Vector2.ZERO)
-	art.material = _art_material
 #endregion
 
 #region Hover Animation
@@ -445,7 +420,9 @@ func _animate_hover(active: bool) -> void:
 	_hover_tween.set_trans(Tween.TRANS_CUBIC)
 
 	# The fake-3D quad and the outline glow are both children of _visual_root, so
-	# one tween moves the whole card as a rigid unit.
+	# one tween moves the whole card as a rigid unit. Hovering only scales and
+	# lifts the card: it is never warped, so its footprint (and therefore the
+	# size and spacing of the hand) stays exactly as laid out.
 	_hover_tween.tween_property(
 		_visual_root,
 		"scale",
@@ -458,9 +435,6 @@ func _animate_hover(active: bool) -> void:
 		target_y,
 		HOVER_TWEEN_TIME
 	)
-
-	if not active:
-		_tween_tilt(0.0, 0.0, HOVER_TILT_RELEASE)
 
 
 func _reset_hover_immediate() -> void:
@@ -479,73 +453,16 @@ func _reset_hover_immediate() -> void:
 	_set_tilt(0.0, 0.0)
 #endregion
 
-#region Fake-3D tilt
+#region Fake-3D pose
 
-## Balatro / Runeterra style cursor tilt: the hovered card leans towards the
-## pointer, and the illustration inside drifts the other way.
-func _update_cursor_tilt(local_position: Vector2) -> void:
-	if _is_drawing or _drag_in_progress or _is_consumed or not _is_hovered:
-		return
-	if size.x <= 0.0 or size.y <= 0.0:
-		return
-
-	var normalised := Vector2(
-		clampf(local_position.x / size.x, 0.0, 1.0),
-		clampf(local_position.y / size.y, 0.0, 1.0)
-	)
-	var lean: Vector2 = (normalised - Vector2(0.5, 0.5)) * 2.0
-	_tween_tilt(-HOVER_TILT_MAX * lean.x, -HOVER_TILT_MAX * lean.y, HOVER_TILT_TIME)
-
-
-func _tween_tilt(target_yaw: float, target_pitch: float, duration: float) -> void:
-	if _card_material == null:
-		return
-
-	var from_yaw: float = _shader_float("y_rot")
-	var from_pitch: float = _shader_float("x_rot")
-
-	if _tilt_tween != null and _tilt_tween.is_valid():
-		_tilt_tween.kill()
-
-	_tilt_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	_tilt_tween.tween_method(
-		func(weight: float) -> void:
-			_set_tilt(
-				lerpf(from_yaw, target_yaw, weight),
-				lerpf(from_pitch, target_pitch, weight)
-			),
-		0.0,
-		1.0,
-		duration
-	)
-
-
-## Pushes a fake-3D orientation into the warp shader and mirrors it into the art
-## parallax, so the illustration lags slightly behind the frame.
+## Pushes a fake-3D orientation into the warp shader. Only the deal / merge
+## animations ever move it away from flat, so a card in hand is never warped.
 func _set_tilt(yaw: float, pitch: float) -> void:
 	if _card_material != null:
 		_card_material.set_shader_parameter("y_rot", yaw)
 		_card_material.set_shader_parameter("x_rot", pitch)
-
-	if _art_material != null:
-		_art_material.set_shader_parameter(
-			"tilt",
-			Vector2(
-				clampf(-yaw / 30.0, -1.0, 1.0),
-				clampf(-pitch / 30.0, -1.0, 1.0)
-			)
-		)
-
-
-func _shader_float(param: StringName) -> float:
-	if _card_material == null:
-		return 0.0
-	var raw: Variant = _card_material.get_shader_parameter(param)
-	if raw is float:
-		var value: float = raw
-		return value
-	return 0.0
 #endregion
+
 #region Fake-3D draw animation
 
 ## True while the fake-3D deal / merge animation owns the card transform.
@@ -619,9 +536,6 @@ func _stop_pose_tweens() -> void:
 	if _hover_tween != null and _hover_tween.is_valid():
 		_hover_tween.kill()
 	_hover_tween = null
-	if _tilt_tween != null and _tilt_tween.is_valid():
-		_tilt_tween.kill()
-	_tilt_tween = null
 
 
 ## One frame of the deal-in flight. `t` is raw 0..1 progress.
@@ -823,11 +737,6 @@ func _make_visual_copy() -> PanelContainer:
 	var copied_merge := visual.get_node_or_null("MergeGlow") as Control
 	if copied_merge != null:
 		copied_merge.hide()
-
-	# The preview is never tilted, so it does not need the parallax material.
-	var copied_art := visual.get_node_or_null("Margin/VBox/Art") as TextureRect
-	if copied_art != null:
-		copied_art.material = null
 
 	_set_mouse_filter_recursive(visual)
 	return visual
