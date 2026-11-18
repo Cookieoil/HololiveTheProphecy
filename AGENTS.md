@@ -62,7 +62,7 @@
   - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all three gates and exits `1` on any red gate.
   - **Windows gotcha:** Steam's `godot.exe` is a GUI-subsystem binary, so PowerShell never waits for it and `$LASTEXITCODE` stays empty (a gate can look "failed" while it actually passed). Launch each gate with `Start-Process -Wait -PassThru` and judge `.ExitCode` — that is exactly what `Tools/preflight.ps1` does.
 - **Never commit `reports/`** (gdUnit4 output) or Godot's `~*` atomic-write temp files; both are gitignored.
-- **Branch protection**: `main` requires the `validate` status check (Settings -> Branches -> main), so never rename that job id or add a `name:` to it. Add `Scripts and tests` as a second required check if you want the test gate to block merges. Configure it in the UI or with the GitHub API (`gh api -X PATCH repos/:owner/:repo/branches/main/protection`, requires repo admin).
+- **Branch protection**: `main` requires **both** the `validate` and `Scripts and tests` status checks (confirmed with `gh api repos/:owner/:repo/branches/main/protection`), so never rename either job id — and keep `validate` without a `name:` so its check context stays exactly `validate`. Direct pushes are permitted (`pr_required: false`) and the branch need not be up to date with base (`strict: false`), but admins cannot bypass the rules (`enforce_admins: true`) and force pushes and deletions are disabled. Prefer a pull request for game-data changes so the gates run before the change lands.
 
 - **JSON numbers parse as `float`.** Always coerce with the typed helpers (`_to_int` / `_get_int`, `int(float_value)`) instead of `int(dict["key"])`, which is a compile error under `unsafe_call_argument`.
 
