@@ -579,6 +579,14 @@ func test_battle_scene_mounts_and_toggles_the_debug_menu() -> void:
 	assert_bool(scene.debug_menu.is_open()).is_false()
 	assert_str(scene.debug_button.text).is_equal("Debug ▴")
 
+	# The toggle is a small button: it must stay inside the hand bar's left gutter
+	# instead of stretching under the cards row (the panel keeps its own width).
+	var hand_margin: MarginContainer = scene.hand_bar.get_node("MarginContainer") as MarginContainer
+	assert_object(hand_margin).is_not_null()
+	var gutter: float = float(hand_margin.get_theme_constant("margin_left"))
+	assert_bool(scene.debug_button.size.x > 0.0).is_true()
+	assert_bool(scene.debug_button.size.x <= gutter).is_true()
+
 	scene._on_debug_button_pressed()
 	assert_bool(scene.debug_menu.is_open()).is_true()
 	assert_str(scene.debug_button.text).is_equal("Debug ▾")
