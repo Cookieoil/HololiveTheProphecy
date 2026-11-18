@@ -163,8 +163,13 @@ void fragment() {
 		discard;
 	}
 
-	// Card-local pixel offset from the card centre, plus its 0..1 twin.
+	// Card-local pixel offset from the card centre, plus the two 0..1
+	// coordinates that follow from it: one across the whole quad (where the
+	// composited card lives) and one across the card body itself.
+	// Dividing by the wrong one zooms the quad into the texture and silently
+	// shrinks the card, so quad_uv must use quad_size and card_uv card_size.
 	vec2 p = t * v_ray.xy - center_local.xy;
+	vec2 quad_uv = p / quad_size + 0.5;
 	vec2 card_uv = p / card_size + 0.5;
 
 	// Metallic sheen. normal_local.xy is 0 while the card is flat, so the
@@ -178,7 +183,7 @@ void fragment() {
 	vec4 out_color;
 	if (normal_local.z > 0.0) {
 		// Printed side: the composited card, perspective-warped.
-		out_color = texture(TEXTURE, card_uv);
+		out_color = texture(TEXTURE, quad_uv);
 		out_color.rgb += vec3(1.0, 0.97, 0.90) * (glint * out_color.a);
 	} else if (draw_back) {
 		out_color = card_back_color(p, card_uv, glint);

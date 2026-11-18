@@ -32,8 +32,8 @@ const CARD_CORNER_RADIUS: float = 6.0
 const CARD_PADDING: Vector2 = Vector2(20, 20)
 ## Padded quad (and matching SubViewport logical size) in logical pixels.
 const QUAD_SIZE: Vector2 = Vector2(140, 185)
-## Offscreen supersampling: text and borders stay crisp under the hover zoom and
-## the perspective warp.
+## Offscreen supersampling used only while the deal is in flight, so the text and
+## borders stay crisp under the perspective warp. A resting card renders 1:1.
 const RENDER_SUPERSAMPLE: float = 2.0
 const FAKE_3D_SHADER: Shader = preload("res://Shaders/FakeCard3D.gdshader")
 #endregion
@@ -63,15 +63,6 @@ const SETTLE_FREQUENCY: float = 7.0
 const SETTLE_DAMPING: float = 6.5
 #endregion
 
-#region Merge animation
-## A merged card is forged in hand rather than dealt from the deck, so it pops
-## and flips in place instead of flying in from the right.
-const MERGE_POP_TIME: float = 0.28
-const MERGE_START_YAW: float = 26.0
-const MERGE_START_PITCH: float = -18.0
-const MERGE_START_SCALE: float = 0.88
-#endregion
-
 @export var icon_catalog: CardIconCatalog
 
 @export_group("Value Change Timing")
@@ -89,7 +80,7 @@ var _is_hovered: bool = false
 ## True while the cursor sits inside the slot, even if the card is still flying
 ## in from the deck. The hover is applied the moment it lands.
 var _hover_wanted: bool = false
-## True while the fake-3D draw / merge animation owns the card transform.
+## True while the fake-3D deal animation owns the card transform.
 var _is_drawing: bool = false
 var _pick_selectable: bool = false
 var _flash_active: bool = false
@@ -343,16 +334,10 @@ func _build_fake_3d_rig() -> void:
 	hover_visual.position = CARD_PADDING
 	hover_visual.size = CARD_SIZE
 
-	# Resolution and 2x canvas scale are applied only once the surface actually
+	# Resolution and canvas scale are applied only once the surface actually
 	# holds a canvas item: until then the rendering server has no canvas to
-	# transform and silently rejects the transform.
-	_card_surface.size = Vector2i(
-		int(QUAD_SIZE.x * RENDER_SUPERSAMPLE),
-		int(QUAD_SIZE.y * RENDER_SUPERSAMPLE)
-	)
-	_card_surface.canvas_transform = Transform2D(
-		0.0, Vector2.ONE * RENDER_SUPERSAMPLE, 0.0, Vector2.ZERO
-	)
+	# transform and silently rejects the transform. A resting card renders 1:1.
+	_set_surface_scale(1.0)
 
 	# Per-card material: a shared one would tilt every card in hand at once.
 	_card_material = ShaderMaterial.new()
@@ -455,17 +440,32 @@ func _reset_hover_immediate() -> void:
 
 #region Fake-3D pose
 
-## Pushes a fake-3D orientation into the warp shader. Only the deal / merge
-## animations ever move it away from flat, so a card in hand is never warped.
+## Pushes a fake-3D orientation into the warp shader. Only the deal animation
+## ever moves it away from flat, so a card in hand is never warped.
 func _set_tilt(yaw: float, pitch: float) -> void:
 	if _card_material != null:
 		_card_material.set_shader_parameter("y_rot", yaw)
 		_card_material.set_shader_parameter("x_rot", pitch)
+
+
+## Renders the offscreen card at 1:1 while it rests, and supersampled only while
+## the deal needs the extra resolution, so a card sitting in hand is drawn on the
+## exact same pixel grid as a plain control.
+func _set_surface_scale(supersample: float) -> void:
+	if _card_surface == null:
+		return
+	_card_surface.size = Vector2i(
+		int(QUAD_SIZE.x * supersample),
+		int(QUAD_SIZE.y * supersample)
+	)
+	_card_surface.canvas_transform = Transform2D(
+		0.0, Vector2.ONE * supersample, 0.0, Vector2.ZERO
+	)
 #endregion
 
 #region Fake-3D draw animation
 
-## True while the fake-3D deal / merge animation owns the card transform.
+## True while the fake-3D deal animation owns the card transform.
 func is_drawing() -> bool:
 	return _is_drawing
 
@@ -483,6 +483,8 @@ func play_draw_animation(start_offset: Vector2, delay: float = 0.0, stagger_inde
 	_is_hovered = false
 	modulate.a = 0.0
 	z_index = DRAW_Z_BASE + stagger_index
+	# The card is still off screen here, so the resolution switch is invisible.
+	_set_surface_scale(RENDER_SUPERSAMPLE)
 
 	var arc: float = -(DRAW_ARC_BASE + DRAW_ARC_STEP * float(stagger_index))
 	# Pose the first frame by hand, otherwise the card would flash flat for one
@@ -496,24 +498,6 @@ func play_draw_animation(start_offset: Vector2, delay: float = 0.0, stagger_inde
 	_draw_tween.tween_method(
 		_apply_draw_pose.bind(start_offset, arc), 0.0, 1.0, DRAW_FLIGHT_TIME
 	)
-	_draw_tween.tween_callback(_finish_draw)
-
-
-## Forged-in-hand pop for a freshly merged card: it stays in its slot and flips
-## and swells in place, so a merge never looks like a card dealt from the deck.
-func play_merge_animation() -> void:
-	if _is_consumed or not is_instance_valid(_visual_root):
-		return
-
-	_stop_pose_tweens()
-	_is_drawing = true
-	_is_hovered = false
-	z_index = DRAW_Z_BASE
-	_apply_merge_pose(0.0)
-
-	_draw_tween = create_tween()
-	_draw_tween.set_trans(Tween.TRANS_LINEAR)
-	_draw_tween.tween_method(_apply_merge_pose, 0.0, 1.0, MERGE_POP_TIME)
 	_draw_tween.tween_callback(_finish_draw)
 
 
@@ -561,20 +545,6 @@ func _apply_draw_pose(t: float, start_offset: Vector2, arc: float) -> void:
 	modulate.a = clampf(t / DRAW_FADE_IN, 0.0, 1.0)
 
 
-## One frame of the merge forge pop.
-func _apply_merge_pose(t: float) -> void:
-	var settle: float = _settle(t)
-	_visual_root.position = Vector2.ZERO
-	_visual_root.rotation = 0.0
-	_visual_root.scale = Vector2.ONE * (
-		lerpf(MERGE_START_SCALE, 1.0, settle) + DRAW_POP_SCALE * sin(PI * t)
-	)
-	_set_tilt(
-		lerpf(MERGE_START_YAW, 0.0, settle),
-		lerpf(MERGE_START_PITCH, 0.0, settle)
-	)
-
-
 func _finish_draw() -> void:
 	_draw_tween = null
 	_is_drawing = false
@@ -587,6 +557,9 @@ func _finish_draw() -> void:
 func _apply_flat_pose() -> void:
 	modulate.a = 1.0
 	z_index = 0
+	# Back to 1:1 now that the warp is gone: the card must line up with its slot
+	# exactly, texel for pixel.
+	_set_surface_scale(1.0)
 	if not is_instance_valid(_visual_root):
 		return
 	_visual_root.position = Vector2.ZERO

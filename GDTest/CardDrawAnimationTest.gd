@@ -143,7 +143,7 @@ func test_set_hand_only_deals_the_new_cards() -> void:
 	assert_float(row[1]._visual_root.position.x).is_greater(100.0)
 
 
-func test_merged_card_pops_in_place_instead_of_flying_in() -> void:
+func test_merged_card_appears_in_place_instead_of_flying_in() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var merged: Card = Card.new(5)
 	merged.is_merged = true
@@ -151,10 +151,31 @@ func test_merged_card_pops_in_place_instead_of_flying_in() -> void:
 	bar.set_hand([merged])
 
 	var ui: CardUI = _row(bar)[0]
-	assert_bool(ui.is_drawing()).is_true()
-	# Forged in hand: it never leaves its slot for the deck.
+	# Forged in hand: it never leaves its slot for the deck, and it is never
+	# warped either.
+	assert_bool(ui.is_drawing()).is_false()
 	assert_float(absf(ui._visual_root.position.x)).is_less(0.01)
 	assert_float(absf(ui._visual_root.position.y)).is_less(0.01)
+	assert_float(_tilt(ui, "y_rot")).is_equal_approx(0.0, 0.001)
+	assert_float(_tilt(ui, "x_rot")).is_equal_approx(0.0, 0.001)
+
+
+func test_a_resting_card_renders_on_the_pixel_grid_of_its_slot() -> void:
+	# The offscreen surface has to be 1:1 while the card rests, or the shader
+	# would resample it and the card would no longer line up with its slot.
+	var ui: CardUI = _make_card_ui(Card.new(6))
+	assert_vector(ui._card_surface.canvas_transform.get_scale()).is_equal(Vector2.ONE)
+	assert_vector(Vector2(ui._card_surface.size)).is_equal(CardUI.QUAD_SIZE)
+
+	# It is only supersampled while the deal needs the extra resolution.
+	ui.play_draw_animation(Vector2(740.0, 42.0), 0.0, 0)
+	assert_float(ui._card_surface.canvas_transform.get_scale().x).is_equal_approx(
+		CardUI.RENDER_SUPERSAMPLE, 0.001
+	)
+
+	ui._finish_draw_immediate()
+	assert_vector(ui._card_surface.canvas_transform.get_scale()).is_equal(Vector2.ONE)
+	assert_vector(Vector2(ui._card_surface.size)).is_equal(CardUI.QUAD_SIZE)
 
 
 func test_removed_card_collapses_out_of_the_row() -> void:

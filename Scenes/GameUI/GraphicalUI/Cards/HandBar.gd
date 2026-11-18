@@ -113,8 +113,8 @@ func _apply_pick_candidates() -> void:
 ## Rebuilds the row from the model, reusing every CardUI that is still valid.
 ## A deal that is still in flight, a hover, or a pick highlight therefore all
 ## survive the refreshes BattleScene fires after every action.
-## Cards that are new to the row are dealt in from the right; merged cards pop
-## in place, because they are forged in hand rather than drawn from the deck.
+## Cards that are new to the row are dealt in from the right; merged cards are
+## forged in hand, so they simply fade into the gap that opens for them.
 func set_hand(cards: Array[Card]) -> void:
 	for ui: CardUI in _live_card_uis():
 		if not cards.has(ui.card):
@@ -182,14 +182,15 @@ func _spawn_card(card: Card, animate: bool) -> CardUI:
 	var slot_tween: Tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	slot_tween.tween_property(ui, "custom_minimum_size:x", CARD_WIDTH, ENTER_TWEEN_TIME)
 
-	var slot: int = _next_deal_slot()
 	if card.is_merged:
-		# Merged cards are forged in hand: they pop rather than fly in from the
-		# deck, so a merge reads differently from a draw.
-		ui.play_merge_animation()
-	else:
-		ui.play_draw_animation(_deck_offset(slot), DEAL_STAGGER * float(slot), slot)
+		# A merged card is forged in hand rather than dealt from the deck, so it
+		# simply fades into the gap that opens up for it.
+		ui.modulate.a = 0.0
+		slot_tween.parallel().tween_property(ui, "modulate:a", 1.0, ENTER_TWEEN_TIME)
+		return ui
 
+	var slot: int = _next_deal_slot()
+	ui.play_draw_animation(_deck_offset(slot), DEAL_STAGGER * float(slot), slot)
 	return ui
 
 
