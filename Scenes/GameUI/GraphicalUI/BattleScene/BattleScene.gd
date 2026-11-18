@@ -71,6 +71,14 @@ func on_card_played(card: Card, state: GameState) -> void:
 	hand_bar.remove_card(card)   # animated collapse
 	_update_top_bar(state)       # Actions counter updates immediately too
 
+## Two cards in hand were fused into `result`: the hand plays the merge (the two
+## cards drift into each other from where they were dropped, fold closed, and the
+## merged card opens back out of that fold), then the merge counter updates
+## immediately so the top bar never lags the animation.
+func on_cards_merged(source_a: Card, source_b: Card, result: Card, state: GameState) -> void:
+	hand_bar.play_merge(source_a, source_b, result, state.hand)
+	_update_top_bar(state)
+
 ## Cards the game selected without asking (auto_top_n / auto_highest) get a
 ## short highlight so the player can see what was picked for them.
 ## `hostile` is set when an enemy caused the change; those cards flash red.

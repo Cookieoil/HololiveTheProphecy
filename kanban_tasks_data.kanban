@@ -11,11 +11,9 @@
 			"uuid": "9bf5da1f-f556-41fb-a370-5326a0a8ac0c",
 			"title": "Heavy tasks",
 			"tasks": [
-				"e7c47974-081d-491d-87f3-0bffd7e1f02a",
 				"ebba78a7-806b-432c-bbac-ccd618c780cd",
 				"8a66d4e0-9bfa-4b5b-8d76-9298796f8698",
-				"6307d856-42e9-4321-a133-698b920e7b88",
-				"690b4a52-3fbb-46c0-9b7c-039851f4241f"
+				"6307d856-42e9-4321-a133-698b920e7b88"
 			]
 		},
 		{
@@ -24,7 +22,9 @@
 			"tasks": [
 				"1123dfaa-782d-4cfc-8237-d490a01e159d",
 				"591fc37c-7d63-4f48-a283-d9feabaa7cdd",
-				"2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295"
+				"2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295",
+				"59d40d14-a636-4871-a7de-141eaa7aa120",
+				"df00be59-c397-44c4-9b70-6c4443f8f23b"
 			]
 		},
 		{
@@ -36,8 +36,11 @@
 			"uuid": "ad808fe2-5756-455e-8508-c095cfae22a0",
 			"title": "Done",
 			"tasks": [
+				"690b4a52-3fbb-46c0-9b7c-039851f4241f",
 				"79f83019-950f-40b1-bd82-043422f4c9ea",
 				"edec03dc-fe42-41a6-a27d-8c586679be38",
+				"a3ca0e61-e7ba-4a0d-9290-ba24b0e29c59",
+				"e7c47974-081d-491d-87f3-0bffd7e1f02a",
 				"258ca0ab-7514-4d3e-b7ba-ad11dc4ad6ba",
 				"5361585b-8897-45f3-82e1-8de82a2e037d",
 				"dcefedab-d114-4a7e-a713-d6593ec93b26",
@@ -230,6 +233,27 @@
 			"uuid": "2f4f80cd-f9b5-4e3d-a5a7-d42aa1c0b295",
 			"title": "tooltip des fix",
 			"description": "change the tooltip description Chain ultimate to only Ultimate:",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "a3ca0e61-e7ba-4a0d-9290-ba24b0e29c59",
+			"title": "Fix the game validation",
+			"description": "",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "59d40d14-a636-4871-a7de-141eaa7aa120",
+			"title": "Devlog 2",
+			"description": "record another devlog to show them I'm smart",
+			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
+			"steps": []
+		},
+		{
+			"uuid": "df00be59-c397-44c4-9b70-6c4443f8f23b",
+			"title": "Optimized workflow",
+			"description": "download any necessary tools / plugins to maximine speed and not reply on guessing",
 			"category": "96b4fba8-5ece-4e96-82bf-274f2389d3d6",
 			"steps": []
 		}

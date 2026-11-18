@@ -428,7 +428,13 @@ func _handle_merge(a: Card, b: Card) -> void:
 	
 	# Proceed with the merge
 	var result: Card = state.try_merge(a, b)
+	if result == null:
+		ui.show_message("Invalid merge.")
+		return
 	state.merges_left -= 1
+	# Presentation first: the hand plays the merge, then the counters refresh. The
+	# merged card is reused by that refresh, so the merge is not interrupted by it.
+	ui.on_cards_merged(a, b, result, state)
 	var result_str: String = _color_card_value(result)
 	ui.show_message("Merged → %s" % result_str)
 
