@@ -1,12 +1,14 @@
 class_name CardMergeAnimationTest
 extends GdUnitTestSuite
-## Locks in the merge: the two cards fly at each other, are born into the merged
-## card where they collide, and are then flung out through each other.
+## Locks in the merge: the two cards slide onto the same spot and the card they
+## become is simply there - the plain Reverse: 1999 read, no wind-up and no impact.
 ##   - the two source cards are never taken off screen before the merged card is
 ##     on it (they are children of the node that used to be dimmed to hide it)
-##   - the merged card is born small between them and grows out of the collision
+##   - the merged card takes over their exact spot at full size, unmoved and
+##     unwarped, so no part of the silhouette jumps when the two become one
+##   - the two cards finish up stacked on that spot, behind it
 ##   - the survivors of the merge glide into the gap it left
-##   - the hand refresh BattleScene fires after every action reuses the forging
+##   - the hand refresh BattleScene fires after every action reuses the merging
 ##     card instead of interrupting it
 ##   - grabbing the card mid-merge leaves it flat, visible and grabbable
 ##   - a double merge (a free-play card) merges differently from a cross merge
@@ -14,13 +16,10 @@ extends GdUnitTestSuite
 ## @author TheGreatJellyfish
 ## @version 11/18/2026
 
-## Comfortably longer than CardUI's recoil + collide + hitstop + burn.
-const FORGE_SETTLE_MILLIS: int = 1100
+## Comfortably longer than CardUI's move + settle.
+const FORGE_SETTLE_MILLIS: int = 900
 ## Long enough for the hand layout to settle, so slot positions are real.
 const LAYOUT_SETTLE_MILLIS: int = 60
-## Recoil (0.12s) + charge (0.07s): just past the frame the two cards collide, and
-## comfortably before the two are flung off.
-const STRIKE_MILLIS: int = 240
 
 
 ## Minimal HandBar: the real one lives inside BattleScene, which would start a
@@ -55,7 +54,8 @@ func _card_ui(bar: HandBar, card: Card) -> CardUI:
 	return ui
 
 
-## The flat source plates mounted in the slot for the strike, plate A first.
+## The two source cards mounted in the slot, the dragged card first, whatever
+## order they happen to sit in for drawing.
 func _ghosts(ui: CardUI) -> Array[Control]:
 	var result: Array[Control] = []
 	for child: Node in ui.bounds.get_children():
@@ -63,6 +63,10 @@ func _ghosts(ui: CardUI) -> Array[Control]:
 			var control: Control = child as Control
 			if control != null:
 				result.append(control)
+	result.sort_custom(
+		func(a: Control, b: Control) -> bool:
+			return String(a.name) < String(b.name)
+	)
 	return result
 
 
@@ -152,6 +156,8 @@ func test_the_forged_card_settles_flat_and_the_weld_is_cleaned_up() -> void:
 	# Nothing of the forge survives on a card that is simply sitting in hand.
 	assert_int(_ghosts(forged_ui).size()).is_equal(0)
 	assert_object(forged_ui._weld_overlay).is_null()
+	# It is up, resting, and back on the same pixel grid it was drawn on.
+	assert_bool(forged_ui._visual_root.visible).is_true()
 	assert_float(forged_ui.modulate.a).is_equal_approx(1.0, 0.001)
 	assert_float(forged_ui._visual_root.position.x).is_equal_approx(0.0, 0.01)
 	assert_float(forged_ui._visual_root.position.y).is_equal_approx(0.0, 0.01)
@@ -370,32 +376,34 @@ func test_the_two_source_cards_are_never_hidden_before_the_merged_card() -> void
 	assert_int(blank_frames).is_equal(0)
 
 
-## The merged card is born between the two cards that make it and grows out of
-## their collision, so the first size it is ever seen at is a fraction of a card
-## rather than a full-size card switched on where two used to be.
-func test_the_merged_card_is_born_small_between_the_two_cards() -> void:
+## The merged card takes over the exact spot of the two cards that made it, at
+## full size and unmoved, so the silhouette never jumps: only the face changes,
+## which is the whole point of the merge reading as two cards becoming one.
+func test_the_merged_card_takes_over_the_spot_of_the_two_cards_it_replaced() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var state: GameState = _ready_hand(bar, [2, 3, 5])
 	await await_millis(LAYOUT_SETTLE_MILLIS)
 	var merged: Card = _merge_on_state(bar, state, 1, 2)
 	var forged_ui: CardUI = _card_ui(bar, merged)
 
-	# Hidden while the two cards fly in.
+	# Hidden while the two cards slide onto each other.
 	assert_bool(forged_ui._visual_root.visible).is_false()
 
-	# Sampling catches the size it is first shown at, which is roughly the start
-	# scale rather than a full card.
-	var smallest: float = 99.0
-	for _sample: int in 60:
+	# The first frame it is up, it is already at its resting size and position.
+	var first_scale: float = -1.0
+	for _sample: int in 80:
 		await await_millis(4)
 		if forged_ui._visual_root.visible:
-			smallest = minf(smallest, forged_ui._visual_root.scale.x)
-	assert_float(smallest).is_less(0.75)
-
-	# It does reach full size and land flat in its slot.
-	await await_millis(FORGE_SETTLE_MILLIS)
-	assert_float(forged_ui._visual_root.scale.x).is_equal_approx(1.0, 0.01)
-	assert_float(forged_ui._card_material.get_shader_parameter("x_rot")).is_equal_approx(0.0, 0.01)
+			first_scale = forged_ui._visual_root.scale.x
+			break
+	assert_float(first_scale).is_greater_equal(0.99)
+	assert_float(first_scale).is_less(1.2)
+	assert_vector(forged_ui._visual_root.position).is_equal(Vector2.ZERO)
+	# It is not warped either, so nothing about its silhouette moved.
+	assert_float(_tilt(forged_ui, "x_rot")).is_equal_approx(0.0, 0.001)
+	assert_float(_tilt(forged_ui, "y_rot")).is_equal_approx(0.0, 0.001)
+	# And the two cards are still mounted behind it as it settles.
+	assert_int(_ghosts(forged_ui).size()).is_equal(2)
 
 
 ## The card that comes out of the merge has to be the thing the player watches,
@@ -412,27 +420,40 @@ func test_the_merged_card_is_drawn_in_front_of_the_two_cards_that_made_it() -> v
 		assert_int(plate.get_index()).is_less(forged_ui._visual_root.get_index())
 
 
-func test_the_two_cards_are_flung_out_through_each_other_and_then_gone() -> void:
+## The whole animation is the two cards travelling onto the same spot, so by the
+## end of the move both of them are sitting exactly where the merged card is.
+func test_the_two_cards_slide_onto_the_same_spot() -> void:
 	var bar: HandBar = _make_hand_bar()
 	var state: GameState = _ready_hand(bar, [2, 3, 5])
 	await await_millis(LAYOUT_SETTLE_MILLIS)
 	var merged: Card = _merge_on_state(bar, state, 1, 2)
 	var forged_ui: CardUI = _card_ui(bar, merged)
 
-	# Just after the collision they are still on screen at full strength, and the
-	# two have been fired through each other onto opposite sides of the anvil.
-	await await_millis(STRIKE_MILLIS)
-	var plates: Array[Control] = _ghosts(forged_ui)
-	assert_int(plates.size()).is_equal(2)
-	assert_float(plates[0].modulate.a).is_equal_approx(1.0, 0.01)
-	assert_float(plates[0].position.x * plates[1].position.x).is_less(0.0)
-	var crossed_gap: float = absf(plates[0].position.x - plates[1].position.x)
+	var start_gap: float = absf(_ghosts(forged_ui)[0].position.x - _ghosts(forged_ui)[1].position.x)
+	assert_float(start_gap).is_greater(0.0)
+
+	# Watch the two cards come together: they are seen part way in (so neither
+	# snapped) and then parked on exactly the same spot.
+	var saw_partway: bool = false
+	var saw_stacked: bool = false
+	for _sample: int in 40:
+		await await_millis(10)
+		var plates: Array[Control] = _ghosts(forged_ui)
+		if plates.size() != 2:
+			break
+		var gap: float = absf(plates[0].position.x - plates[1].position.x)
+		if gap > 0.0 and gap < start_gap - 1.0:
+			saw_partway = true
+		if is_zero_approx(gap):
+			saw_stacked = true
+			break
+
+	assert_bool(saw_partway).is_true()
+	assert_bool(saw_stacked).is_true()
+	# The card they became is on top of that same spot by now.
+	await await_millis(40)
+	assert_bool(forged_ui._visual_root.visible).is_true()
 
 	await await_millis(FORGE_SETTLE_MILLIS)
-
-	# ...and by the end they have been carried well clear and freed, leaving the
-	# card they made resting in the slot.
 	assert_int(_ghosts(forged_ui).size()).is_equal(0)
-	assert_bool(forged_ui._visual_root.visible).is_true()
-	assert_float(crossed_gap).is_greater(0.0)
 	assert_object(_card_ui(bar, merged)).is_same(forged_ui)

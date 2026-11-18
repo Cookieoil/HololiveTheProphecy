@@ -64,10 +64,11 @@ const SETTLE_DAMPING: float = 6.5
 #endregion
 
 #region Kintsugi forge animation
-## Two cards strike edge to edge above the target slot and fuse into one along a
-## molten seam, the way broken lacquerware is rejoined with kintsugi. The whole
-## forge is deliberately short: a player merges several times a turn, so it must
-## never make them wait.
+## Two cards are merged by simply moving onto the same spot: the card the player
+## dragged slides across and the card it was dropped on stays put, so the two end
+## up on top of each other and the card that comes out of it is there. The whole
+## thing is short - a player merges several times a turn, so it must never make
+## them wait.
 const KINTSUGI_SHADER: Shader = preload("res://Shaders/KintsugiWeld.gdshader")
 
 ## Node names the two source plates are mounted under, so they stay
@@ -75,44 +76,15 @@ const KINTSUGI_SHADER: Shader = preload("res://Shaders/KintsugiWeld.gdshader")
 const FORGE_PLATE_A: String = "ForgePlateA"
 const FORGE_PLATE_B: String = "ForgePlateB"
 
-## The two cards pull apart, then ram into each other. That collision is what
-## creates the merged card, so both halves of the motion have to be big enough to
-## read: the cards station well clear of each other, then cross right over.
-const MERGE_APPROACH_TIME: float = 0.12
-const MERGE_COLLIDE_TIME: float = 0.07
-## A double merge (a free-play card) holds the collision for one beat longer, so
-## the extra value it is worth can be felt as well as read.
-const MERGE_HITSTOP: float = 0.035
-## The card born out of the collision grows out and lands while the two spent
-## plates are dragged back into it and swallowed.
-const MERGE_CONSUME_TIME: float = 0.20
-
-## How far the collision point sits above the resting slot.
-const MERGE_LIFT: float = 26.0
-## How far each card stations from the anvil before the slam. Wide enough that
-## they clearly read as two separate cards, not as one card twitching.
-const MERGE_STAGE_GAP: float = 46.0
-## The plates swell a little as they accelerate into each other.
-const MERGE_STAGE_SCALE: float = 1.05
-## 2D bank of each card's leading edge as it comes in.
-const MERGE_INNER_TILT: float = 8.0
-## Fraction of the lift the collision still holds above the resting slot.
-const MERGE_IMPACT_LIFT: float = 0.45
-## The merged card is born small, right where the two cards met, and grows out of
-## it. It is never a card that fades in where two cards used to be.
-const MERGE_CARD_START_SCALE: float = 0.5
-## Share of the swallow phase the card spends bursting out to full size.
-const MERGE_GROW_FRACTION: float = 0.7
-## How far past full size it overshoots on the way out of the collision.
-const MERGE_POP_SCALE: float = 0.16
-## The card unfolds out of the collision in fake 3D, then settles flat.
-const MERGE_IMPACT_PITCH: float = 14.0
-## Where each spent card has flown out to by the end, and how small it has
-## shrunk: they are carried off out the far side, not erased where they stopped.
-const MERGE_EXIT_GAP: float = 54.0
-const MERGE_CONSUME_SCALE: float = 0.5
+## The two cards travel onto the same spot.
+const MERGE_MOVE_TIME: float = 0.20
+## The molten seam flashes across the card that comes out and the new value is
+## branded on as it settles back to its resting size.
+const MERGE_SETTLE_TIME: float = 0.18
+## How far past full size the merged card springs as it settles.
+const MERGE_POP_SCALE: float = 0.10
 const MERGE_BRAND_SCALE: float = 1.32
-const MERGE_BRAND_DELAY: float = 0.10
+const MERGE_BRAND_DELAY: float = 0.06
 const MERGE_BRAND_TIME: float = 0.16
 const MERGE_Z_INDEX: int = 45
 #endregion
@@ -177,11 +149,9 @@ var _forge_ghost_b: Control
 ## Molten seam overlay drawn over the card face while the weld burns.
 var _weld_overlay: ColorRect
 var _weld_material: ShaderMaterial
-## Where each source plate started, in this card's own local pixels.
+## Where each source card started, in this card's own local pixels.
 var _merge_from_a: Vector2 = Vector2.ZERO
 var _merge_from_b: Vector2 = Vector2.ZERO
-## Which side of the anvil plate A came from (+1 right, -1 left).
-var _merge_incoming_dir: float = 1.0
 
 ## Fake-3D rig, built in _ready() so CardUI.tscn stays a plain flat layout.
 var _visual_root: Control
@@ -790,7 +760,6 @@ func play_merge_animation(
 	# vanishing and a third one appearing.
 	_visual_root.visible = false
 	z_index = MERGE_Z_INDEX
-	_set_surface_scale(RENDER_SUPERSAMPLE)
 	_visual_root.position = Vector2.ZERO
 	_visual_root.rotation = 0.0
 	_visual_root.scale = Vector2.ONE
@@ -800,31 +769,21 @@ func play_merge_animation(
 	_forge_ghost_b = ghost_b
 	_mount_forge_ghost(ghost_a, start_offset_a, FORGE_PLATE_A)
 	_mount_forge_ghost(ghost_b, start_offset_b, FORGE_PLATE_B)
-	# Both cards go behind the card they are about to create, so that card always
-	# draws in front: it is born between them and grows out of their collision.
+	# The card that was dragged rides on top of the card it was dropped on, and
+	# the card the two of them become is in front of both.
 	_put_forge_plates_behind_card()
 
 	_merge_from_a = start_offset_a
 	_merge_from_b = start_offset_b
-	# Which side of the anvil plate A comes in from.
-	_merge_incoming_dir = 1.0 if start_offset_a.x > start_offset_b.x else -1.0
 
 	_build_weld_overlay(double_merged)
-	_pose_approach(0.0)
+	_pose_move(0.0)
 
 	_merge_tween = create_tween()
 	_merge_tween.set_trans(Tween.TRANS_LINEAR)
-	_merge_tween.tween_method(_pose_approach, 0.0, 1.0, MERGE_APPROACH_TIME)
-	# The two cards meet dead centre on the last frame of the charge, and that is
-	# the exact frame the merged card is born on.
-	_merge_tween.tween_method(_pose_collide, 0.0, 1.0, MERGE_COLLIDE_TIME)
-	_merge_tween.tween_callback(_on_merge_impact)
-	if double_merged:
-		# A free-play card is worth a beat of frozen impact.
-		_merge_tween.tween_interval(MERGE_HITSTOP)
-	# The swallow runs the full phase, so it has completely faded the two spent
-	# cards out by the time they are freed.
-	_merge_tween.tween_method(_pose_consume, 0.0, 1.0, MERGE_CONSUME_TIME)
+	_merge_tween.tween_method(_pose_move, 0.0, 1.0, MERGE_MOVE_TIME)
+	_merge_tween.tween_callback(_on_merge_landed)
+	_merge_tween.tween_method(_pose_settle, 0.0, 1.0, MERGE_SETTLE_TIME)
 	_merge_tween.tween_callback(_finish_merge)
 
 
@@ -856,9 +815,9 @@ func _discard_ghost(ghost: Control) -> void:
 		ghost.free()
 
 
-## Parks a source plate inside the fixed slot so the strike can play there. The
-## ghost is a plain flat face, so the cock and the slam are a 2D bank rather than
-## the fake-3D warp, which belongs to the card that is being forged.
+## Parks a source card inside the fixed slot so the merge can play there. The
+## ghost is a plain flat copy of the card's face; only its position ever changes,
+## so it can be drawn anywhere without disturbing the hand layout.
 ## The plate is renamed, so the two of them stay distinguishable as siblings.
 func _mount_forge_ghost(ghost: Control, offset: Vector2, plate_name: String) -> void:
 	if ghost == null:
@@ -867,8 +826,6 @@ func _mount_forge_ghost(ghost: Control, offset: Vector2, plate_name: String) -> 
 	ghost.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	ghost.size = CARD_SIZE
 	ghost.custom_minimum_size = CARD_SIZE
-	# A spent card shrinks about its own middle as it is carried off, so the plate
-	# narrows in on itself rather than scaling from an edge.
 	ghost.pivot_offset = CARD_SIZE * 0.5
 	ghost.position = offset
 	ghost.scale = Vector2.ONE
@@ -878,140 +835,53 @@ func _mount_forge_ghost(ghost: Control, offset: Vector2, plate_name: String) -> 
 	bounds.add_child(ghost)
 
 
-## The wind-up: both cards lift off the hand and take up station well clear of
-## each other, banked inward and leaning towards the collision. `dir` says which
-## side plate A came from.
-func _pose_approach(u: float) -> void:
+## One frame of the move: both cards glide from where they were onto the same
+## spot, so the two end up stacked on top of each other. Neither is hidden at any
+## point, and nothing else about them moves.
+func _pose_move(u: float) -> void:
 	var eased: float = _ease_out_cubic(u)
-	var dir: float = _merge_incoming_dir
-	var cock: float = dir * MERGE_INNER_TILT
-	var stance: float = lerpf(1.0, MERGE_STAGE_SCALE, eased)
-
-	_pose_forge_ghost(_forge_ghost_a,
-		_merge_from_a,
-		Vector2(dir * MERGE_STAGE_GAP, -MERGE_LIFT),
-		0.0, cock, eased)
-	_pose_forge_ghost(_forge_ghost_b,
-		_merge_from_b,
-		Vector2(-dir * MERGE_STAGE_GAP, -MERGE_LIFT),
-		0.0, -cock, eased)
-	_set_forge_plates_scale(stance)
+	_pose_forge_card(_forge_ghost_a, _merge_from_a.lerp(Vector2.ZERO, eased))
+	_pose_forge_card(_forge_ghost_b, _merge_from_b.lerp(Vector2.ZERO, eased))
 
 
-## The charge: both cards accelerate into the contact point and meet dead centre on
-## the last frame of this phase. That frame is where the merged card is born, and
-## the two cards carry straight on through each other from there.
-func _pose_collide(u: float) -> void:
-	var eased: float = _ease_in_quart(u)
-	var dir: float = _merge_incoming_dir
-	var contact := Vector2(0.0, -MERGE_LIFT * MERGE_IMPACT_LIFT)
-	var cock: float = dir * MERGE_INNER_TILT
-
-	# Each card's leading edge stays banked into the other until they touch.
-	_pose_forge_ghost(_forge_ghost_a,
-		Vector2(dir * MERGE_STAGE_GAP, -MERGE_LIFT), contact,
-		cock, 0.0, eased)
-	_pose_forge_ghost(_forge_ghost_b,
-		Vector2(-dir * MERGE_STAGE_GAP, -MERGE_LIFT), contact,
-		-cock, 0.0, eased)
-
-
-## One frame of a forge ghost, gliding from one pose to the next.
-func _pose_forge_ghost(
-	ghost: Control,
-	from_position: Vector2,
-	to_position: Vector2,
-	from_rotation: float,
-	to_rotation: float,
-	u: float
-) -> void:
-	if not is_instance_valid(ghost):
+## One frame of the settle: the card the two became springs back to its resting
+## size while the molten seam runs across it and the new value is branded on.
+func _pose_settle(u: float) -> void:
+	var settle: float = clampf(_settle(u), 0.0, 1.0)
+	if not is_instance_valid(_visual_root):
 		return
-	ghost.position = from_position.lerp(to_position, u)
-	ghost.rotation = lerpf(from_rotation, to_rotation, u)
+	_visual_root.position = Vector2.ZERO
+	_visual_root.scale = Vector2.ONE * (1.0 + MERGE_POP_SCALE * (1.0 - settle))
 
 
-## Squeezes both plates together. The forged card starts the burn at exactly this
-## size, which is what makes the hand-off from plates to card invisible.
-func _set_forge_plates_scale(value: float) -> void:
-	var plate_scale := Vector2.ONE * value
-	if is_instance_valid(_forge_ghost_a):
-		_forge_ghost_a.scale = plate_scale
-	if is_instance_valid(_forge_ghost_b):
-		_forge_ghost_b.scale = plate_scale
-
-
-## Drops both spent cards to the bottom of the slot, so the card they are about to
-## create always draws in front of them and is the thing the player watches.
+## Drops both source cards behind the card they become, so the card the player
+## watches is always the one in front. The dragged card goes above the card it
+## was dropped on.
 func _put_forge_plates_behind_card() -> void:
-	var depth: int = 0
-	if is_instance_valid(_forge_ghost_a):
-		bounds.move_child(_forge_ghost_a, depth)
-		depth += 1
 	if is_instance_valid(_forge_ghost_b):
-		bounds.move_child(_forge_ghost_b, depth)
+		bounds.move_child(_forge_ghost_b, 0)
+	if is_instance_valid(_forge_ghost_a):
+		bounds.move_child(_forge_ghost_a, 1)
 
 
-func _pose_forge_plate(plate: Control, position: Vector2, p_scale: float, alpha: float) -> void:
-	if not is_instance_valid(plate):
-		return
-	plate.position = position
-	plate.rotation = 0.0
-	plate.scale = Vector2.ONE * p_scale
-	plate.modulate.a = alpha
+## Slides one of the two source cards. They only ever move: no scaling, no fading,
+## so what the player sees is exactly the two cards they had.
+func _pose_forge_card(plate: Control, position: Vector2) -> void:
+	if is_instance_valid(plate):
+		plate.position = position
 
 
-## The card born out of the collision bursts out to full size and lands in the
-## slot, unfolding flat in fake 3D, while the two cards that made it carry on out
-## the far side of each other and shrink away. Nothing fades in place where two
-## cards used to be: the two are still moving, and the card is what came out of
-## them meeting.
-func _pose_consume(u: float) -> void:
-	# A damped spring, so the card lands with weight instead of stopping dead.
-	var settle: float = _settle(u)
-	var stack_y: float = -MERGE_LIFT * MERGE_IMPACT_LIFT * (1.0 - settle)
-
-	# Burst: snaps out of the collision fast, overshoots past full size, settles.
-	var burst: float = clampf(u / MERGE_GROW_FRACTION, 0.0, 1.0)
-	var grown: float = MERGE_CARD_START_SCALE \
-		+ (1.0 - MERGE_CARD_START_SCALE) * _ease_out_cubic(burst) \
-		+ MERGE_POP_SCALE * sin(PI * burst)
-
+## The two cards have landed on top of each other. The card they make is switched
+## on right there, in exactly the same place and at exactly the same size, so the
+## silhouette does not change: the two source cards end up behind it, and the
+## molten seam and the new value tell the player what happened.
+func _on_merge_landed() -> void:
 	if is_instance_valid(_visual_root):
-		_visual_root.position = Vector2(0.0, stack_y)
-		_visual_root.scale = Vector2.ONE * grown
-	_set_tilt(-MERGE_IMPACT_PITCH * (1.0 - clampf(settle, 0.0, 1.0)), 0.0)
-
-	# The two spent cards are flung on out through each other, shrinking as they
-	# go, and are only faded out in the tail once the new card has grown past them.
-	var leaving: float = _ease_out_cubic(u)
-	var plate_scale: float = lerpf(MERGE_STAGE_SCALE, MERGE_CONSUME_SCALE, leaving)
-	var plate_gap: float = lerpf(0.0, MERGE_EXIT_GAP, leaving)
-	var plate_alpha: float = 1.0 - smoothstep(0.5, 1.0, u)
-	var dir: float = _merge_incoming_dir
-
-	_pose_forge_plate(_forge_ghost_a,
-		Vector2(-dir * plate_gap, stack_y), plate_scale, plate_alpha)
-	_pose_forge_plate(_forge_ghost_b,
-		Vector2(dir * plate_gap, stack_y), plate_scale, plate_alpha)
-
-
-## The two cards have just met. The merged card is born on this exact frame,
-## small and right between them, and everything from here is it growing out of
-## their collision while they are carried off through each other. Nothing is
-## switched on where two cards used to be; nothing needs to be, because the two
-## are still on screen at this moment and still moving.
-func _on_merge_impact() -> void:
-	var anvil_y: float = -MERGE_LIFT * MERGE_IMPACT_LIFT
-
-	if is_instance_valid(_visual_root):
-		_visual_root.position = Vector2(0.0, anvil_y)
-		_visual_root.scale = Vector2.ONE * MERGE_CARD_START_SCALE
+		_visual_root.position = Vector2.ZERO
+		_visual_root.scale = Vector2.ONE
 		_visual_root.visible = true
-	_set_tilt(-MERGE_IMPACT_PITCH, 0.0)
-	_set_surface_scale(RENDER_SUPERSAMPLE)
 
-	# The forge lights the newborn card up gold for the length of the swallow.
+	# The merge itself lights the card up gold while it settles.
 	if _glow != null:
 		_glow.set_active(true, OutlineGlow.Preset.ARCANE_GOLD)
 
@@ -1056,7 +926,7 @@ func _start_weld_burn() -> void:
 		return
 	_weld_tween = create_tween()
 	_weld_tween.set_trans(Tween.TRANS_LINEAR)
-	_weld_tween.tween_method(_set_weld_progress, 0.0, 1.0, MERGE_CONSUME_TIME)
+	_weld_tween.tween_method(_set_weld_progress, 0.0, 1.0, MERGE_SETTLE_TIME)
 
 
 func _set_weld_progress(value: float) -> void:
@@ -1124,9 +994,6 @@ func _clear_weld_overlay() -> void:
 	_weld_material = null
 
 
-## Tween-friendly accelerating slam, so the plates arrive with weight.
-static func _ease_in_quart(x: float) -> float:
-	return x * x * x * x
 #endregion
 
 func setup(p_card: Card, p_hand_bar: HandBar = null) -> void:
