@@ -95,6 +95,10 @@ var _target_selector: OptionButton
 var _tier_selector: OptionButton
 var _value_spin: SpinBox
 var _close_button: Button
+## Header row: the drag handle for the whole panel.
+var _header: HBoxContainer
+## True while the header is held down and dragging the panel.
+var _dragging: bool = false
 ## Buttons that mutate battle state. They stay disabled while the turn loop is not
 ## waiting for a player action, because that is the only moment it can accept one.
 var _gated_buttons: Array[Button] = []
@@ -110,6 +114,9 @@ func _init() -> void:
 	name = "DebugMenuPopup"
 	visible = false
 	custom_minimum_size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
+	# Opaque to clicks: the menu background must never let a click through to the
+	# hand cards behind it.
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	_seat_above_bottom_left()
 	_build_layout()
 	_apply_chrome()
@@ -195,6 +202,22 @@ func _seat_above_bottom_left() -> void:
 	offset_bottom = -SEAT_BOTTOM
 
 
+## Slides the panel by a mouse delta. Offsets are moved instead of `position`, so the
+## panel keeps its bottom-left anchoring, and the result is clamped so the whole panel
+## always stays inside the viewport (it can never be dragged out of reach).
+func _move_by(delta: Vector2) -> void:
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var width: float = maxf(size.x, custom_minimum_size.x)
+	var height: float = maxf(size.y, custom_minimum_size.y)
+
+	offset_left = clampf(offset_left + delta.x, 0.0, maxf(0.0, viewport_size.x - width))
+	offset_right = offset_left + width
+
+	var top: float = clampf(offset_top + delta.y, -viewport_size.y, -height)
+	offset_top = top
+	offset_bottom = top + height
+
+
 ## Dark slab with an accent border, matched to SkillTooltipPopup.
 func _apply_chrome() -> void:
 	var box := StyleBoxFlat.new()
@@ -214,16 +237,22 @@ func _build_layout() -> void:
 	column.add_theme_constant_override("separation", 6)
 	add_child(column)
 
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 6)
-	column.add_child(header)
+	_header = HBoxContainer.new()
+	_header.add_theme_constant_override("separation", 6)
+	# The header doubles as the drag handle: it slides the whole panel, so a tester
+	# can push the menu clear of whatever they are inspecting instead of closing it.
+	_header.mouse_filter = Control.MOUSE_FILTER_STOP
+	_header.mouse_default_cursor_shape = Control.CURSOR_MOVE
+	_header.tooltip_text = "Drag to move the debug menu"
+	_header.gui_input.connect(_on_header_gui_input)
+	column.add_child(_header)
 
-	var title := _make_label("DEBUG - tester tools", 13, TITLE_COLOR)
+	var title := _make_label("≡ DEBUG - tester tools", 13, TITLE_COLOR)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title)
+	_header.add_child(title)
 
 	_status_label = _make_label("locked", 11, LOCKED_COLOR)
-	header.add_child(_status_label)
+	_header.add_child(_status_label)
 
 	# Never gated: the menu must always be closable.
 	_close_button = Button.new()
@@ -232,7 +261,7 @@ func _build_layout() -> void:
 	_close_button.focus_mode = Control.FOCUS_NONE
 	_close_button.custom_minimum_size = Vector2(28.0, 22.0)
 	_close_button.pressed.connect(_on_close_pressed)
-	header.add_child(_close_button)
+	_header.add_child(_close_button)
 
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -487,6 +516,18 @@ func _snap_int(snapshot: Dictionary, key: String, fallback: int) -> int:
 
 
 #region Signal Handlers
+## Header drag. Godot keeps routing motion to the control that was pressed while a
+## button is held, so the drag keeps working even when the cursor leaves the panel.
+func _on_header_gui_input(event: InputEvent) -> void:
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT:
+		_dragging = click.pressed
+		return
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion != null and _dragging:
+		_move_by(motion.relative)
+
+
 func _on_close_pressed() -> void:
 	close_menu()
 

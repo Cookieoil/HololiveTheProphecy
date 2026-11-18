@@ -233,6 +233,93 @@ func test_unit_tool_without_a_target_does_nothing() -> void:
 #endregion
 
 
+#region Header drag (the panel can be moved out of the way)
+
+## Sends the press/release the GUI would deliver to the header.
+func _press_header(popup: DebugMenuPopup, pressed: bool, button: MouseButton = MOUSE_BUTTON_LEFT) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = pressed
+	popup._on_header_gui_input(event)
+
+
+## Sends one motion step over the header.
+func _drag_header(popup: DebugMenuPopup, delta: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
+	event.relative = delta
+	popup._on_header_gui_input(event)
+
+
+func test_dragging_the_header_moves_the_panel() -> void:
+	var popup: DebugMenuPopup = DebugMenuPopup.new()
+	add_child(popup)
+	var start_left: float = popup.offset_left
+	var start_top: float = popup.offset_top
+
+	# Motion without a press is not a drag.
+	_drag_header(popup, Vector2(40.0, -30.0))
+	assert_float(popup.offset_left).is_equal(start_left)
+
+	_press_header(popup, true)
+	_drag_header(popup, Vector2(40.0, -30.0))
+	assert_float(popup.offset_left).is_equal(start_left + 40.0)
+	assert_float(popup.offset_top).is_equal(start_top - 30.0)
+
+	# Releasing ends the drag.
+	_press_header(popup, false)
+	_drag_header(popup, Vector2(40.0, -30.0))
+	assert_float(popup.offset_left).is_equal(start_left + 40.0)
+
+	# Moving the panel must never resize it.
+	assert_float(popup.offset_right - popup.offset_left).is_equal(DebugMenuPopup.PANEL_WIDTH)
+	assert_float(popup.offset_bottom - popup.offset_top).is_equal(DebugMenuPopup.PANEL_HEIGHT)
+
+
+func test_header_drag_ignores_other_mouse_buttons() -> void:
+	var popup: DebugMenuPopup = DebugMenuPopup.new()
+	add_child(popup)
+	var start_left: float = popup.offset_left
+
+	_press_header(popup, true, MOUSE_BUTTON_RIGHT)
+	_drag_header(popup, Vector2(50.0, 0.0))
+
+	assert_float(popup.offset_left).is_equal(start_left)
+
+
+func test_header_is_a_wired_drag_handle() -> void:
+	var popup: DebugMenuPopup = DebugMenuPopup.new()
+	add_child(popup)
+
+	assert_int(popup._header.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+	assert_bool(popup._header.gui_input.is_connected(popup._on_header_gui_input)).is_true()
+	# The menu background must swallow clicks instead of leaking them to the cards.
+	assert_int(popup.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+
+
+func test_dragging_cannot_push_the_panel_off_screen() -> void:
+	var popup: DebugMenuPopup = DebugMenuPopup.new()
+	add_child(popup)
+	var viewport_size: Vector2 = popup.get_viewport_rect().size
+	assert_bool(viewport_size.y >= DebugMenuPopup.PANEL_HEIGHT).is_true()
+
+	_press_header(popup, true)
+
+	# Far up-left: the panel stops at the viewport's top/left edges.
+	_drag_header(popup, Vector2(-10000.0, -10000.0))
+	assert_float(popup.offset_left).is_equal(0.0)
+	assert_bool(popup.global_position.x >= 0.0).is_true()
+	assert_bool(popup.global_position.y >= 0.0).is_true()
+
+	# Far down-right: it stops with its own bottom-right corner on the edge.
+	_drag_header(popup, Vector2(10000.0, 10000.0))
+	assert_float(popup.offset_bottom).is_equal(0.0)
+	assert_bool(popup.global_position.x + popup.size.x <= viewport_size.x).is_true()
+	assert_bool(popup.global_position.y + popup.size.y <= viewport_size.y).is_true()
+
+	_press_header(popup, false)
+#endregion
+
+
 #region Card tools (overflow, merge tiers, hand operations)
 
 func test_spawning_ignores_the_hand_cap() -> void:
