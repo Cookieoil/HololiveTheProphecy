@@ -4,10 +4,12 @@
 # Usage:
 #   pwsh -File Tools/preflight.ps1
 #   pwsh -File Tools/preflight.ps1 -Godot 'C:\path\to\godot.exe'
+#   pwsh -File Tools/preflight.ps1 -SkipIndexCheck
 #
 # Exits 0 when every gate is green, 1 otherwise.
 param(
-    [string]$Godot = 'godot'
+    [string]$Godot = 'godot',
+    [switch]$SkipIndexCheck
 )
 
 $ErrorActionPreference = 'Continue'
@@ -34,6 +36,15 @@ $gates = @(
     @{ Name = 'Compile all scripts';  Args = @('--headless', '--path', '.', '--script', 'res://Tools/check_scripts.gd') },
     @{ Name = 'Unit tests (gdUnit4)'; Args = @('--headless', '--path', '.', '-s', 'res://addons/gdUnit4/bin/GdUnitCmdTool.gd', '-a', 'res://GDTest', '-c', '--ignoreHeadlessMode') }
 )
+
+# The generated symbol index (Docs/) must still match the sources, otherwise the
+# map the next reader trusts is lying. Same command the CI `project` job runs.
+if ($SkipIndexCheck) {
+    Write-Host 'Skipping the symbol index gate (-SkipIndexCheck).' -ForegroundColor Yellow
+}
+else {
+    $gates += @{ Name = 'Symbol index up to date'; Args = @('--headless', '--path', '.', '--script', 'res://Tools/gen_code_index.gd', '--', '--check') }
+}
 
 $failed = @()
 

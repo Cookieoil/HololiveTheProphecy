@@ -3,8 +3,9 @@ name: Validate Game Data
 
 # res://Data/json/ is the single source of truth the game loads at runtime and
 # res://Data/xlsx/game_data.xlsx is only a bulk-entry authoring tool. Both are
-# checked here, together with the GDScript compile gate and the gdUnit4 suite,
-# so a broken data edit or a typing regression cannot reach main.
+# checked here, together with the GDScript compile gate, the generated symbol
+# index in Docs/ and the gdUnit4 suite, so a broken data edit, a typing
+# regression or a stale code map cannot reach main.
 #
 # Actions are pinned to commit SHAs on purpose: a moving major tag is a supply
 # chain risk. The trailing comment records the version each SHA was verified at.
@@ -119,6 +120,13 @@ jobs:
       - name: Compile all scripts
         timeout-minutes: 5
         run: godot --headless --path . --script res://Tools/check_scripts.gd
+
+      # The committed symbol index (Docs/) is what a reader trusts instead of
+      # opening files, so it must match the sources: a code change that forgets
+      # to regenerate it fails here rather than silently leaving a stale map.
+      - name: Check symbol index is up to date
+        timeout-minutes: 5
+        run: godot --headless --path . --script res://Tools/gen_code_index.gd -- --check
 
       # gdUnit4 refuses to run in headless mode unless that check is ignored;
       # -c keeps going after the first failure so the log lists every failure.

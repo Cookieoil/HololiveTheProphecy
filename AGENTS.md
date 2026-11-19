@@ -15,6 +15,15 @@
 - `res://Skills/` — Ability and skill logic.
 - `res://Tools/` — Editor tools, Python scripts, and utilities.
 
+## Code Navigation (read this before opening files)
+- **`Docs/CODEBASE_MAP.md` is the generated table of contents of the whole codebase.** Section 1 is a one-screen overview of every first-party script (class_name, size, role); section 2 carries each script's signals, constants, exports, onready nodes and public API with line numbers, plus `Uses` / `Used by`; section 3 lists every `EventBus` signal with the scripts that emit and listen to it; section 4 maps scenes to scripts; section 5 lists the shape, entry count and keys of every JSON data file.
+- **`Docs/code_index.json` is the same data for lookups:** `rg -n '"my_symbol"' Docs/code_index.json` returns every `path:line` definition (classes, signals, constants, variables, functions).
+- **Use them instead of reading sources.** Read the map, then open only the file and line range it points at — never read a whole file to find one function.
+- **Both files are generated** by `Tools/gen_code_index.gd` — never hand-edit them. Regenerate after changing any first-party script, scene or data file:
+  `godot --headless --path . --script res://Tools/gen_code_index.gd`
+- **Staleness is a gate:** append `-- --check` to fail when the committed files no longer match the sources. `Tools/preflight.ps1` runs it (skip with `-SkipIndexCheck`) and the CI `project` job runs it, so a forgotten regeneration fails the build instead of leaving a stale map behind.
+- The index walks `res://` subfolders only: `addons/`, `Trash/`, `bin/`, `reports/`, `.godot/` and files sitting directly in the project root are ignored, which keeps the output identical on every checkout.
+
 ## Strict Coding Rules
 - **100% Static Typing:** Every variable, parameter, and function return MUST have explicit types (`var speed: float = 200.0`, `func take_damage(amount: int) -> void:`). Untyped declarations are compiler errors.
 - **Strict Warning Compliance:** `project.godot` has `unsafe_property_access`, `unsafe_method_access`, `unsafe_cast`, `unsafe_call_argument`, and `missing_await` set to **Error (2)**. Ensure all code compiles without warnings.
@@ -55,13 +64,14 @@
 - **CI gates** (`.github/workflows/validate_game_data.yml`) run on every pull request (deliberately no `paths:` filter — a required check that never runs would block every PR) and on every push to `main`, split into three jobs:
   - `version` — resolves the Godot version from `project.godot` once, for the other jobs.
   - `validate` — the data gate: the validator with `--strict`, so any error **or warning** fails the build. Keep this job id and its missing `name:`; `main` requires the `validate` status check.
-  - `project` — compiles every script and runs the gdUnit4 suite.
+  - `project` — compiles every script, verifies the generated symbol index in `Docs/` still matches the sources, and runs the gdUnit4 suite.
   Errors/warnings are annotated inline on the PR, summarised on the job page, and the JUnit/HTML report is kept as the `gdunit4-reports` artifact. A red job means bad game data or a broken script — never merge past it.
-- **Local pre-flight before pushing** (the same three gates CI runs, all headless):
+- **Local pre-flight before pushing** (the same gates CI runs, all headless):
   - Validate data: `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
   - Compile every script: `godot --headless --path . --script res://Tools/check_scripts.gd`
+  - Symbol index is current: `godot --headless --path . --script res://Tools/gen_code_index.gd -- --check`
   - Unit tests: `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
-  - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all three gates and exits `1` on any red gate.
+  - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all four gates and exits `1` on any red gate (add `-SkipIndexCheck` to leave the generated index alone while iterating).
   - **Windows gotcha:** Steam's `godot.exe` is a GUI-subsystem binary, so PowerShell never waits for it and `$LASTEXITCODE` stays empty (a gate can look "failed" while it actually passed). Launch each gate with `Start-Process -Wait -PassThru` and judge `.ExitCode` — that is exactly what `Tools/preflight.ps1` does.
 - **Never commit `reports/`** (gdUnit4 output) or Godot's `~*` atomic-write temp files; both are gitignored.
 - **Branch protection**: `main` requires **both** the `validate` and `Scripts and tests` status checks (confirmed with `gh api repos/:owner/:repo/branches/main/protection`), so never rename either job id — and keep `validate` without a `name:` so its check context stays exactly `validate`. Direct pushes are permitted (`pr_required: false`) and the branch need not be up to date with base (`strict: false`), but admins cannot bypass the rules (`enforce_admins: true`) and force pushes and deletions are disabled. Prefer a pull request for game-data changes so the gates run before the change lands.

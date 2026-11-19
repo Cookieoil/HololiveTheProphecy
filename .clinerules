@@ -13,16 +13,32 @@ After you have completed a task and all tests/verifications pass, you MUST:
   `git add -f` them.
 
 ## Pre-flight gates (required before every commit)
-Run all three headless gates from the repo root — they are exactly the gates CI runs:
+Run all four headless gates from the repo root — they are exactly the gates CI runs:
 
 1. Validate game data (errors **and** warnings are fatal):
    `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
 2. Compile every script:
    `godot --headless --path . --script res://Tools/check_scripts.gd`
-3. Unit tests:
+3. Generated symbol index still matches the sources:
+   `godot --headless --path . --script res://Tools/gen_code_index.gd -- --check`
+4. Unit tests:
    `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
 
 Never commit past a red gate. If a gate fails, fix the root cause — do not weaken the gate.
+If gate 3 fails, regenerate the index (it is generated — never hand-edit `Docs/`).
+
+## Context budget (explore without reading everything)
+- **Read `Docs/CODEBASE_MAP.md` first.** It is generated from the sources: section 1 is a
+  one-screen overview of every first-party script, section 2 carries each script's
+  signals/exports/public API with line numbers plus `Uses` / `Used by`, section 3 lists every
+  `EventBus` signal with its emitters and listeners, section 4 maps scenes to scripts, and
+  section 5 lists the shape and keys of every JSON data file.
+- **Look symbols up instead of grepping blindly:**
+  `rg -n '"my_symbol"' Docs/code_index.json` returns every `path:line` definition.
+- **Then open only the file and line range you need** — never read a whole file to find one
+  function, and never read `addons/` or `Trash/` unless the task is about them.
+- **Regenerate after any code, scene or data change:**
+  `godot --headless --path . --script res://Tools/gen_code_index.gd`
 
 ## Terminal environment (Windows / PowerShell 7)
 - The default integrated terminal is PowerShell 7 from `C:\Users\vmv03\Tools\PowerShell7`
