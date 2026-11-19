@@ -61,6 +61,6 @@ Private:
 - L641-658 `_describe_value`
 
 Uses: Card, GameState, SkillContext, SkillEffect, Unit
-Used by: Core/DataLoader.gd, Skills/SkillContext.gd, Skills/SkillEffect.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, Skills/SkillPreviewFormatter.gd
 Loads: —
 

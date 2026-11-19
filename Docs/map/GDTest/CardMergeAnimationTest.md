@@ -38,7 +38,7 @@ Private:
 - L95-102 `_ready_hand`
 - L107-113 `_merge_on_state`
 
-Uses: BattleScene, Card, CardUI, ForgePlate, GameManager, GameState, HandBar
+Uses: Card, CardUI, ForgePlate, GameState, HandBar
 Used by: —
 Loads: —
 

@@ -15,5 +15,5 @@ Private:
 
 Uses: DataBuilder
 Used by: —
-Loads: res
+Loads: res://Tools/dataBuilder.gd
 

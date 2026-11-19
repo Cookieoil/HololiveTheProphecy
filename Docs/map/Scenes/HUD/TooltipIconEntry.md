@@ -31,7 +31,7 @@ Public API:
 Private:
 - L123-131 `_style_keyword`
 
-Uses: TooltipIconCatalog
+Uses: —
 Used by: GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/TooltipIconCatalog.gd
-Loads: res
+Loads: —
 

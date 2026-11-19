@@ -12,6 +12,6 @@ Public API:
 - L13-14 `get_icon(category: StringName) -> Texture2D`
 
 Uses: —
-Used by: GDTest/TooltipIconCatalogTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/SkillTooltipPopup.gd, Scenes/HUD/TooltipIconCatalog.gd, Tools/validate_gameData.gd
-Loads: res
+Used by: Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/SkillTooltipPopup.gd, Scenes/HUD/TooltipIconCatalog.gd
+Loads: —
 

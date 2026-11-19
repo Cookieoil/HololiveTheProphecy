@@ -20,5 +20,5 @@ Private:
 
 Uses: —
 Used by: —
-Loads: res
+Loads: res://.godot/, res://reports/, res://Trash/, res://
 

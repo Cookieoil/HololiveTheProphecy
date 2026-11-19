@@ -32,7 +32,7 @@ Private:
 - L270-280 `_extract_scalar_int`
 - L283-329 `_parse_status_object`
 
-Uses: BattleScene, CardIconCatalog, Unit
+Uses: BattleScene, Unit
 Used by: GDTest/StatusCatalogTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/HUD/TooltipIconCatalog.gd
-Loads: res
+Loads: res://Scenes/BattleScene/Assets/icon.svg, res://Scenes/BattleScene/Assets/icon2.png
 

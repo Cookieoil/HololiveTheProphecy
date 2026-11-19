@@ -41,6 +41,6 @@ Private:
 - L199-218 `_ensure_mipmapped_silhouette`
 
 Uses: —
-Used by: GDTest/CardUITest.gd, GDTest/EnemyUltAuraTest.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/MoxieOrbUI.gd
-Loads: res
+Used by: GDTest/CardUITest.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/MoxieOrbUI.gd
+Loads: res://Scenes/HUD/OutlineGlow.gdshader, res://Scenes/HUD/OutlineGlowGroup.gdshader
 

@@ -15,5 +15,5 @@ Private:
 
 Uses: —
 Used by: —
-Loads: res
+Loads: res://Scenes/BattleUnit/Spine/300101_zhujue
 

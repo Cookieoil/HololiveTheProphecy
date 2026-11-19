@@ -55,6 +55,6 @@ Private:
 - L458-514 `_build_config`
 
 Uses: EffectBlock, GameDatabase, GameState, SkillData, UnitData
-Used by: Scenes/BattleScene/BattleScene.gd, Tools/dataBuilder.gd, Tools/validate_gameData.gd
-Loads: res
+Used by: Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
+Loads: res://Data/json, res://Data/json/skills.json, res://Data/json/allies.json, res://Data/json/enemies.json, res://Data/json/waves.json, res://Data/json/config.json, res://Tools/export_xlsx_to_json.gd
 

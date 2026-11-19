@@ -66,7 +66,7 @@ Private:
 - L420-421 `_on_event_card_drawn`
 - L426-427 `_on_event_card_discarded`
 
-Uses: BattleScene, Card, CardUI, ForgePlate, GameManager, GameState, Unit
-Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/DebugMenuPopup.gd
-Loads: res
+Uses: Card, CardUI, ForgePlate, GameState, Unit
+Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/CardUI.gd
+Loads: res://Scenes/Cards/CardUI.tscn
 

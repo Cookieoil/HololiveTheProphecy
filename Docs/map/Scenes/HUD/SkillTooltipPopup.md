@@ -42,6 +42,6 @@ Private:
 - L236-271 `_draw`
 
 Uses: CardIconCatalog
-Used by: Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/DebugMenuPopup.gd, Scenes/HUD/TooltipIconCatalog.gd
-Loads: res
+Used by: Scenes/HUD/BattleOverlayController.gd
+Loads: —
 

@@ -24,7 +24,7 @@ Public API:
 Private:
 - L33-42 `_init`
 
-Uses: Card, EffectBlock, GameState, Unit
-Used by: GDTest/CardFlashPolicyTest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd, Skills/SkillEffect.gd, Tools/validate_gameData.gd
+Uses: Card, GameState, Unit
+Used by: GDTest/CardFlashPolicyTest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd, Skills/SkillEffect.gd
 Loads: —
 

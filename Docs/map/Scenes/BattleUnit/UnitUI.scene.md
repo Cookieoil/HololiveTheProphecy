@@ -9,20 +9,20 @@ Root script: `Scenes/BattleUnit/UnitUI.gd`
 
 - UnitUI `PanelContainer` — script `Scenes/BattleUnit/UnitUI.gd`
   - VBox `VBoxContainer`
-  - IntentLabel `Label`
-  - StatusSection `VBoxContainer`
-    - StatusIconsGrid `GridContainer`
-    - SkillPreview `VBoxContainer`
-      - Skill1Row `HBoxContainer`
-        - Icons `HBoxContainer`
-      - Skill2Row `HBoxContainer`
-        - Icons `HBoxContainer`
-  - HealthShieldContainer `Control`
-    - BarCanvas `Control`
-    - HpBar `ProgressBar`
-    - ShieldBar `ProgressBar`
-  - OvalBody `PanelContainer`
-    - BodyVBox `VBoxContainer`
-      - CharacterSprite `Control` — script `Scenes/BattleUnit/SpinePortrait.gd`
-      - NameLabel `Label`
+    - IntentLabel `Label`
+    - StatusSection `VBoxContainer`
+      - StatusIconsGrid `GridContainer`
+      - SkillPreview `VBoxContainer`
+        - Skill1Row `HBoxContainer`
+          - Icons `HBoxContainer`
+        - Skill2Row `HBoxContainer`
+          - Icons `HBoxContainer`
+    - HealthShieldContainer `Control`
+      - BarCanvas `Control`
+      - HpBar `ProgressBar`
+      - ShieldBar `ProgressBar`
+    - OvalBody `PanelContainer`
+      - BodyVBox `VBoxContainer`
+        - CharacterSprite `Control` — script `Scenes/BattleUnit/SpinePortrait.gd`
+        - NameLabel `Label`
   - HoverGlow `Panel`

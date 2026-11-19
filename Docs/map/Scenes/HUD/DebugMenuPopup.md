@@ -108,7 +108,7 @@ Private:
 - L541-547 `_on_unit_action_pressed`
 - L550-554 `_on_spawn_custom_pressed`
 
-Uses: Card, GameManager, GameState, HandBar, SkillTooltipPopup, Unit
-Used by: GDTest/DebugMenuTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd
-Loads: res
+Uses: Card
+Used by: GDTest/DebugMenuTest.gd, Scenes/BattleScene/BattleScene.gd
+Loads: —
 

@@ -129,5 +129,5 @@ Private:
 
 Uses: BattleScene, OutlineGlow, Unit
 Used by: GDTest/EnemyUltAuraTest.gd, Scenes/HUD/BattleOverlayController.gd
-Loads: res
+Loads: res://Scenes/HUD/MoxieOrbPortrait.gdshader, res://Scenes/HUD/MoxieOrbRing.gdshader, res://Scenes/BattleScene/Assets/icon.svg
 

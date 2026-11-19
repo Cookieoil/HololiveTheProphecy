@@ -30,7 +30,7 @@ Private:
 - L47-53 `_row`
 - L57-63 `_tilt`
 
-Uses: BattleScene, Card, CardUI, HandBar
+Uses: Card, CardUI, HandBar
 Used by: —
-Loads: res
+Loads: res://Scenes/Cards/CardUI.tscn
 

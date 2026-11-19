@@ -20,5 +20,5 @@ Private:
 
 Uses: BattleScene, StatusIconCatalog, Unit, UnitData
 Used by: —
-Loads: res
+Loads: res://Scenes/BattleScene/Assets/StatusIcons.tres
 

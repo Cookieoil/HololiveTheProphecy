@@ -9,7 +9,7 @@ Public API:
 - L13-15 `execute(_ctx: SkillContext) -> void`
 - L18-19 `get_description() -> String` — Auto-description for inspectat	ion/debug
 
-Uses: EffectBlock, GameManager, SkillContext
+Uses: SkillContext
 Used by: Managers/GameManager.gd, Skills/EffectBlock.gd, Skills/SkillData.gd, Skills/SkillPreviewFormatter.gd
 Loads: —
 

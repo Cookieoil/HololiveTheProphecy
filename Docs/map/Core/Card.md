@@ -32,6 +32,6 @@ Private:
 - L98-114 `_to_string`
 
 Uses: —
-Used by: Core/GameState.gd, Core/GameUI.gd, GDTest/CardDrawAnimationTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/CardTest.gd, GDTest/CardUITest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/GameStateMergeTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/EventBus.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/CardUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/DebugMenuPopup.gd, Scenes/HUD/TooltipIconCatalog.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/gen_code_index.gd, Tools/validate_gameData.gd
+Used by: Core/GameState.gd, Core/GameUI.gd, GDTest/CardDrawAnimationTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/CardTest.gd, GDTest/CardUITest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/GameStateMergeTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/EventBus.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/CardUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/DebugMenuPopup.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/check_navigation.gd
 Loads: —
 

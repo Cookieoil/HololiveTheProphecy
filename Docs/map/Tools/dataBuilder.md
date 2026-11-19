@@ -64,7 +64,7 @@ Private:
 - L752-765 `_format_json_array`
 - L769-778 `_is_inline_array`
 
-Uses: DataLoader, XlsxReader
-Used by: Tools/export_xlsx_to_json.gd, Tools/validate_gameData.gd, Tools/xlsx_reader.gd
-Loads: res
+Uses: XlsxReader
+Used by: Tools/export_xlsx_to_json.gd, Tools/validate_gameData.gd
+Loads: res://Data/xlsx/game_data.xlsx, res://Data/json
 

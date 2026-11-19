@@ -22,5 +22,5 @@ Private:
 
 Uses: Card, CardUI, OutlineGlow
 Used by: —
-Loads: res
+Loads: res://Scenes/Cards/CardUI.tscn
 

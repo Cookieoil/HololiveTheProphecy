@@ -8,10 +8,10 @@ Refresh after changing any first-party script, scene or data file:
 godot --headless --path . --script res://Tools/gen_code_index.gd
 ```
 
-Staleness gate (the same check Tools/preflight.ps1 and CI run; exits 1 when stale or when a page is orphaned):
+Staleness and correctness gate (run by Tools/preflight.ps1 and CI; it also checks coverage, ranges, links, scenes, signals and data, and prints the read-cost benchmark):
 
 ```powershell
-godot --headless --path . --script res://Tools/gen_code_index.gd -- --check
+godot --headless --path . --script res://Tools/check_navigation.gd
 ```
 
 ## How to use this map (overview here, details in their own page)
@@ -22,8 +22,9 @@ godot --headless --path . --script res://Tools/gen_code_index.gd -- --check
 - **Find a symbol:** `rg -n '^get_effective_value\t' Docs/symbols.tsv` returns `path:start-end`; drop the `^name\t` anchor to search loosely.
 - **Impact of a change:** the `Uses` / `Used by` lines on a script's page, and the emit/listen table in section 3.
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
+- **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (40)
+## 1. Game scripts at a glance (42)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -60,15 +61,17 @@ godot --headless --path . --script res://Tools/gen_code_index.gd -- --check
 | [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 51 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of effects for unmerged and merged resolution |
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager always calls: await effect.execute(ctx). Note: This base shouldn't… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 330 | extends RefCounted, 8 function(s) |
+| [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 746 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns plain Dictionaries: no file system access, no rendering, no CLI… |
+| [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifacts against the sources with independent scans (coverage, ranges… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 79 | Headless compile gate: loads every project GDScript outside the excluded folders, so a type error, a stale `class_name` or a bad annotation fails CI instead of… |
 | [`Tools/dataBuilder.gd`](map/Tools/dataBuilder.md) | `DataBuilder` | 779 | Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into the JSON files stored in res://Data/json/. Those JSON files are the single source of trut… |
 | [`Tools/diagnose_spine_atlas.gd`](map/Tools/diagnose_spine_atlas.md) | — | 49 | extends SceneTree, 1 function(s) |
 | [`Tools/export_xlsx_to_json.gd`](map/Tools/export_xlsx_to_json.md) | — | 34 | Headless Excel -> JSON exporter for the game data pipeline. Usage: godot --headless --path . --script res://Tools/export_xlsx_to_json.gd The workbook (res://Dat… |
-| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 1466 | Headless symbol-index generator for this repository. Parses every first-party GDScript source and writes the navigation set that replaces reading the sources: D… |
+| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 809 | Headless symbol-index generator for this repository. Parses every first-party GDScript source and writes the navigation set that replaces reading the sources: D… |
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single source of truth the game reads at runtime, while res://Data/xlsx/ga… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every cell is returned as a String; DataBuilder performs the typed conve… |
 
-## 2. Tests at a glance (11)
+## 2. Tests at a glance (12)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -77,6 +80,7 @@ godot --headless --path . --script res://Tools/gen_code_index.gd -- --check
 | [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 564 | Locks in the merge: the card the player was carrying is picked up from the exact point they released it, the two cards drift into each other and fold closed int… |
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 99 | Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/debuff and the hostile (enemy-caused) red glow preset. |
+| [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 292 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigation set (Docs/). Each fixture is an inline script so the test nev… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 727 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is view-only: it reports readouts, gates its tools while the turn loop… |
 | [`GDTest/EnemyTurnOverlapTest.gd`](map/GDTest/EnemyTurnOverlapTest.md) | `EnemyTurnOverlapTest` | 232 | Locks the enemy-turn overlap ("fast mode" pacing): - consecutive enemies hand control to the next one at the impact beat of their skill animation, so wind-downs… |
 | [`GDTest/EnemyUltAuraTest.gd`](map/GDTest/EnemyUltAuraTest.md) | `EnemyUltAuraTest` | 139 | Locks in the enemy Ultimate warning lifecycle. The crimson character aura and the Moxie orb preview both describe one *pending* roll, so neither may outlive the… |
@@ -135,4 +139,4 @@ Top-level keys:
 
 ---
 
-Indexed 51 script(s) (40 game, 11 test), 4 scene(s), 5 data file(s).
+Indexed 54 script(s) (42 game, 12 test), 4 scene(s), 5 data file(s).

@@ -20,9 +20,10 @@
 - **Per-script detail lives in its own page:** `Docs/map/<path>.md` (e.g. `Docs/map/Scenes/Cards/CardUI.md`) carries signals, constants, exports, onready nodes and the public API with line ranges, plus `Uses` / `Used by`. Scene pages (`*.scene.md`) carry the node tree, so `@onready` paths can be checked without opening the `.tscn`.
 - **Find a symbol instead of grepping sources:** `rg -n '^get_effective_value\t' Docs/symbols.tsv` returns `path:start-end` in a single line; drop the `^name\t` anchor to search loosely.
 - **Read only the range the index gives you** (`Core/Card.gd:74-75`), never a whole file to find one function.
-- **All of `Docs/` is generated** by `Tools/gen_code_index.gd` — never hand-edit it. Regenerate after changing any first-party script, scene or data file:
+- **All of `Docs/` is generated** by `Tools/gen_code_index.gd` (the parsing lives in `Tools/CodeIndexParser.gd`) — never hand-edit it. Regenerate after changing any first-party script, scene or data file:
   `godot --headless --path . --script res://Tools/gen_code_index.gd` (or `pwsh -File Tools/preflight.ps1 -FixIndex`).
-- **Staleness is a gate:** append `-- --check` to fail when the committed index no longer matches the sources, including pages orphaned by a deleted or renamed script. `Tools/preflight.ps1` runs it (skip with `-SkipIndexCheck`) and so does the CI `project` job, so a forgotten regeneration fails the build instead of leaving a stale map behind.
+- **Staleness and correctness are a gate:** `Tools/check_navigation.gd` re-checks the committed set against the sources (declaration coverage, line ranges, links, scenes, signals, data), exercises the generator in a scratch directory (`res://reports/navigation-test/`) and prints a read-cost benchmark. `Tools/preflight.ps1` runs it (skip with `-SkipIndexCheck`) and so does the CI `project` job, so a forgotten regeneration fails the build instead of leaving a stale map behind. `-- --benchmark` prints only the cost report.
+- **The parser is unit tested:** `GDTest/CodeIndexTest.gd` locks in the tricky cases with inline fixtures — wrapped signatures, header-doc detection, enum forms, function ranges, `.tscn` attributes and node depths, JSON shapes, dependency scanning.
 - The index walks `res://` subfolders only: `addons/`, `Trash/`, `bin/`, `reports/`, `.godot/` and files sitting directly in the project root are ignored, which keeps the output identical on every checkout.
 
 ## Strict Coding Rules
@@ -70,7 +71,7 @@
 - **Local pre-flight before pushing** (the same gates CI runs, all headless):
   - Validate data: `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
   - Compile every script: `godot --headless --path . --script res://Tools/check_scripts.gd`
-  - Symbol index is current: `godot --headless --path . --script res://Tools/gen_code_index.gd -- --check`
+  - Symbol index is current: `godot --headless --path . --script res://Tools/check_navigation.gd`
   - Unit tests: `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
   - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all four gates and exits `1` on any red gate. Add `-FixIndex` to regenerate `Docs/` before the gates run, or `-SkipIndexCheck` to leave the generated index alone while iterating.
   - **Windows gotcha:** Steam's `godot.exe` is a GUI-subsystem binary, so PowerShell never waits for it and `$LASTEXITCODE` stays empty (a gate can look "failed" while it actually passed). Launch each gate with `Start-Process -Wait -PassThru` and judge `.ExitCode` — that is exactly what `Tools/preflight.ps1` does.

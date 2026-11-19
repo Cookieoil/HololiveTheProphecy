@@ -23,7 +23,7 @@ Public API:
 - L92-95 `ask_pick_cards(_cards: Array[Card], _count: int) -> Array[Card]` — Ask the player to pick 'count' cards from 'cards'. Returns the chosen cards.
 - L97-98 `show_hand_and_resources(_state: GameState) -> void` — Refresh hand and resource counters (Actions, Merges, Deck, Discard).
 
-Uses: BattleScene, Card, EnemyIntent, GameManager, GameState, Unit
-Used by: GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd
+Uses: Card, EnemyIntent, GameState, Unit
+Used by: GDTest/CardFlashPolicyTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd
 Loads: —
 

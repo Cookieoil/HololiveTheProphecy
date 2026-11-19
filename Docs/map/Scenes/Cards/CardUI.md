@@ -178,7 +178,7 @@ Private:
 - L1348-1359 `_find_hand_bar`
 - L1368-1379 `_on_card_value_changed`
 
-Uses: BattleScene, Card, CardDrag, CardIconCatalog, ForgePlate, GameState, HandBar, OutlineGlow, UnitUI
-Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/CardUITest.gd, Managers/GameManager.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/HandBar.gd
-Loads: res
+Uses: BattleScene, Card, CardDrag, CardIconCatalog, ForgePlate, GameState, HandBar, OutlineGlow
+Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/CardUITest.gd, GDTest/CodeIndexTest.gd, Scenes/Cards/HandBar.gd, Tools/check_navigation.gd
+Loads: res://Scenes/BattleScene/Assets/icon.svg, res://Shaders/FakeCard3D.gdshader, res://Scenes/BattleScene/Assets/icon2.png
 

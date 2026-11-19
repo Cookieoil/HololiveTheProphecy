@@ -47,7 +47,7 @@ Private:
 - L306-324 `_bbcode_tag_name`
 - L328-332 `_collapse_repeated_spaces`
 
-Uses: BattleScene, Card, CardIconCatalog, SkillTooltipPopup, StatusIconCatalog, TooltipIconEntry, Unit
-Used by: GDTest/TooltipIconCatalogTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/TooltipIconEntry.gd, Skills/SkillPreviewFormatter.gd
-Loads: res
+Uses: BattleScene, CardIconCatalog, StatusIconCatalog, TooltipIconEntry, Unit
+Used by: GDTest/TooltipIconCatalogTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd, Skills/SkillPreviewFormatter.gd
+Loads: res://Scenes/BattleScene/Assets/icon2.png, res://Scenes/BattleScene/Assets/icon.svg
 

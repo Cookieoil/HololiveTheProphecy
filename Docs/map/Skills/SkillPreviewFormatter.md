@@ -26,6 +26,6 @@ Private:
 - L328-329 `_num_bb`
 
 Uses: Card, EffectBlock, EnemyIntent, GameState, SkillData, SkillEffect, TooltipIconCatalog, Unit
-Used by: GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/BattleOverlayController.gd
-Loads: res
+Used by: GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/BattleOverlayController.gd, Tools/check_navigation.gd
+Loads: res://Data/json/skills.json.
 

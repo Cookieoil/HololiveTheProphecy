@@ -25,7 +25,7 @@ Private:
 - L160-168 `_column_from_reference`
 - L172-180 `_commit_row`
 
-Uses: DataBuilder
+Uses: —
 Used by: Tools/dataBuilder.gd, Tools/validate_gameData.gd
-Loads: res
+Loads: —
 

@@ -23,7 +23,7 @@ Private:
 - L38-44 `_make_unit_ui`
 - L49-53 `_glow_param`
 
-Uses: MoxieOrbUI, OutlineGlow, SkillData, Unit, UnitData, UnitUI
+Uses: MoxieOrbUI, SkillData, Unit, UnitData, UnitUI
 Used by: —
-Loads: res
+Loads: res://Scenes/BattleUnit/UnitUI.tscn
 

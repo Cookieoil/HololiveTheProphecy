@@ -9,10 +9,10 @@ Root script: `Scenes/Cards/CardUI.gd`
 
 - CardUI `PanelContainer` — script `Scenes/Cards/CardUI.gd`
   - Bounds `Control`
-  - HoverVisual `PanelContainer`
-    - Margin `MarginContainer`
-      - VBox `VBoxContainer`
-        - IconRow `HBoxContainer`
-        - Art `TextureRect`
-        - ValueLabel `Label`
-    - MergeGlow `Panel`
+    - HoverVisual `PanelContainer`
+      - Margin `MarginContainer`
+        - VBox `VBoxContainer`
+          - IconRow `HBoxContainer`
+          - Art `TextureRect`
+          - ValueLabel `Label`
+      - MergeGlow `Panel`

@@ -18,7 +18,7 @@ Private:
 - L48-51 `_make_enemy`
 - L54-55 `_accept_all`
 
-Uses: BattleScene, Card, EnemyIntent, GameManager, GameState, GameUI, SkillContext, Unit, UnitData
+Uses: Card, EnemyIntent, GameManager, GameState, GameUI, SkillContext, Unit, UnitData
 Used by: —
 Loads: —
 

@@ -57,13 +57,16 @@ $gates = @(
     @{ Name = 'Unit tests (gdUnit4)'; Args = @('--headless', '--path', '.', '-s', 'res://addons/gdUnit4/bin/GdUnitCmdTool.gd', '-a', 'res://GDTest', '-c', '--ignoreHeadlessMode') }
 )
 
-# The generated symbol index (Docs/) must still match the sources, otherwise the
-# map the next reader trusts is lying. Same command the CI `project` job runs.
+# The generated navigation set (Docs/) must still match the sources, otherwise
+# the map the next reader trusts is lying. The harness also checks coverage,
+# ranges, links, scenes, signals and data against the sources, exercises the
+# generator in a scratch directory, and prints the read-cost benchmark. Same
+# command the CI `project` job runs.
 if ($SkipIndexCheck) {
-    Write-Host 'Skipping the symbol index gate (-SkipIndexCheck).' -ForegroundColor Yellow
+    Write-Host 'Skipping the navigation index gate (-SkipIndexCheck).' -ForegroundColor Yellow
 }
 else {
-    $gates += @{ Name = 'Symbol index up to date'; Args = @('--headless', '--path', '.', '--script', 'res://Tools/gen_code_index.gd', '--', '--check') }
+    $gates += @{ Name = 'Navigation index checks'; Args = @('--headless', '--path', '.', '--script', 'res://Tools/check_navigation.gd') }
 }
 
 foreach ($gate in $gates) {

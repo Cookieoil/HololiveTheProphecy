@@ -65,5 +65,5 @@ Private:
 
 Uses: BattleScene, Card, DebugMenuPopup, EnemyIntent, GameManager, GameState, GameUI, SkillData, Unit, UnitData
 Used by: —
-Loads: res
+Loads: res://Scenes/BattleScene/BattleScene.tscn
 

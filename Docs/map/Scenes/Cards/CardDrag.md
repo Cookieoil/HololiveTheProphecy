@@ -12,7 +12,7 @@ State:
 Private:
 - L10-12 `_init`
 
-Uses: Card, CardUI, HandBar
+Uses: Card, HandBar
 Used by: Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd
 Loads: —
 

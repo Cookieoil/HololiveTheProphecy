@@ -64,7 +64,7 @@ Private:
 - L482-485 `_on_orb_activated`
 - L488-491 `_on_ultimate_cast`
 
-Uses: BattleScene, Card, CardIconCatalog, EnemyIntent, GameManager, GameState, MoxieOrbUI, SkillPreviewFormatter, SkillTooltipPopup, TooltipIconCatalog, Unit, UnitData, UnitUI
-Used by: Scenes/BattleScene/BattleScene.gd
-Loads: res
+Uses: Card, CardIconCatalog, EnemyIntent, GameManager, GameState, MoxieOrbUI, SkillPreviewFormatter, SkillTooltipPopup, TooltipIconCatalog, Unit, UnitUI
+Used by: Scenes/BattleScene/BattleScene.gd, Tools/check_navigation.gd
+Loads: —
 

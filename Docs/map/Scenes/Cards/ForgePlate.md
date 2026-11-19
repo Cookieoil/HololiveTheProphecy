@@ -33,5 +33,5 @@ Private:
 
 Uses: —
 Used by: GDTest/CardMergeAnimationTest.gd, Scenes/Cards/CardUI.gd, Scenes/Cards/HandBar.gd
-Loads: res
+Loads: res://Shaders/FakeCard3D.gdshader
 
