@@ -83,8 +83,12 @@ func test_slab_reuses_the_debug_menu_background() -> void:
 	assert_bool(box.bg_color.is_equal_approx(DebugMenuPopup.PANEL_BG)).is_true()
 	assert_bool(box.border_color.is_equal_approx(DebugMenuPopup.PANEL_BORDER)).is_true()
 	assert_int(box.border_width_left).is_equal(HudTooltip.BORDER_WIDTH)
-	assert_int(box.corner_radius_top_left).is_equal(HudTooltip.CORNER_RADIUS)
 	assert_int(int(box.content_margin_left)).is_equal(HudTooltip.PADDING)
+	# Square corners on all four edges, like the debug menu itself.
+	assert_int(box.corner_radius_top_left).is_equal(0)
+	assert_int(box.corner_radius_top_right).is_equal(0)
+	assert_int(box.corner_radius_bottom_left).is_equal(0)
+	assert_int(box.corner_radius_bottom_right).is_equal(0)
 
 
 ## The engine hook: returning a Control is what makes Godot show this slab instead of
