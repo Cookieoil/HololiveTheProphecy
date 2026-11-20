@@ -171,10 +171,41 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 12
 alignment = 2
 
-[node name="ResourceLabel" type="Label" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=681888237]
+[node name="DeckStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=681888237]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "Deck: 12 | Discard: 0"
+theme_override_constants/separation = 6
+tooltip_text = "Deck\nCards left to draw. It reshuffles when it runs out."
+script = ExtResource("8_hudtip")
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/RightGroup/DeckStat" unique_id=681888238]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/RightGroup/DeckStat" unique_id=681888239]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "12"
+
+[node name="DiscardStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=681888240]
+layout_mode = 2
+theme_override_constants/separation = 6
+tooltip_text = "Discard\nCards played or discarded. They come back when the deck runs out."
+script = ExtResource("8_hudtip")
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/RightGroup/DiscardStat" unique_id=681888241]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/RightGroup/DiscardStat" unique_id=681888242]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "0"
 
 [node name="ConvertButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=197317561]
 custom_minimum_size = Vector2(34, 34)

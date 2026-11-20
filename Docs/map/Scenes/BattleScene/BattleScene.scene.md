@@ -1,5 +1,5 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
-# `Scenes/BattleScene/BattleScene.tscn` — root `Main` (`Node`), 41 nodes
+# `Scenes/BattleScene/BattleScene.tscn` — root `Main` (`Node`), 46 nodes
 
 [back to the map](../../../CODEBASE_MAP.md)
 
@@ -32,7 +32,12 @@ Root script: `Scenes/BattleScene/BattleScene.gd`
               - Icon `TextureRect`
               - Value `Label`
           - RightGroup `HBoxContainer`
-            - ResourceLabel `Label`
+            - DeckStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
+              - Icon `TextureRect`
+              - Value `Label`
+            - DiscardStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
+              - Icon `TextureRect`
+              - Value `Label`
             - ConvertButton `Button` — script `Scenes/HUD/HudTooltip.gd`
             - EndTurnButton `Button` — script `Scenes/HUD/HudTooltip.gd`
     - MessageLog `Label`
