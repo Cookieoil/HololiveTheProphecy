@@ -103,12 +103,26 @@ func test_slab_reuses_the_debug_menu_background() -> void:
 		return
 
 	assert_bool(box.bg_color.is_equal_approx(DebugMenuPopup.PANEL_BG)).is_true()
-	assert_bool(box.border_color.is_equal_approx(DebugMenuPopup.PANEL_BORDER)).is_true()
-	# Same outline weight as the debug menu, so the two surfaces stay one chrome.
-	assert_int(box.border_width_left).is_equal(DebugMenuPopup.BORDER_WIDTH)
-	assert_int(box.border_width_top).is_equal(DebugMenuPopup.BORDER_WIDTH)
-	assert_int(box.border_width_right).is_equal(DebugMenuPopup.BORDER_WIDTH)
-	assert_int(box.border_width_bottom).is_equal(DebugMenuPopup.BORDER_WIDTH)
+	# The outline has to *look* like the debug menu's, and the engine draws a
+	# semi-transparent border far fainter inside the tooltip's popup window than a plain
+	# panel draws it (measured: a fifth of the intensity). So the theme carries the
+	# colour the debug menu's border renders as - its own border over its own background
+	# - and carries it opaque, which the popup renders exactly.
+	var border: Color = DebugMenuPopup.PANEL_BORDER
+	var backdrop: Color = DebugMenuPopup.PANEL_BG
+	var outline := Color(
+		border.r * border.a + backdrop.r * (1.0 - border.a),
+		border.g * border.a + backdrop.g * (1.0 - border.a),
+		border.b * border.a + backdrop.b * (1.0 - border.a),
+		1.0
+	)
+	assert_bool(box.border_color.is_equal_approx(outline)).is_true()
+	assert_bool(box.border_color.a == 1.0).is_true()
+	# One pixel heavier: the popup's outline reads thinner than a panel's at one width.
+	assert_int(box.border_width_left).is_equal(3)
+	assert_int(box.border_width_top).is_equal(3)
+	assert_int(box.border_width_right).is_equal(3)
+	assert_int(box.border_width_bottom).is_equal(3)
 	# Square corners on all four edges, like the debug menu itself.
 	assert_int(box.corner_radius_top_left).is_equal(0)
 	assert_int(box.corner_radius_top_right).is_equal(0)
