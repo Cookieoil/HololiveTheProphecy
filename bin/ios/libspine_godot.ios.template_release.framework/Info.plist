@@ -13,9 +13,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.esotericsoftware.spine.spine-godot</string>
 	<key>CFBundleVersion</key>
-	<string>4.2.0</string>
+	<string>4.3.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>4.2.0</string>
+	<string>4.3.0</string>
 	<key>MinimumOSVersion</key>
 	<string>12.0</string>
 	<key>DTPlatformName</key>
