@@ -175,3 +175,52 @@ After activation the launcher logged `Downloading: Spine 4.3.26 Professional` an
   "Other software has interfered" text there with no further detail.
 - Only the launcher lives in `C:\Program Files\Spine` (`launcher\1` and `launcher\2` are its
   bundled Java runtime).
+
+### Clicking the shortcut still fails after that fix
+
+Deleting a wrong pin fixes the launcher, but on this machine the *argument-less* start stayed
+broken: `Spine.exe` (what the Start-menu and Desktop shortcuts run) came up as the launcher
+window (`Spine Launcher`), never switched to the editor, and then reported *Unable to start
+Spine* — while `Spine.com -u 4.3.26` started the editor every time. `Spine -h` documents the flag:
+*`-u, --update  The version number of the Spine update to load or "project"`*. Both shortcuts
+therefore pass `-u 4.3.26`:
+
+```powershell
+$ws = New-Object -ComObject WScript.Shell
+foreach ($lnk in "$env:USERPROFILE\Desktop\Spine.lnk",
+                "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Spine\Spine.lnk") {
+    $s = $ws.CreateShortcut($lnk)
+    $s.TargetPath = 'C:\Program Files\Spine\Spine.exe'
+    $s.Arguments = '-u 4.3.26'
+    $s.WorkingDirectory = 'C:\Program Files\Spine'
+    $s.Save()
+}
+```
+
+A healthy click shows the launcher window for a second, then a window titled `Spine 4.3.26`;
+`%USERPROFILE%\Spine\spine.log` ends with `Starting: Spine 4.3.26 Professional` and `Started.`,
+with no interference text.
+
+**Do not hand-write `version.txt`.** Deleting a wrong pin is the fix; writing one by hand is not:
+`Set-Content "$env:USERPROFILE\Spine\version.txt" '4.3.26'` — a version this launcher *did*
+download — brought the interference dialog straight back, because the pin has to match the
+launcher's own update record. Pick the editor with `-u <version>` instead.
+
+### The third-party 3.8.75 repack
+
+A cracked "Spine 2D Pro 3.8.75 made by MKS" install sits in `%USERPROFILE%\Downloads\gAME\`.
+Its `install.bat` is the source of the original mess:
+
+```bat
+reg import spine.reg
+xcopy Spine %USERPROFILE%\Spine\ /e /y
+Shortcut.exe /f:"%USERPROFILE%\Desktop\Spine.lnk" /a:c /t:"%~dp0\Spine.exe"
+```
+
+It copies its own 3.8.75 state (the 2019-12-24 payload plus a `version.txt` pin) into the shared
+state folder, imports Java prefs pinning the launcher to 3.8.75, and rewrites the Desktop
+shortcut to point at its own 2019 launcher. That shortcut always ends in the interference dialog,
+and running it can re-pin `%USERPROFILE%\Spine` to 3.8.75 — which breaks the installed launcher
+again. The Desktop shortcut now points at the installed launcher; the original is kept in
+`Documents\SpineRepair-2026-11-20\Spine-repack-3.8.75.lnk.bak`. Do not run the repack again —
+delete it.
