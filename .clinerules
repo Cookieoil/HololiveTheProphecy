@@ -75,4 +75,12 @@ runs every gate.
   `Start-Process -WindowStyle Hidden -FilePath powershell.exe -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','<script.ps1>'`
   then poll the log with the read tool. Do not block the terminal; it has no reliable
   completion signal for long commands.
+- **`Start-Process -ArgumentList` never quotes.** It joins array elements with spaces, so an
+  argument containing a space is silently split — passing `'-Godot','C:\Program Files (x86)\...\godot.exe'`
+  reaches the child as `-Godot C:\Program`, and `Tools/preflight.ps1` exits with
+  `Godot executable not found: C:\Program`. Give the path element its own quotes instead:
+  `$g = '"C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.exe"'; Start-Process pwsh -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','Tools/preflight.ps1','-Godot',$g`
+- **A detached child inherits the *session* PATH.** Prepending the user-space toolchain above
+  drops Steam's `godot.exe` entry, so a detached `pwsh -File Tools/preflight.ps1` exits at once
+  with `Godot executable not found: godot`; pass `-Godot` explicitly to sidestep it.
 - Prefer `curl.exe` over `Invoke-WebRequest` (PS 5.1 uses the IE engine and can hang).
