@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (44)
+## 1. Game scripts at a glance (43)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -41,7 +41,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks, not game logic. depend on these signals — they are fire-and-forg… |
 | [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1057 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 502 | extends GameUI, 2 signal(s), 6 export(s), 37 function(s) |
-| [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 625 | extends Control, 3 signal(s), 28 export(s), 36 function(s) |
+| [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 632 | extends Control, 3 signal(s), 28 export(s), 36 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 331 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup and automatic inspection of Unit buff/debuff state. Two dictiona… |
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
 | [`Scenes/Cards/CardDrag.gd`](map/Scenes/Cards/CardDrag.md) | `CardDrag` | 13 | Payload for all card drag operations. Consumed by: CardUI (merge), UnitDropZone (skill activation). |
@@ -65,9 +65,8 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 746 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns plain Dictionaries: no file system access, no rendering, no CLI… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifacts against the sources with independent scans (coverage, ranges… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 79 | Headless compile gate: loads every project GDScript outside the excluded folders, so a type error, a stale `class_name` or a bad annotation fails CI instead of… |
-| [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 69 | Headless link check for the spine-godot GDExtension: proves the runtime in `bin/` loaded, exposes the Spine classes the game scripts call through `ClassDB`/`cal… |
+| [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 142 | Headless link and compatibility gate for the spine-godot GDExtension. Proves three things: 1. the runtime in `bin/` loaded and exposes the Spine classes the gam… |
 | [`Tools/dataBuilder.gd`](map/Tools/dataBuilder.md) | `DataBuilder` | 779 | Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into the JSON files stored in res://Data/json/. Those JSON files are the single source of trut… |
-| [`Tools/diagnose_spine_atlas.gd`](map/Tools/diagnose_spine_atlas.md) | — | 49 | extends SceneTree, 1 function(s) |
 | [`Tools/export_xlsx_to_json.gd`](map/Tools/export_xlsx_to_json.md) | — | 34 | Headless Excel -> JSON exporter for the game data pipeline. Usage: godot --headless --path . --script res://Tools/export_xlsx_to_json.gd The workbook (res://Dat… |
 | [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 809 | Headless symbol-index generator for this repository. Parses every first-party GDScript source and writes the navigation set that replaces reading the sources: D… |
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single source of truth the game reads at runtime, while res://Data/xlsx/ga… |
@@ -142,4 +141,4 @@ Top-level keys:
 
 ---
 
-Indexed 57 script(s) (44 game, 13 test), 4 scene(s), 5 data file(s).
+Indexed 56 script(s) (43 game, 13 test), 4 scene(s), 5 data file(s).

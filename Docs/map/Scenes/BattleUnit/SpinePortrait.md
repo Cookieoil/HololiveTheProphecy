@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleUnit/SpinePortrait.gd` — `class_name SpinePortrait` extends `Control`
 
-`625` lines · [back to the map](../../../CODEBASE_MAP.md)
+`632` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > extends Control, 3 signal(s), 28 export(s), 36 function(s)
 
@@ -81,9 +81,9 @@ Public API:
 - L350-360 `has_animation(anim_name: StringName) -> bool` — Check if the current skeleton actually has the animation
 - L364-373 `play_animation(anim_name: StringName, loop: bool = false) -> void` — Plays a one-shot by default, then automatically returns to idle. Pass loop = true for persistent states such as sleep, freeze, or giddy.
 - L426-444 `set_dead(value: bool) -> void`
-- L599-604 `is_skill_animation(anim_name: StringName) -> bool` — True for animations where the character leaves its idle spot.
-- L606-609 `get_intro_duration() -> float` — How long the spawn animation lasts. UnitUI fades its HUD in after this.
-- L612-613 `get_canvas_group() -> CanvasGroup`
+- L606-611 `is_skill_animation(anim_name: StringName) -> bool` — True for animations where the character leaves its idle spot.
+- L613-616 `get_intro_duration() -> float` — How long the spawn animation lasts. UnitUI fades its HUD in after this.
+- L619-620 `get_canvas_group() -> CanvasGroup`
 
 Private:
 - L87-91 `_ready`
@@ -99,14 +99,14 @@ Private:
 - L376-410 `_play_base_animation`
 - L412-423 `_play_death_animation`
 - L446-455 `_schedule_delayed_death`
-- L457-500 `_create_spine_sprite`
-- L503-518 `_create_material`
-- L521-533 `_fit_sprite`
-- L536-549 `_show_fallback`
-- L550-570 `_get_animation_duration`
-- L573-586 `_finish_active_action`
-- L591-596 `_emit_action_lead`
-- L616-623 `_ensure_canvas_group`
+- L457-502 `_create_spine_sprite`
+- L505-520 `_create_material`
+- L523-535 `_fit_sprite`
+- L540-556 `_show_fallback`
+- L557-577 `_get_animation_duration`
+- L580-593 `_finish_active_action`
+- L598-603 `_emit_action_lead`
+- L623-630 `_ensure_canvas_group`
 
 Uses: BattleScene
 Used by: GDTest/EnemyTurnOverlapTest.gd, Scenes/BattleUnit/UnitUI.gd

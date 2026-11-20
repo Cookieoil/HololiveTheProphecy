@@ -1,22 +1,26 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/check_spine_runtime.gd` extends `SceneTree`
 
-`69` lines · [back to the map](../../CODEBASE_MAP.md)
+`142` lines · [back to the map](../../CODEBASE_MAP.md)
 
-> Headless link check for the spine-godot GDExtension: proves the runtime in `bin/` loaded, exposes the Spine classes the game scripts call through `ClassDB`/`cal…
+> Headless link and compatibility gate for the spine-godot GDExtension. Proves three things: 1. the runtime in `bin/` loaded and exposes the Spine classes the gam…
 
 Sections: Constants · Lifecycle Methods · Private Methods
 
 Constants:
-- L15 `REQUIRED_CLASSES: PackedStringArray = [`
-- L23 `SKELETON_RESOURCES: PackedStringArray = [` — Every committed character folder that a unit can resolve to at runtime.
+- L25 `REQUIRED_CLASSES: PackedStringArray = [` — Classes the game scripts touch through `ClassDB` or dynamic `call()`.
+- L33 `RIG_DIR: String = "res://Scenes/BattleUnit/Spine/"` — Folder scanned for `<char_id>/<char_id>.tres` rigs.
+- L36 `REQUIRED_SPINE_VERSION: String = "4.3"` — Major.minor of the spine-godot runtime in `bin/`. A rig exported from any other Spine version is rejected by the runtime at load time.
+- L38 `REQUIRED_BONES: PackedStringArray` — Combat-rig contract (task I-1). Reported, not enforced, until the rigs land.
+- L39 `REQUIRED_EVENTS: PackedStringArray = ["event_vfx_spawn", "event_hit_frame"]`
 
 Private:
-- L30-42 `_initialize`
-- L46-51 `_check_classes`
-- L54-67 `_check_resources`
+- L43-71 `_initialize`
+- L75-80 `_check_classes`
+- L83-96 `_collect_rigs`
+- L99-140 `_check_rig`
 
 Uses: —
 Used by: —
-Loads: res://Scenes/BattleUnit/Spine/300101_zhujue/300101_zhujue.tres, res://Scenes/BattleUnit/Spine/300402_hongnujian/300402_hongnujian.tres
+Loads: res://Scenes/BattleUnit/Spine/
 

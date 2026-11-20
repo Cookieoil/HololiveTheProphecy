@@ -7,28 +7,37 @@ It is hand-written, unlike everything under `Docs/`, which is generated.
 
 ## Version rule (read this first)
 
-The project ships the **spine-godot 4.2** runtime (`bin/spine_godot_extension.gdextension`,
+The project ships the **spine-godot 4.3** runtime (`bin/spine_godot_extension.gdextension`,
 verified by `Tools/check_spine_runtime.gd`). Spine requires the **editor version to match the
-runtime version**, and both committed rigs are Spine **4.2.36** exports. So:
+runtime version**: the runtime refuses to load a skeleton exported from another version, and
+logs `Skeleton version X does not match runtime version Y`. So:
 
 | You have | Result |
 | --- | --- |
-| Spine 4.2.xx editor | ✅ works with this project |
-| Spine 4.3 editor | ❌ the 4.2 runtime rejects the data |
+| Spine 4.3.xx editor | ✅ works with this project |
+| Spine 4.2.xx editor | ❌ the 4.3 runtime rejects the data |
 
-`Tools/prepare_spine_portrait.py` enforces this and refuses anything that is not `4.2.x`.
+`Tools/prepare_spine_portrait.py` and `Tools/check_spine_runtime.gd` both enforce `4.3`.
+`Tools/export_spine_to_godot.ps1` needs **Spine 4.3.26 or newer**, because the CLI gained
+`-o`/`-e` export settings that the script relies on.
 
-The installed launcher is **Spine Launcher 4.3.08**, which can still run the 4.2 editor —
-pass `-u 4.2.xx` (see below). The launcher must be **activated** (your Spine account /
-activation code) before it will download an editor version; an unactivated launcher prints
+The installed launcher is **Spine Launcher 4.3.08**, so the default version it downloads is
+already correct. The launcher must be **activated** (your Spine account / activation code)
+before it will download an editor version; an unactivated launcher prints
 `An activation code is required.`
+
+> **Upgrading from 4.2:** the two rigs that shipped with the 4.2 runtime
+> (`300101_zhujue`, `300402_hongnujian`) were removed because a Spine 4.2 export cannot be
+> converted without the Spine editor. Re-create them from their `SpineSource/` projects with
+> the 4.3 editor: open the project, then export with the script below. Until a rig exists for a
+> unit, `SpinePortrait` falls back to the placeholder icon art.
 
 ## One-time setup
 
 1. Launch Spine from the Start menu and activate it with your license.
-2. Download the 4.2 editor once (any 4.2 patch is fine, the data records 4.2.36):
+2. Download the 4.3 editor once (any 4.3 patch works; 4.3.26 is the current stable):
    ```powershell
-   & 'C:\Program Files\Spine\Spine.com' -u 4.2.xx
+   & 'C:\Program Files\Spine\Spine.com' -u 4.3.xx
    ```
 
 ## Per character
@@ -55,12 +64,12 @@ activation code) before it will download an editor version; an unactivated launc
    ```powershell
    godot --headless --path . --script res://Tools/check_spine_runtime.gd
    ```
-   Add the new `.tres` to `SKELETON_RESOURCES` in that script so the gate covers it.
+   The gate discovers every rig under `res://Scenes/BattleUnit/Spine/` automatically, so a new
+   `<char_id>/` folder is covered without editing the script.
 
 ## Why the exports look the way they do
 
-- **Binary `.skel`, not JSON.** Smaller and faster to load. `300101_zhujue` is the legacy
-  `.spine-json` export; new characters use `.skel`.
+- **Binary `.skel`, not JSON.** Smaller and faster to load. Use `Tools/spine/binary.json`.
 - **No premultiplied alpha.** `prepare_spine_portrait.py` rejects `pma: true` atlases because
   the portrait shader does its own blending.
 - **The atlas page is named `<char_id>.png`.** The normalizer checks this and rescales the

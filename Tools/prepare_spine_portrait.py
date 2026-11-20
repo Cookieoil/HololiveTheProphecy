@@ -1,18 +1,22 @@
 # tools/prepare_spine_portrait.py
 #!/usr/bin/env python3
 """
-Validate a Spine 4.2 binary skeleton, normalize its atlas to the supplied PNG,
+Validate a Spine binary skeleton, normalize its atlas to the supplied PNG,
 and generate a shared SpineSkeletonDataResource for spine-godot.
+
+The accepted Spine version is ``SPINE_RUNTIME_MAJOR_MINOR`` and must match the
+spine-godot runtime in ``bin/`` (4.3). The runtime refuses to load a skeleton
+exported from any other version.
 
 Example:
 python tools/prepare_spine_portrait.py \
-    --skel downloads/300101_zhujue.skel \
-    --atlas downloads/300101_zhujue.atlas \
-    --png downloads/300101_zhujue.png \
-    --json downloads/300101_zhujue.json \
-    --bloom downloads/300101_zhujue_bloom.png \
-    --name 300101_zhujue \
-    --out res://Scenes/BattleUnit/Spine/300101_zhujue
+    --skel downloads/striker.skel \
+    --atlas downloads/striker.atlas \
+    --png downloads/striker.png \
+    --json downloads/striker.json \
+    --bloom downloads/striker_bloom.png \
+    --name striker \
+    --out res://Scenes/BattleUnit/Spine/striker
 """
 
 from __future__ import annotations
@@ -23,6 +27,10 @@ import re
 import shutil
 import struct
 from pathlib import Path
+
+# Must match bin/spine_godot_extension.gdextension's runtime. Tools/check_spine_runtime.gd
+# asserts every committed rig declares this version.
+SPINE_RUNTIME_MAJOR_MINOR = "4.3"
 
 
 def png_size(path: Path) -> tuple[int, int]:
@@ -249,11 +257,11 @@ def main() -> None:
 
     spine_version = read_binary_spine_version(args.skel)
 
-    if not spine_version.startswith("4.2."):
+    if not spine_version.startswith(f"{SPINE_RUNTIME_MAJOR_MINOR}."):
         raise ValueError(
-            f"Expected a Spine 4.2 binary export, "
+            f"Expected a Spine {SPINE_RUNTIME_MAJOR_MINOR} binary export, "
             f"found {spine_version!r}. "
-            "Use a compatible runtime or re-export from Spine 4.2."
+            f"Re-export from Spine {SPINE_RUNTIME_MAJOR_MINOR} to match the runtime."
         )
 
     atlas_bytes = args.atlas.read_bytes()

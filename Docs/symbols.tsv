@@ -32,7 +32,6 @@ ARG_OUTPUT_DIR	const	Tools/gen_code_index.gd:51-51	: String = "--output-dir"
 ARG_STRICT	const	Tools/validate_gameData.gd:36-36	: String = "--strict"
 ARG_SUMMARY	const	Tools/validate_gameData.gd:37-37	: String = "--summary"
 ARROW_SIZE	const	Scenes/HUD/SkillTooltipPopup.gd:7-7	: float = 11.0
-ATLAS_PATH	const	Tools/diagnose_spine_atlas.gd:5-5	= ROOT + "/300101_zhujue.atlas"
 AUTO_FLASH_HOLD	const	Scenes/Cards/HandBar.gd:18-18	: float = 0.55
 Action	enum	Skills/EffectBlock.gd:35-49	DEAL_DAMAGE
 ActionBeat	enum	Scenes/BattleUnit/SpinePortrait.gd:81-85	REACTION, transformation, buff preparation, etc. ATTACK
@@ -324,7 +323,6 @@ PLACEHOLDER_ICON	const	Scenes/BattleUnit/StatusIconCatalog.gd:17-17	: Texture2D
 PLACEHOLDER_ICON	const	Scenes/BattleUnit/UnitUI.gd:11-11	: Texture2D
 PLACEHOLDER_ICON	const	Scenes/Cards/CardUI.gd:20-20	: Texture2D
 PLACEHOLDER_PORTRAIT	const	Scenes/HUD/MoxieOrbUI.gd:23-23	: Texture2D = preload(
-PNG_PATH	const	Tools/diagnose_spine_atlas.gd:4-4	= ROOT + "/300101_zhujue.png"
 PORTRAIT_SHADER	const	Scenes/BattleUnit/SpinePortrait.gd:13-13	: Shader
 PORTRAIT_SHADER	const	Scenes/HUD/MoxieOrbUI.gd:17-17	: Shader = preload(
 PREVIEW_SPARK_CORE	const	Scenes/HUD/MoxieOrbUI.gd:86-86	= Color(0.97, 0.99, 1.00)
@@ -338,14 +336,17 @@ READY_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:88-88	: Color = Color(0.55, 1.0, 
 REGENERATION_HEAL_PER_TICK	const	Core/Unit.gd:27-27	: int = 3
 REGEN_STEP	const	Scenes/HUD/DebugMenuPopup.gd:65-65	: int = 2
 RENDER_SUPERSAMPLE	const	Scenes/Cards/CardUI.gd:37-37	: float = 2.0
-REQUIRED_CLASSES	const	Tools/check_spine_runtime.gd:15-15	: PackedStringArray = [
+REQUIRED_BONES	const	Tools/check_spine_runtime.gd:38-38	: PackedStringArray
+REQUIRED_CLASSES	const	Tools/check_spine_runtime.gd:25-25	: PackedStringArray = [
 REQUIRED_EFFECT_KEYS	const	Tools/validate_gameData.gd:46-46	: PackedStringArray
+REQUIRED_EVENTS	const	Tools/check_spine_runtime.gd:39-39	: PackedStringArray = ["event_vfx_spawn", "event_hit_frame"]
 REQUIRED_SHEETS	const	Tools/dataBuilder.gd:37-37	: PackedStringArray = [
+REQUIRED_SPINE_VERSION	const	Tools/check_spine_runtime.gd:36-36	: String = "4.3"
 RES_SCHEME	const	Tools/CodeIndexParser.gd:18-18	: String = "res://"
 RETURN_CANVAS_LAYER	const	Scenes/Cards/CardUI.gd:19-19	: int = 100
 RETURN_TWEEN_TIME	const	Scenes/Cards/CardUI.gd:18-18	: float = 0.18
+RIG_DIR	const	Tools/check_spine_runtime.gd:33-33	: String = "res://Scenes/BattleUnit/Spine/"
 RING_SHADER	const	Scenes/HUD/MoxieOrbUI.gd:20-20	: Shader = preload(
-ROOT	const	Tools/diagnose_spine_atlas.gd:3-3	
 ROOT_DIR	const	Tools/check_navigation.gd:30-30	: String = "res://"
 ROOT_DIR	const	Tools/check_scripts.gd:22-22	: String = "res://"
 ROOT_DIR	const	Tools/gen_code_index.gd:40-40	: String = "res://"
@@ -382,7 +383,6 @@ SHIELD_STEP	const	Scenes/HUD/DebugMenuPopup.gd:64-64	: int = 10
 SHOW_CATEGORY_ICONS	const	Scenes/HUD/SkillTooltipPopup.gd:12-12	: bool = false
 SHOW_SKILL_PREVIEW_STRIP	const	Scenes/BattleUnit/UnitUI.gd:710-710	: bool = false
 SHOW_STATUS_ICONS	const	Scenes/BattleUnit/UnitUI.gd:708-708	: bool = true
-SKELETON_RESOURCES	const	Tools/check_spine_runtime.gd:23-23	: PackedStringArray = [
 SKILLS_FILE	const	Tools/dataBuilder.gd:31-31	: String = "skills.json"
 SKILLS_PATH	const	Core/DataLoader.gd:18-18	: String = "res://Data/json/skills.json"
 SKILLS_PATH	const	Tools/validate_gameData.gd:26-26	: String = JSON_DIR + "/skills.json"
@@ -575,7 +575,7 @@ _card_surface	var	Scenes/Cards/CardUI.gd:188-188	: SubViewport
 _card_ui	func	GDTest/CardMergeAnimationTest.gd:63-66	(bar: HandBar, card: Card) -> CardUI
 _cell	func	Tools/gen_code_index.gd:412-413	(text: String) -> String
 _check	func	Tools/check_navigation.gd:76-84	(condition: bool, message: String) -> bool
-_check_classes	func	Tools/check_spine_runtime.gd:46-51	(failures: PackedStringArray) -> void
+_check_classes	func	Tools/check_spine_runtime.gd:75-80	(failures: PackedStringArray) -> void
 _check_committed_artifacts	func	Tools/check_navigation.gd:144-162	() -> void
 _check_committed_docs_untouched	func	Tools/check_navigation.gd:626-628	(before: Dictionary) -> void
 _check_condition	func	Skills/EffectBlock.gd:187-203	(ctx: SkillContext) -> bool
@@ -585,7 +585,7 @@ _check_links	func	Tools/check_navigation.gd:361-386	() -> void
 _check_loader_integration	func	Tools/validate_gameData.gd:958-981	() -> void
 _check_lookup_recipes	func	Tools/check_navigation.gd:248-261	(rows: Array[Dictionary]) -> void
 _check_only	var	Tools/gen_code_index.gd:76-76	: bool = false
-_check_resources	func	Tools/check_spine_runtime.gd:54-67	(failures: PackedStringArray) -> void
+_check_rig	func	Tools/check_spine_runtime.gd:99-140	(path: String, failures: PackedStringArray, notes: PackedStringArray) -> void
 _check_rows_are_valid	func	Tools/check_navigation.gd:216-244	(rows: Array[Dictionary]) -> void
 _check_scenes	func	Tools/check_navigation.gd:421-440	() -> void
 _check_signal_table	func	Tools/check_navigation.gd:456-479	(map_text: String) -> void
@@ -611,6 +611,7 @@ _collect_data_files	func	Tools/gen_code_index.gd:473-480	() -> Array[Dictionary]
 _collect_dirs	func	Tools/check_navigation.gd:610-622	(dir_path: String, result: PackedStringArray) -> void
 _collect_dirs	func	Tools/gen_code_index.gd:299-311	(dir_path: String, result: PackedStringArray) -> void
 _collect_global_signals	func	Tools/gen_code_index.gd:431-461	() -> Array[Dictionary]
+_collect_rigs	func	Tools/check_spine_runtime.gd:83-96	(dir_path: String, result: PackedStringArray) -> void
 _collect_scenes	func	Tools/gen_code_index.gd:466-470	() -> Array[Dictionary]
 _collect_scripts	func	Tools/check_scripts.gd:49-64	(dir_path: String, result: PackedStringArray) -> void
 _color_card	func	Skills/EffectBlock.gd:121-122	(card: Card) -> String
@@ -630,8 +631,8 @@ _config_json	var	Tools/validate_gameData.gd:121-121	: Dictionary = {}
 _config_line	func	Tools/validate_gameData.gd:1085-1094	(message: String) -> int
 _consume_card	func	Scenes/Cards/HandBar.gd:258-268	(card: Card) -> bool
 _create_e7_status_badge	func	Scenes/BattleUnit/UnitUI.gd:792-848	(tex: Texture2D, count: int, is_debuff: bool) -> Control
-_create_material	func	Scenes/BattleUnit/SpinePortrait.gd:503-518	() -> void
-_create_spine_sprite	func	Scenes/BattleUnit/SpinePortrait.gd:457-500	() -> void
+_create_material	func	Scenes/BattleUnit/SpinePortrait.gd:505-520	() -> void
+_create_spine_sprite	func	Scenes/BattleUnit/SpinePortrait.gd:457-502	() -> void
 _current_ally_units	var	Scenes/HUD/BattleOverlayController.gd:22-22	: Array[Unit] = []
 _current_enemy_units	var	Scenes/HUD/BattleOverlayController.gd:23-23	: Array[Unit] = []
 _current_target_args	func	Scenes/HUD/DebugMenuPopup.gd:476-480	() -> Dictionary
@@ -694,7 +695,7 @@ _ease_in_out_cubic	func	Scenes/Cards/CardUI.gd:751-755	static (x: float) -> floa
 _ease_out_cubic	func	Scenes/Cards/CardUI.gd:745-747	static (x: float) -> float
 _ease_out_quart	func	Scenes/Cards/CardUI.gd:758-760	static (x: float) -> float
 _effect_keys	var	Tools/validate_gameData.gd:99-99	: PackedStringArray = PackedStringArray()
-_emit_action_lead	func	Scenes/BattleUnit/SpinePortrait.gd:591-596	() -> void
+_emit_action_lead	func	Scenes/BattleUnit/SpinePortrait.gd:598-603	() -> void
 _emit_annotation	func	Tools/validate_gameData.gd:1011-1020	(severity: String, message: String) -> void
 _emit_annotations	func	Tools/validate_gameData.gd:1002-1008	() -> void
 _empty_bundle	func	Tools/dataBuilder.gd:211-218	() -> Dictionary
@@ -707,7 +708,7 @@ _enemy_holds_full_gauge	func	Scenes/BattleUnit/UnitUI.gd:412-413	() -> bool
 _enemy_ids	var	Tools/validate_gameData.gd:106-106	: Dictionary = {}
 _enemy_rail	var	Scenes/HUD/BattleOverlayController.gd:14-14	: VBoxContainer
 _enemy_skill_ids	var	Tools/validate_gameData.gd:108-108	: Dictionary = {}
-_ensure_canvas_group	func	Scenes/BattleUnit/SpinePortrait.gd:616-623	() -> CanvasGroup
+_ensure_canvas_group	func	Scenes/BattleUnit/SpinePortrait.gd:623-630	() -> CanvasGroup
 _ensure_mipmapped_silhouette	func	Scenes/HUD/OutlineGlow.gd:199-218	static (tex: Texture2D) -> Texture2D
 _ensure_shared_resources	func	Scenes/HUD/OutlineGlow.gd:180-196	static () -> void
 _entry_at	func	GDTest/CodeIndexTest.gd:74-79	(entries: Array, index: int) -> Dictionary
@@ -743,7 +744,7 @@ _find_hand_bar	func	Scenes/Cards/CardUI.gd:1348-1359	() -> HandBar
 _find_header_row	func	Tools/dataBuilder.gd:268-277	(grid: Array) -> int
 _find_info	func	Tools/gen_code_index.gd:314-319	(res_path: String) -> Dictionary
 _find_intent_for_enemy	func	Scenes/HUD/BattleOverlayController.gd:415-426	(enemy: Unit) -> EnemyIntent
-_finish_active_action	func	Scenes/BattleUnit/SpinePortrait.gd:573-586	() -> void
+_finish_active_action	func	Scenes/BattleUnit/SpinePortrait.gd:580-593	() -> void
 _finish_draw	func	Scenes/Cards/CardUI.gd:712-718	() -> void
 _finish_draw_immediate	func	Scenes/Cards/CardUI.gd:669-677	() -> void
 _finish_intro	func	Scenes/BattleUnit/UnitUI.gd:668-682	() -> void
@@ -751,7 +752,7 @@ _finish_merge	func	Scenes/Cards/CardUI.gd:873-878	() -> void
 _finish_merge_immediate	func	Scenes/Cards/CardUI.gd:864-870	() -> void
 _first_page	func	Tools/check_navigation.gd:571-577	(dir_path: String) -> String
 _first_quoted	func	Tools/validate_gameData.gd:1116-1123	(message: String) -> String
-_fit_sprite	func	Scenes/BattleUnit/SpinePortrait.gd:521-533	() -> void
+_fit_sprite	func	Scenes/BattleUnit/SpinePortrait.gd:523-535	() -> void
 _flash_active	var	Scenes/Cards/CardUI.gd:156-156	: bool = false
 _flash_auto_selected	func	Skills/EffectBlock.gd:447-450	(ctx: SkillContext, cards: Array[Card]) -> void
 _flash_hostile	var	Scenes/Cards/CardUI.gd:158-158	: bool = false
@@ -766,7 +767,7 @@ _function_named	func	GDTest/CodeIndexTest.gd:63-69	(info: Dictionary, name: Stri
 _gain_shield	func	Skills/EffectBlock.gd:337-356	(ctx: SkillContext, targets: Array[Unit], amount: int) -> void
 _game_infos	func	Tools/gen_code_index.gd:527-528	() -> Array[Dictionary]
 _gated_buttons	var	Scenes/HUD/DebugMenuPopup.gd:108-108	: Array[Button] = []
-_get_animation_duration	func	Scenes/BattleUnit/SpinePortrait.gd:550-570	(anim_name: StringName) -> float
+_get_animation_duration	func	Scenes/BattleUnit/SpinePortrait.gd:557-577	(anim_name: StringName) -> float
 _get_array	func	Core/DataLoader.gd:247-252	static (source: Dictionary, key: String) -> Array
 _get_bool	func	Core/DataLoader.gd:200-218	static (source: Dictionary, key: String, fallback: bool) -> bool
 _get_drag_data	func	Scenes/Cards/CardUI.gd:1107-1140	(_at_position: Vector2) -> Variant
@@ -845,8 +846,7 @@ _init	func	Skills/SkillContext.gd:33-42	(p_caster: Unit, p_card: Card, p_state: 
 _init	func	Skills/SkillData.gd:31-34	() -> void
 _initialize	func	Tools/check_navigation.gd:58-72	() -> void
 _initialize	func	Tools/check_scripts.gd:27-45	() -> void
-_initialize	func	Tools/check_spine_runtime.gd:30-42	() -> void
-_initialize	func	Tools/diagnose_spine_atlas.gd:7-49	() -> void
+_initialize	func	Tools/check_spine_runtime.gd:43-71	() -> void
 _initialize	func	Tools/export_xlsx_to_json.gd:16-33	() -> void
 _initialize	func	Tools/gen_code_index.gd:81-106	() -> void
 _instantiate_battle_scene	func	GDTest/HudTooltipTest.gd:53-61	() -> Node
@@ -1161,7 +1161,7 @@ _shatter_shards	var	Scenes/BattleUnit/UnitUI.gd:128-128	: Array[Dictionary] = []
 _shatter_timer	var	Scenes/BattleUnit/UnitUI.gd:127-127	: float = 0.0
 _shield_flash_timer	var	Scenes/BattleUnit/UnitUI.gd:117-117	: float = 0.0
 _should_show_glow	func	Scenes/HUD/MoxieOrbUI.gd:315-321	() -> bool
-_show_fallback	func	Scenes/BattleUnit/SpinePortrait.gd:536-549	(reason: String) -> void
+_show_fallback	func	Scenes/BattleUnit/SpinePortrait.gd:540-556	(reason: String, fatal: bool = true) -> void
 _show_instructions	func	Managers/GameManager.gd:259-260	() -> void
 _signal_row	func	Tools/check_navigation.gd:482-486	(map_text: String, signal_name: String) -> String
 _silhouette_mipmap_cache	var	Scenes/HUD/OutlineGlow.gd:20-20	: Dictionary[Variant, Texture2D] = {}
@@ -1480,7 +1480,7 @@ game_running	var	Managers/GameManager.gd:12-12	: bool = false
 game_state	var	Scenes/Cards/HandBar.gd:33-33	: GameState
 game_state	var	Skills/SkillContext.gd:18-18	: GameState
 get_active_categories	func	Skills/SkillData.gd:37-50	(is_merged: bool) -> PackedStringArray
-get_canvas_group	func	Scenes/BattleUnit/SpinePortrait.gd:612-613	() -> CanvasGroup
+get_canvas_group	func	Scenes/BattleUnit/SpinePortrait.gd:619-620	() -> CanvasGroup
 get_description	func	Skills/EffectBlock.gd:597-638	() -> String
 get_description	func	Skills/SkillEffect.gd:18-19	() -> String
 get_dice_size	func	Core/GameState.gd:428-430	(turn_index: int) -> int
@@ -1488,7 +1488,7 @@ get_effective_value	func	Core/Card.gd:74-75	() -> int
 get_errors	func	Core/DataLoader.gd:131-132	static () -> PackedStringArray
 get_highest_card_in_hand	func	Core/GameState.gd:359-365	() -> Card
 get_icon	func	Scenes/Cards/CardIconCatalog.gd:13-14	(category: StringName) -> Texture2D
-get_intro_duration	func	Scenes/BattleUnit/SpinePortrait.gd:606-609	() -> float
+get_intro_duration	func	Scenes/BattleUnit/SpinePortrait.gd:613-616	() -> float
 get_keyword_keys	func	Scenes/HUD/TooltipIconEntry.gd:69-81	() -> PackedStringArray
 get_label	func	Scenes/HUD/TooltipIconEntry.gd:61-65	() -> String
 get_living_allies	func	Core/GameState.gd:413-419	() -> Array[Unit]
@@ -1562,7 +1562,7 @@ is_merging	func	Scenes/Cards/CardUI.gd:771-772	() -> bool
 is_odd	func	Core/Card.gd:80-81	() -> bool
 is_open	func	Scenes/HUD/DebugMenuPopup.gd:175-176	() -> bool
 is_resource_path_char	func	Tools/CodeIndexParser.gd:666-667	static (character: String) -> bool
-is_skill_animation	func	Scenes/BattleUnit/SpinePortrait.gd:599-604	(anim_name: StringName) -> bool
+is_skill_animation	func	Scenes/BattleUnit/SpinePortrait.gd:606-611	(anim_name: StringName) -> bool
 join_doc	func	Tools/CodeIndexParser.gd:488-498	static (doc: PackedStringArray) -> String
 keys_of	func	Tools/CodeIndexParser.gd:727-731	static (raw_keys: Array) -> PackedStringArray
 keyword_color	export	Scenes/HUD/TooltipIconEntry.gd:34-34	: Color = Color("#FBBF24")

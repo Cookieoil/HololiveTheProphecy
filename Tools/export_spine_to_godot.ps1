@@ -7,9 +7,9 @@
     Godot-ready `<char_id>.skel` + `<char_id>.atlas` + `<char_id>.png` (and the
     generated `<char_id>.tres`) inside `res://Scenes/BattleUnit/Spine/<char_id>/`.
 
-    The project uses the spine-godot **4.2** runtime (see
-    `bin/spine_godot_extension.gdextension` and `Tools/prepare_spine_portrait.py`),
-    so the export MUST come from the Spine **4.2** editor. A 4.3 export will be
+    The project uses the spine-godot **4.3** runtime (see
+    `bin/spine_godot_extension.gdextension` and `Tools/check_spine_runtime.gd`),
+    so the export MUST come from the Spine **4.3** editor. A 4.2 export will be
     rejected by the runtime.
 
     Export settings live in `Tools/spine/binary.json` (binary + nonessential,
@@ -18,7 +18,7 @@
 
 .EXAMPLE
     pwsh -File Tools/export_spine_to_godot.ps1 -CharId striker
-    pwsh -File Tools/export_spine_to_godot.ps1 -CharId striker -SpineVersion 4.2.36
+    pwsh -File Tools/export_spine_to_godot.ps1 -CharId striker -SpineVersion 4.3.26
     pwsh -File Tools/export_spine_to_godot.ps1 -CharId striker -DryRun
 #>
 [CmdletBinding()]
@@ -28,9 +28,9 @@ param(
     [ValidatePattern('^[A-Za-z0-9_]+$')]
     [string]$CharId,
 
-    # Spine editor version to run. The project runtime is 4.2, so stay on 4.2.xx.
+    # Spine editor version to run. The project runtime is 4.3, so stay on 4.3.xx.
     [ValidatePattern('^\d+\.\d+(\.\d+|\.[xX]{2})?$')]
-    [string]$SpineVersion = '4.2.xx',
+    [string]$SpineVersion = '4.3.xx',
 
     # Folder holding `<char_id>.spine`. Defaults to `<repo>/SpineSource`.
     [string]$SourceRoot,
@@ -66,8 +66,8 @@ if (-not (Test-Path -LiteralPath $exportSettings)) {
 if (-not (Test-Path -LiteralPath $packSettings)) {
     throw "Pack settings not found: $packSettings"
 }
-if ($SpineVersion -notlike '4.2*') {
-    Write-Warning "The project runtime is Spine 4.2 but -SpineVersion is '$SpineVersion'. A non-4.2 export will not load at runtime."
+if ($SpineVersion -notlike '4.3*') {
+    Write-Warning "The project runtime is Spine 4.3 but -SpineVersion is '$SpineVersion'. A non-4.3 export will not load at runtime."
 }
 
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null

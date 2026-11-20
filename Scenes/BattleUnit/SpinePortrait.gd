@@ -456,7 +456,9 @@ func _schedule_delayed_death(delay: float) -> void:
 
 func _create_spine_sprite() -> void:
 	if skeleton_data == null:
-		_show_fallback("SpinePortrait: skeleton_data is not assigned")
+		# Not having a rig yet is a normal configuration: a unit without a
+		# Spine/<char_id>/ export just shows the placeholder art.
+		_show_fallback("SpinePortrait: skeleton_data is not assigned", false)
 		return
 
 	if not ClassDB.class_exists("SpineSprite"):
@@ -533,8 +535,13 @@ func _fit_sprite() -> void:
 	_spine.position = Vector2(size.x * 0.5 + horizontal_offset, size.y - bottom_padding)
 
 
-func _show_fallback(reason: String) -> void:
-	push_error(reason)
+## Falls back to the placeholder icon art. `fatal = false` downgrades the log to
+## a warning, for cases the game is expected to run in (a unit with no rig yet).
+func _show_fallback(reason: String, fatal: bool = true) -> void:
+	if fatal:
+		push_error(reason)
+	else:
+		push_warning(reason)
 	if _fallback != null:
 		return
 
