@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/HudTooltipTest.gd` — `class_name HudTooltipTest` extends `GdUnitTestSuite`
 
-`247` lines · [back to the map](../../CODEBASE_MAP.md)
+`272` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the top-bar hover tooltips (HudTooltip) and the slab they are drawn on (the tooltip theme in HudTooltipTheme.tres). Every icon in the bar is the same plac…
 
@@ -24,6 +24,7 @@ Public API:
 - L187-193 `test_tooltip_never_eats_the_hover() -> void` — The tooltip is opened *by* a hover, so neither it nor its children may take that hover.
 - L196-219 `test_top_bar_widgets_carry_the_hover_tooltip() -> void`
 - L224-246 `test_action_buttons_are_labelless_icons() -> void` — The word moved out of the buttons: they are icon-only squares now that the tooltip names them.
+- L251-271 `test_action_buttons_light_up_on_hover() -> void` — Flat icon buttons need another cue that they are clickable: hovering brightens the icon (self_modulate above white) and leaving restores it, like the ultimate o…
 
 Private:
 - L42-45 `_make_content`
