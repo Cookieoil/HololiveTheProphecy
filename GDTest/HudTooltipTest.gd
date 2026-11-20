@@ -244,3 +244,28 @@ func test_action_buttons_are_labelless_icons() -> void:
 			var box: StyleBox = button.get_theme_stylebox(state)
 			assert_int(int(box.get_margin(SIDE_LEFT))).is_equal(0)
 			assert_int(int(box.get_margin(SIDE_TOP))).is_equal(0)
+
+
+## Flat icon buttons need another cue that they are clickable: hovering brightens the
+## icon (self_modulate above white) and leaving restores it, like the ultimate orbs.
+func test_action_buttons_light_up_on_hover() -> void:
+	var scene: Node = _instantiate_battle_scene()
+	assert_object(scene).is_not_null()
+	if scene == null:
+		return
+
+	for button_name: String in ["ConvertButton", "EndTurnButton"]:
+		var path: String = "HUD/TopBar/Margin/HBox/RightGroup/%s" % button_name
+		var button: Button = scene.get_node_or_null(path) as Button
+		assert_object(button).is_not_null()
+		if button == null:
+			continue
+		assert_bool(button.self_modulate.is_equal_approx(Color.WHITE)).is_true()
+
+		button.mouse_entered.emit()
+		assert_bool(button.self_modulate.r > 1.0).is_true()
+		assert_bool(button.self_modulate.g > 1.0).is_true()
+		assert_bool(button.self_modulate.b > 1.0).is_true()
+
+		button.mouse_exited.emit()
+		assert_bool(button.self_modulate.is_equal_approx(Color.WHITE)).is_true()

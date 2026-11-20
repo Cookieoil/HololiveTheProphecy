@@ -42,6 +42,10 @@ signal unit_selected_for_target(unit: Unit)
 
 ## seconds between each enemy's intent appearing
 const INTENT_STAGGER: float = 0.08
+## The two top-bar action buttons draw no button chrome (see BattleScene.tscn), so hovering
+## brightens their icon a little instead, the same cue the ultimate orbs give their
+## portrait. Above 1.0 the icon lights up; white is the resting state.
+const ICON_BUTTON_HOVER_TINT: Color = Color(1.25, 1.25, 1.25)
 
 func _ready() -> void:
 	if status_icon_catalog == null:
@@ -51,6 +55,8 @@ func _ready() -> void:
 
 	end_turn_button.pressed.connect(func() -> void: action_decided.emit({"type": "end_turn"}))
 	convert_button.pressed.connect(func() -> void: action_decided.emit({"type": "convert"}))
+	_setup_icon_button_hover(convert_button)
+	_setup_icon_button_hover(end_turn_button)
 	hand_bar.merge_requested.connect(_on_merge_requested)
 	_setup_debug_menu()
 
@@ -149,6 +155,13 @@ func _update_top_bar(state: GameState) -> void:
 	merges_value_label.text = str(state.merges_left)
 	deck_value_label.text = str(state.deck.size())
 	discard_value_label.text = str(state.discard.size())
+
+
+## The top-bar action buttons are flat icons, so they light up while the pointer is over
+## them instead of drawing a hover chrome - the cue that they are clickable.
+func _setup_icon_button_hover(button: Button) -> void:
+	button.mouse_entered.connect(func() -> void: button.self_modulate = ICON_BUTTON_HOVER_TINT)
+	button.mouse_exited.connect(func() -> void: button.self_modulate = Color.WHITE)
 
 
 func show_enemy_intents(intents: Array[EnemyIntent]) -> void:
