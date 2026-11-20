@@ -221,6 +221,12 @@ It copies its own 3.8.75 state (the 2019-12-24 payload plus a `version.txt` pin)
 state folder, imports Java prefs pinning the launcher to 3.8.75, and rewrites the Desktop
 shortcut to point at its own 2019 launcher. That shortcut always ends in the interference dialog,
 and running it can re-pin `%USERPROFILE%\Spine` to 3.8.75 — which breaks the installed launcher
-again. The Desktop shortcut now points at the installed launcher; the original is kept in
-`Documents\SpineRepair-2026-11-20\Spine-repack-3.8.75.lnk.bak`. Do not run the repack again —
-delete it.
+again. The repack folder is deleted (121 MB); the original shortcut is kept in
+`Documents\SpineRepair-2026-11-20\Spine-repack-3.8.75.lnk.bak`.
+
+One detail worth keeping: `install.bat` hardcodes `%USERPROFILE%\Desktop`, but this machine's
+desktop is **redirected to OneDrive** (`HKCU\...\Explorer\User Shell Folders\Desktop` =
+`%USERPROFILE%\OneDrive\Desktop`), so that shortcut never actually appeared on the visible
+desktop — only the Start-menu entry did. Create desktop shortcuts on the *effective* desktop
+(`[Environment]::GetFolderPath('Desktop')`), which is where the working `Spine.lnk` lives now; a
+second copy sits in the stale `%USERPROFILE%\Desktop` folder.
