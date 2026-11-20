@@ -207,7 +207,7 @@ text = "0"
 [node name="RightGroup" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox" unique_id=863329915]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 43
 alignment = 2
 
 [node name="ConvertButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=197317561]
