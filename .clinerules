@@ -12,6 +12,21 @@ After you have completed a task and all tests/verifications pass, you MUST:
 - `reports/` (gdUnit4 output) and Godot `~*` atomic-write temp files are gitignored. Never
   `git add -f` them.
 
+## Pushing (main is protected — never push to it directly)
+`main` requires the `validate` and `Scripts and tests` status checks, and a required check
+must be *reported* before `main` accepts a commit — so `git push origin main` fails with
+`GH006: 2 of 2 required status checks are expected`. The checks cannot exist for a commit
+that has never been pushed, and `enforce_admins` is on, so do not try to force it. Land the
+work through a branch and a pull request:
+
+1. `git switch -c <type>/<short-name>` then `git push -u origin <type>/<short-name>`
+2. `gh pr create --base main --head <type>/<short-name> --title "<subject>" --body "<summary>"`
+3. `gh pr checks <n>` until `validate` and `Scripts and tests` are green (`Resolve Godot
+   version` also runs, but it is not a required context)
+4. `gh pr merge <n> --merge --delete-branch` — `--merge`, not `--squash`, so every
+   Conventional Commit stays its own commit on `main` (linear history is not required)
+5. `git switch main; git pull --ff-only` and confirm `git status -sb` shows no ahead/behind
+
 ## Pre-flight gates (required before every commit)
 Run all four headless gates from the repo root — they are exactly the gates CI runs:
 
@@ -53,8 +68,9 @@ runs every gate.
 - A freshly opened shell may carry a stale PATH. If `pwsh`, `rg`, `fd`, `uv`, `gh`, `node`,
   `gdformat` or `jq` are "not recognized", prepend the user-space toolchain:
   `$env:Path = "C:\Users\vmv03\Tools\PowerShell7;C:\Users\vmv03\Tools\bin;$env:USERPROFILE\.local\bin;C:\Program Files\GitHub CLI;C:\Program Files\nodejs;C:\ffmpeg;" + [Environment]::GetEnvironmentVariable('Path','Machine')`
-- `gh` is installed but **not authenticated**; run `gh auth login` once to enable
-  `gh run list`, `gh pr checks`, `gh api` and branch-protection inspection.
+- `gh` is installed **and authenticated** as `Cookieoil` (token scopes `gist`, `read:org`,
+  `repo`, `workflow`), so `gh pr create`, `gh pr checks`, `gh pr merge`, `gh run list` and
+  `gh api` work as-is; re-run `gh auth login` only if `gh auth status` reports otherwise.
 - For long-running installs/downloads, start a detached process that logs to a file:
   `Start-Process -WindowStyle Hidden -FilePath powershell.exe -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','<script.ps1>'`
   then poll the log with the read tool. Do not block the terminal; it has no reliable
