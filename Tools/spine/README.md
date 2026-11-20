@@ -96,6 +96,12 @@ python Tools/rig_combat_actor.py --input rig.json --output rig_combat.json `
   its origin and says so.
 - **Timings.** `0.55` is a fraction of the animation, `0.75s` is seconds, `12f` is a frame at
   `--fps`. A bare number above 1 is rejected as ambiguous. Defaults are 30% and 55%.
+- **Ranges are checked.** `--spawn-fraction`, `--hit-fraction`, `--hit-bone-offset` and
+  `--cast-bone-offset` must be between 0 and 1, the hit key may not land before the spawn key, and
+  a key that lands past the end of the animation is flagged because it would lengthen it.
+- **`--all-attacks` skips pose-only matches.** An animation with no keyed times (a single-frame
+  pose, or an empty placeholder) cannot take a fraction of its duration, so it is skipped with a
+  note instead of failing the whole run. Key it explicitly, `--anim name:0.2s:0.5s`, if you want it.
 - **Idempotent.** An existing bone, event or event key is left alone, so the script can be re-run
   after an artist has adjusted the rig. `--force` re-times keys it wrote before.
 - **Output style.** The writer reproduces Spine's own pretty-printed JSON byte for byte
@@ -111,6 +117,11 @@ Turn the patched JSON into an editable project, then refine and export:
 
 Placing the two bones exactly where the art wants them, and re-timing the hit keys to the impact
 frame, is still an editor job — the script only removes the mechanical part.
+
+`python Tools/rig_combat_actor_test.py` covers every behaviour above: it builds its own rigs in a
+scratch folder and exits non-zero on the first failed check. Add `--samples <dir>` pointing at
+Spine's own `*-pro.json` example exports to also assert that the writer reproduces those files byte
+for byte.
 
 ## Why the exports look the way they do
 
