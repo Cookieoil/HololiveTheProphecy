@@ -21,6 +21,8 @@ const SCRIPT_PATH: String = "res://Scenes/HUD/HudTooltip.gd"
 const THEME_PATH: String = "res://Scenes/HUD/HudTooltipTheme.tres"
 ## Project setting that puts the theme in charge of the engine's tooltip popup.
 const THEME_SETTING: String = "gui/theme/custom"
+## Project setting for how long a hover has to last before the tooltip appears.
+const TOOLTIP_DELAY_SETTING: String = "gui/timers/tooltip_delay_sec"
 ## Theme type and item the engine's tooltip popup asks for its background.
 const THEME_TYPE: String = "TooltipPanel"
 const THEME_ITEM: String = "panel"
@@ -166,6 +168,18 @@ func test_project_theme_reaches_the_tooltip_panel() -> void:
 	assert_bool(box.bg_color.is_equal_approx(DebugMenuPopup.PANEL_BG)).is_true()
 	assert_int(int(box.content_margin_left)).is_equal(DebugMenuPopup.PADDING)
 	assert_int(int(box.expand_margin_top)).is_equal(0)
+
+
+## Hovering a widget has to name it straight away: the engine's tooltip timer defaults to
+## half a second, so the project overrides it. The setting is asserted explicitly (an
+## absent setting would fall back to that 0.5 s default, not to 0).
+func test_tooltip_has_no_hover_delay() -> void:
+	var delay: Variant = ProjectSettings.get_setting(TOOLTIP_DELAY_SETTING, -1.0)
+	assert_bool(delay is float).is_true()
+	if not delay is float:
+		return
+	var seconds: float = delay
+	assert_bool(seconds == 0.0).is_true()
 
 
 ## The engine hook: returning a Control from `_make_custom_tooltip()` is what makes

@@ -69,6 +69,7 @@ folder_colors={
 [gui]
 
 theme/custom="res://Scenes/HUD/HudTooltipTheme.tres"
+timers/tooltip_delay_sec=0.0
 
 [rendering]
 
