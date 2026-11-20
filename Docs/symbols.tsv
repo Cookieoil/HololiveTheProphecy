@@ -1741,7 +1741,7 @@ test_a_card_at_the_fold_angle_is_not_drawn_at_all	func	GDTest/CardMergeAnimation
 test_a_double_merge_merges_a_free_play_card	func	GDTest/CardMergeAnimationTest.gd:446-471	() -> void
 test_a_merge_with_no_release_starts_from_the_cards_own_slot	func	GDTest/CardMergeAnimationTest.gd:212-225	() -> void
 test_a_resting_card_renders_on_the_pixel_grid_of_its_slot	func	GDTest/CardDrawAnimationTest.gd:190-205	() -> void
-test_action_buttons_are_labelless_icons	func	GDTest/HudTooltipTest.gd:208-223	() -> void
+test_action_buttons_are_labelless_icons	func	GDTest/HudTooltipTest.gd:222-237	() -> void
 test_ally_highlights_are_never_rewritten_as_the_enemy_warning	func	GDTest/EnemyUltAuraTest.gd:122-138	() -> void
 test_aura_drops_when_the_roll_lands_short	func	GDTest/EnemyUltAuraTest.gd:108-119	() -> void
 test_aura_warns_before_the_roll_then_releases_on_the_cast	func	GDTest/EnemyUltAuraTest.gd:87-105	() -> void
@@ -1802,7 +1802,7 @@ test_header_drag_ignores_other_mouse_buttons	func	GDTest/DebugMenuTest.gd:293-30
 test_header_is_a_wired_drag_handle	func	GDTest/DebugMenuTest.gd:304-311	() -> void
 test_heal_full_restores_the_target_only	func	GDTest/DebugMenuTest.gd:535-545	() -> void
 test_hostile_flash_uses_the_crimson_preset	func	GDTest/CardUITest.gd:76-98	() -> void
-test_hover_hook_returns_the_tooltip_content	func	GDTest/HudTooltipTest.gd:157-167	() -> void
+test_hover_hook_returns_the_tooltip_content	func	GDTest/HudTooltipTest.gd:171-181	() -> void
 test_hover_scales_the_card_without_warping_it	func	GDTest/CardDrawAnimationTest.gd:281-302	() -> void
 test_icon_only_mode_replaces_the_keyword_with_a_pure_glyph	func	GDTest/TooltipIconCatalogTest.gd:76-86	() -> void
 test_inner_class_is_listed_without_flattening_members	func	GDTest/CodeIndexTest.gd:181-199	() -> void
@@ -1829,7 +1829,7 @@ test_page_file_names_are_derived_from_the_source_path	func	GDTest/CodeIndexTest.
 test_panel_chrome_has_square_corners	func	GDTest/DebugMenuTest.gd:138-149	() -> void
 test_player_effect_flash_is_friendly	func	GDTest/CardFlashPolicyTest.gd:97-108	() -> void
 test_player_skill_still_waits_for_the_full_animation	func	GDTest/EnemyTurnOverlapTest.gd:123-136	() -> void
-test_project_theme_reaches_the_tooltip_panel	func	GDTest/HudTooltipTest.gd:142-152	() -> void
+test_project_theme_reaches_the_tooltip_panel	func	GDTest/HudTooltipTest.gd:156-166	() -> void
 test_refresh_flags_an_over_cap_hand	func	GDTest/DebugMenuTest.gd:185-193	() -> void
 test_refresh_lists_targets_and_keeps_the_selection	func	GDTest/DebugMenuTest.gd:196-207	() -> void
 test_regeneration_counts_down_and_heals	func	GDTest/StatusCatalogTest.gd:30-41	() -> void
@@ -1847,8 +1847,8 @@ test_script_header_doc_becomes_the_summary	func	GDTest/CodeIndexTest.gd:102-107	
 test_set_hand_only_deals_the_new_cards	func	GDTest/CardDrawAnimationTest.gd:156-170	() -> void
 test_set_hand_reuses_the_cards_already_in_the_row	func	GDTest/CardDrawAnimationTest.gd:137-153	() -> void
 test_shield_tools_add_and_clear	func	GDTest/DebugMenuTest.gd:548-558	() -> void
-test_slab_never_grows_past_its_own_border	func	GDTest/HudTooltipTest.gd:127-136	() -> void
-test_slab_reuses_the_debug_menu_background	func	GDTest/HudTooltipTest.gd:99-122	() -> void
+test_slab_never_grows_past_its_own_border	func	GDTest/HudTooltipTest.gd:141-150	() -> void
+test_slab_reuses_the_debug_menu_background	func	GDTest/HudTooltipTest.gd:99-136	() -> void
 test_spawned_merged_card_evaporates_instead_of_poisoning_the_deck	func	GDTest/DebugMenuTest.gd:371-379	() -> void
 test_spawning_ignores_the_hand_cap	func	GDTest/DebugMenuTest.gd:340-348	() -> void
 test_status_tools_apply_and_clear	func	GDTest/DebugMenuTest.gd:591-602	() -> void
@@ -1866,8 +1866,8 @@ test_the_survivors_glide_into_the_gap_the_merge_left	func	GDTest/CardMergeAnimat
 test_the_two_cards_are_drawn_detached_from_the_hand_layout	func	GDTest/CardMergeAnimationTest.gd:557-563	() -> void
 test_the_two_cards_are_mounted_where_they_were_and_the_layout_never_moves	func	GDTest/CardMergeAnimationTest.gd:117-160	() -> void
 test_the_two_cards_are_never_hidden_before_the_merged_card	func	GDTest/CardMergeAnimationTest.gd:499-537	() -> void
-test_tooltip_never_eats_the_hover	func	GDTest/HudTooltipTest.gd:171-177	() -> void
-test_top_bar_widgets_carry_the_hover_tooltip	func	GDTest/HudTooltipTest.gd:180-203	() -> void
+test_tooltip_never_eats_the_hover	func	GDTest/HudTooltipTest.gd:185-191	() -> void
+test_top_bar_widgets_carry_the_hover_tooltip	func	GDTest/HudTooltipTest.gd:194-217	() -> void
 test_true_damage_bypasses_the_shield	func	GDTest/DebugMenuTest.gd:522-532	() -> void
 test_two_lines_become_a_title_and_a_description	func	GDTest/HudTooltipTest.gd:79-86	() -> void
 test_unit_tool_carries_the_selected_target	func	GDTest/DebugMenuTest.gd:210-232	() -> void
