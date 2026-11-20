@@ -30,8 +30,8 @@ const TOOLTIP_WIDGETS: Array[String] = [
 	"HUD/TopBar/Margin/HBox/LeftGroup/DiceStat",
 	"HUD/TopBar/Margin/HBox/CenterGroup/ActionsStat",
 	"HUD/TopBar/Margin/HBox/CenterGroup/MergesStat",
-	"HUD/TopBar/Margin/HBox/RightGroup/DeckStat",
-	"HUD/TopBar/Margin/HBox/RightGroup/DiscardStat",
+	"HUD/TopBar/Margin/HBox/CenterGroup/DeckStat",
+	"HUD/TopBar/Margin/HBox/CenterGroup/DiscardStat",
 	"HUD/TopBar/Margin/HBox/RightGroup/ConvertButton",
 	"HUD/TopBar/Margin/HBox/RightGroup/EndTurnButton",
 ]
