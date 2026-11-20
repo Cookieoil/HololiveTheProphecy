@@ -109,6 +109,6 @@ Private:
 - L550-554 `_on_spawn_custom_pressed`
 
 Uses: Card
-Used by: GDTest/DebugMenuTest.gd, Scenes/BattleScene/BattleScene.gd
+Used by: GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, Scenes/BattleScene/BattleScene.gd
 Loads: —
 

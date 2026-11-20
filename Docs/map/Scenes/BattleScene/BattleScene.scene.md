@@ -18,23 +18,23 @@ Root script: `Scenes/BattleScene/BattleScene.gd`
       - Margin `MarginContainer`
         - HBox `HBoxContainer`
           - LeftGroup `HBoxContainer`
-            - WaveStat `HBoxContainer`
+            - WaveStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
               - Icon `TextureRect`
               - Value `Label`
-            - DiceStat `HBoxContainer`
+            - DiceStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
               - Icon `TextureRect`
               - Value `Label`
           - CenterGroup `HBoxContainer`
-            - ActionsStat `HBoxContainer`
+            - ActionsStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
               - Icon `TextureRect`
               - Value `Label`
-            - MergesStat `HBoxContainer`
+            - MergesStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
               - Icon `TextureRect`
               - Value `Label`
           - RightGroup `HBoxContainer`
             - ResourceLabel `Label`
-            - ConvertButton `Button`
-            - EndTurnButton `Button`
+            - ConvertButton `Button` — script `Scenes/HUD/HudTooltip.gd`
+            - EndTurnButton `Button` — script `Scenes/HUD/HudTooltip.gd`
     - MessageLog `Label`
     - HandBar `PanelContainer` — script `Scenes/Cards/HandBar.gd`
       - MarginContainer `MarginContainer`
@@ -45,6 +45,6 @@ Root script: `Scenes/BattleScene/BattleScene.gd`
             - RightLine `ColorRect`
           - CardsRow `HBoxContainer`
   - DebugLayer `CanvasLayer`
-    - DebugButton `Button`
+    - DebugButton `Button` — script `Scenes/HUD/HudTooltip.gd`
   - BattleOverlay `Node` — script `Scenes/HUD/BattleOverlayController.gd`
   - WorldEnvironment `WorldEnvironment`

@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (42)
+## 1. Game scripts at a glance (43)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -51,6 +51,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Scenes/Cards/HandBar.gd`](map/Scenes/Cards/HandBar.md) | `HandBar` | 430 | Bottom-edge hand of cards. View-only: it animates, GameManager validates. |
 | [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 494 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges UnitUI hover & wave transitions without freed-instance errors. |
 | [`Scenes/HUD/DebugMenuPopup.gd`](map/Scenes/HUD/DebugMenuPopup.md) | `DebugMenuPopup` | 558 | Tester-only tool palette for the battle scene. Every button here is a *request*: it emits `debug_command_requested` upward and the turn loop performs the mutati… |
+| [`Scenes/HUD/HudTooltip.gd`](map/Scenes/HUD/HudTooltip.md) | `HudTooltip` | 116 | Hover tooltip for one top-bar widget. Every icon in the top bar is the same placeholder logo, so the icon alone cannot say what the number beside it means. Inst… |
 | [`Scenes/HUD/MoxieOrbUI.gd`](map/Scenes/HUD/MoxieOrbUI.md) | `MoxieOrbUI` | 594 | extends Control, 3 signal(s), 1 export(s), 22 function(s) |
 | [`Scenes/HUD/OutlineGlow.gd`](map/Scenes/HUD/OutlineGlow.md) | `OutlineGlow` | 233 | outer light border with scrolling sub-surface energy texture. |
 | [`Scenes/HUD/SkillTooltipPopup.gd`](map/Scenes/HUD/SkillTooltipPopup.md) | `SkillTooltipPopup` | 272 | extends Control, 8 function(s) |
@@ -71,7 +72,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single source of truth the game reads at runtime, while res://Data/xlsx/ga… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every cell is returned as a String; DataBuilder performs the typed conve… |
 
-## 2. Tests at a glance (12)
+## 2. Tests at a glance (13)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -85,6 +86,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/EnemyTurnOverlapTest.gd`](map/GDTest/EnemyTurnOverlapTest.md) | `EnemyTurnOverlapTest` | 232 | Locks the enemy-turn overlap ("fast mode" pacing): - consecutive enemies hand control to the next one at the impact beat of their skill animation, so wind-downs… |
 | [`GDTest/EnemyUltAuraTest.gd`](map/GDTest/EnemyUltAuraTest.md) | `EnemyUltAuraTest` | 139 | Locks in the enemy Ultimate warning lifecycle. The crimson character aura and the Moxie orb preview both describe one *pending* roll, so neither may outlive the… |
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the card the player merged *into*, so a merge never teleports the result to the far right. |
+| [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 159 | Locks the top-bar hover tooltips (HudTooltip). Every icon in the bar is the same placeholder logo, so each stat and each icon-only action button describes itsel… |
 | [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 91 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatalog. |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIconEntry). Covers: left-of-keyword icons (LoR style), pure glyphs (Riftbound style), expl… |
 
@@ -139,4 +141,4 @@ Top-level keys:
 
 ---
 
-Indexed 54 script(s) (42 game, 12 test), 4 scene(s), 5 data file(s).
+Indexed 56 script(s) (43 game, 13 test), 4 scene(s), 5 data file(s).
