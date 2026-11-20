@@ -20,10 +20,11 @@ logs `Skeleton version X does not match runtime version Y`. So:
 `Tools/prepare_spine_portrait.py` and `Tools/check_spine_runtime.gd` both enforce `4.3`.
 Any `4.3.xx` patch works; 4.3.26 is the current stable release.
 
-The installed launcher is **Spine Launcher 4.3.08**, so the default version it downloads is
-already correct. The launcher must be **activated** (your Spine account / activation code)
-before it will download an editor version; an unactivated launcher prints
-`An activation code is required.`
+The installed launcher is **Spine Launcher 4.3.08**, and this machine runs **Spine 4.3.26
+Professional** (`%USERPROFILE%\Spine\updates\4.3.26`), which matches the runtime. The launcher
+must be **activated** (your Spine account / activation code) before it will download an editor
+version; an unactivated launcher prints `An activation code is required.` See
+[Troubleshooting the launcher](#troubleshooting-the-launcher) if it refuses to start.
 
 > **Upgrading from 4.2:** the two rigs that shipped with the 4.2 runtime
 > (`300101_zhujue`, `300402_hongnujian`) were removed because a Spine 4.2 export cannot be
@@ -82,34 +83,39 @@ before it will download an editor version; an unactivated launcher prints
 *"Other software has interfered with Spine's operation. Please disable any antivirus or other
 software that manipulates Spine."*
 
-That text is the launcher's generic start-failure hint, **not** an antivirus report, and on
-this machine no antivirus was involved (Defender's real-time protection is off). The launcher
-failed because of its own state folder, `%USERPROFILE%\Spine`:
+That text is the launcher's generic start-failure hint — an anti-tamper message — **not** an
+antivirus report, and on this machine no antivirus was involved (Defender's real-time protection
+is off). The launcher failed because of its own state folder, `%USERPROFILE%\Spine`:
 
-1. `version.txt` pinned a Spine version that was not installed (`4.2.xx`), so there was nothing
-   to start. Note that running `Spine -u <version>` (or `Spine --update <version>`) records that
-   version there, so a one-off download attempt can leave the launcher stuck on a version you
-   never installed.
-2. `updates\3.8.75` was a 10.9 MB *file* left over from a third-party Spine 3.8 install — not a
-   real `<version>/` editor folder.
-3. `prefs.json`, `views.json`, `recent.json` and `hotkeys.txt` still described a 3.8 session.
+1. `version.txt` pinned Spine **3.8.75**, while `updates\3.8.75` held the editor payload of a
+   *third-party* 3.8 install (file dated 2019-12-24) instead of one this launcher downloaded
+   itself. The launcher could not start it and reported interference; deleting the pin and the
+   payload is what made it start. `Spine -u <version>` / `--update <version>` records the version
+   in `version.txt`, so `-u 4.2.xx` also pins the launcher to 4.2.xx — which fails the same way,
+   because that editor was never downloaded.
+2. `prefs.json`, `views.json`, `recent.json` and `hotkeys.txt` still described a 3.8 session.
 
-**Fix** (back up `%USERPROFILE%\Spine` first):
+Note that `updates\<version>` is a single *file* — the downloaded editor payload (~15 MB for
+4.3.26), not a `<version>\` folder. Do not "tidy" it into a directory.
+
+**Fix** (back up `%USERPROFILE%\Spine` first): drop the pinned version and the stale payload,
+then relaunch. The launcher opens, asks for an activation code, and downloads a current editor:
 
 ```powershell
 $s = "$env:USERPROFILE\Spine"
 Remove-Item -LiteralPath "$s\version.txt"                                  # let the launcher choose
-Remove-Item -LiteralPath "$s\updates\3.8.75"                               # bogus leftover
+Remove-Item -LiteralPath "$s\updates\3.8.75"                               # stale third-party payload
 Remove-Item -LiteralPath "$s\prefs.json", "$s\views.json", "$s\recent.json", "$s\hotkeys.txt"
 & 'C:\Program Files\Spine\Spine.com' --no-auto-start
 ```
 
-The launcher then opens and asks for an activation code. Related notes:
+After activation the launcher logged `Downloading: Spine 4.3.26 Professional` and
+`Starting: Spine 4.3.26 Professional`, leaving `updates\4.3.26` in place. Related notes:
 
 - A stale `.lock` in the same folder (left by a crashed session) can also block startup — delete
   it too. To confirm the launcher itself is healthy, run `Spine.com -v`; it prints
   `Spine Launcher <version> … Complete.` and exits 0.
-- `%USERPROFILE%\Spine\spine.log` holds the launcher's own output; on a failure it contains the
-  "Other software has interfered" text with no further detail.
-- Only the launcher lives in `C:\Program Files\Spine`. Editors are downloaded into
-  `%USERPROFILE%\Spine\updates\<version>\` after activation.
+- `%USERPROFILE%\Spine\spine.log` holds the launcher's own output. A start failure leaves the
+  "Other software has interfered" text there with no further detail.
+- Only the launcher lives in `C:\Program Files\Spine` (`launcher\1` and `launcher\2` are its
+  bundled Java runtime).
