@@ -338,6 +338,7 @@ READY_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:88-88	: Color = Color(0.55, 1.0, 
 REGENERATION_HEAL_PER_TICK	const	Core/Unit.gd:27-27	: int = 3
 REGEN_STEP	const	Scenes/HUD/DebugMenuPopup.gd:65-65	: int = 2
 RENDER_SUPERSAMPLE	const	Scenes/Cards/CardUI.gd:37-37	: float = 2.0
+REQUIRED_CLASSES	const	Tools/check_spine_runtime.gd:15-15	: PackedStringArray = [
 REQUIRED_EFFECT_KEYS	const	Tools/validate_gameData.gd:46-46	: PackedStringArray
 REQUIRED_SHEETS	const	Tools/dataBuilder.gd:37-37	: PackedStringArray = [
 RES_SCHEME	const	Tools/CodeIndexParser.gd:18-18	: String = "res://"
@@ -381,6 +382,7 @@ SHIELD_STEP	const	Scenes/HUD/DebugMenuPopup.gd:64-64	: int = 10
 SHOW_CATEGORY_ICONS	const	Scenes/HUD/SkillTooltipPopup.gd:12-12	: bool = false
 SHOW_SKILL_PREVIEW_STRIP	const	Scenes/BattleUnit/UnitUI.gd:710-710	: bool = false
 SHOW_STATUS_ICONS	const	Scenes/BattleUnit/UnitUI.gd:708-708	: bool = true
+SKELETON_RESOURCES	const	Tools/check_spine_runtime.gd:23-23	: PackedStringArray = [
 SKILLS_FILE	const	Tools/dataBuilder.gd:31-31	: String = "skills.json"
 SKILLS_PATH	const	Core/DataLoader.gd:18-18	: String = "res://Data/json/skills.json"
 SKILLS_PATH	const	Tools/validate_gameData.gd:26-26	: String = JSON_DIR + "/skills.json"
@@ -573,6 +575,7 @@ _card_surface	var	Scenes/Cards/CardUI.gd:188-188	: SubViewport
 _card_ui	func	GDTest/CardMergeAnimationTest.gd:63-66	(bar: HandBar, card: Card) -> CardUI
 _cell	func	Tools/gen_code_index.gd:412-413	(text: String) -> String
 _check	func	Tools/check_navigation.gd:76-84	(condition: bool, message: String) -> bool
+_check_classes	func	Tools/check_spine_runtime.gd:46-51	(failures: PackedStringArray) -> void
 _check_committed_artifacts	func	Tools/check_navigation.gd:144-162	() -> void
 _check_committed_docs_untouched	func	Tools/check_navigation.gd:626-628	(before: Dictionary) -> void
 _check_condition	func	Skills/EffectBlock.gd:187-203	(ctx: SkillContext) -> bool
@@ -582,6 +585,7 @@ _check_links	func	Tools/check_navigation.gd:361-386	() -> void
 _check_loader_integration	func	Tools/validate_gameData.gd:958-981	() -> void
 _check_lookup_recipes	func	Tools/check_navigation.gd:248-261	(rows: Array[Dictionary]) -> void
 _check_only	var	Tools/gen_code_index.gd:76-76	: bool = false
+_check_resources	func	Tools/check_spine_runtime.gd:54-67	(failures: PackedStringArray) -> void
 _check_rows_are_valid	func	Tools/check_navigation.gd:216-244	(rows: Array[Dictionary]) -> void
 _check_scenes	func	Tools/check_navigation.gd:421-440	() -> void
 _check_signal_table	func	Tools/check_navigation.gd:456-479	(map_text: String) -> void
@@ -841,6 +845,7 @@ _init	func	Skills/SkillContext.gd:33-42	(p_caster: Unit, p_card: Card, p_state: 
 _init	func	Skills/SkillData.gd:31-34	() -> void
 _initialize	func	Tools/check_navigation.gd:58-72	() -> void
 _initialize	func	Tools/check_scripts.gd:27-45	() -> void
+_initialize	func	Tools/check_spine_runtime.gd:30-42	() -> void
 _initialize	func	Tools/diagnose_spine_atlas.gd:7-49	() -> void
 _initialize	func	Tools/export_xlsx_to_json.gd:16-33	() -> void
 _initialize	func	Tools/gen_code_index.gd:81-106	() -> void
