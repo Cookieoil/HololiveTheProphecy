@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://c3oo6wx54hb7m" path="res://Scenes/BattleScene/Assets/icon.svg" id="4_phsvg"]
 [ext_resource type="Resource" path="res://Scenes/BattleScene/Assets/StatusIcons.tres" id="6_status"]
 [ext_resource type="Resource" path="res://Scenes/BattleScene/Assets/TooltipIcons.tres" id="7_tooltip"]
+[ext_resource type="Script" path="res://Scenes/HUD/HudTooltip.gd" id="8_hudtip"]
 
 [sub_resource type="Environment" id="Environment_hqvvd"]
 background_mode = 3
@@ -89,6 +90,8 @@ theme_override_constants/separation = 24
 [node name="WaveStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/LeftGroup" unique_id=863329902]
 layout_mode = 2
 theme_override_constants/separation = 6
+tooltip_text = "Wave\nEnemy wave you are fighting. Clear it to advance."
+script = ExtResource("8_hudtip")
 
 [node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/LeftGroup/WaveStat" unique_id=863329903]
 custom_minimum_size = Vector2(28, 28)
@@ -105,6 +108,8 @@ text = "2"
 [node name="DiceStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/LeftGroup" unique_id=863329905]
 layout_mode = 2
 theme_override_constants/separation = 6
+tooltip_text = "Dice\nThe die every enemy rolls each turn for its action value."
+script = ExtResource("8_hudtip")
 
 [node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/LeftGroup/DiceStat" unique_id=863329906]
 custom_minimum_size = Vector2(28, 28)
@@ -127,6 +132,8 @@ alignment = 1
 [node name="ActionsStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/CenterGroup" unique_id=863329909]
 layout_mode = 2
 theme_override_constants/separation = 6
+tooltip_text = "Actions\nActions left this turn. Playing a card or a convert spends one."
+script = ExtResource("8_hudtip")
 
 [node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/CenterGroup/ActionsStat" unique_id=863329910]
 custom_minimum_size = Vector2(28, 28)
@@ -143,6 +150,8 @@ text = "2"
 [node name="MergesStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/CenterGroup" unique_id=863329912]
 layout_mode = 2
 theme_override_constants/separation = 6
+tooltip_text = "Merges\nMerges left this turn. A merge fuses two cards into a stronger one."
+script = ExtResource("8_hudtip")
 
 [node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/CenterGroup/MergesStat" unique_id=863329913]
 custom_minimum_size = Vector2(28, 28)
@@ -168,18 +177,20 @@ theme_override_font_sizes/font_size = 14
 text = "Deck: 12 | Discard: 0"
 
 [node name="ConvertButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=197317561]
-custom_minimum_size = Vector2(110, 34)
+custom_minimum_size = Vector2(34, 34)
 layout_mode = 2
-text = "Convert"
+tooltip_text = "Convert\nConvert 1 action into 1 merge."
 icon = ExtResource("4_phsvg")
 expand_icon = true
+script = ExtResource("8_hudtip")
 
 [node name="EndTurnButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=1980702320]
-custom_minimum_size = Vector2(110, 34)
+custom_minimum_size = Vector2(34, 34)
 layout_mode = 2
-text = "End Turn"
+tooltip_text = "End Turn\nEnd your turn to start the enemy turn."
 icon = ExtResource("4_phsvg")
 expand_icon = true
+script = ExtResource("8_hudtip")
 
 [node name="MessageLog" type="Label" parent="HUD" unique_id=1043898199]
 anchors_preset = 5
@@ -258,7 +269,8 @@ offset_right = 122.0
 offset_bottom = -15.0
 grow_vertical = 0
 text = "Debug ▴"
-tooltip_text = "Open the tester debug menu (F1)"
+tooltip_text = "Debug\nOpen the tester debug menu (F1)."
+script = ExtResource("8_hudtip")
 
 [node name="BattleOverlay" type="Node" parent="."]
 script = ExtResource("5_ovl")

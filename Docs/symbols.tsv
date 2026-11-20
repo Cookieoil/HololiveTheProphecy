@@ -40,6 +40,9 @@ BADGE_SIZE	const	Scenes/BattleUnit/UnitUI.gd:714-714	: float = 24.0
 BASE_TRACK	const	Scenes/BattleUnit/SpinePortrait.gd:14-14	: int = 0
 BBC_TAG_NAMES	const	Scenes/HUD/TooltipIconCatalog.gd:32-32	: PackedStringArray = [
 BEZEL_DEFAULT_ALPHA	const	Scenes/HUD/MoxieOrbUI.gd:72-72	= 0.94
+BODY_COLOR	const	Scenes/HUD/HudTooltip.gd:44-44	: Color = Color(0.80, 0.85, 0.93)
+BODY_FONT_SIZE	const	Scenes/HUD/HudTooltip.gd:37-37	: int = 12
+BORDER_WIDTH	const	Scenes/HUD/HudTooltip.gd:35-35	: int = 1
 BUFF_FRAME_COLOR	const	Scenes/BattleUnit/UnitUI.gd:726-726	: Color = Color(0.36, 0.78, 1.0, 0.95)
 BUFF_TILE_COLOR	const	Scenes/BattleUnit/UnitUI.gd:725-725	: Color = Color(0.10, 0.26, 0.42, 0.95)
 BUTTON_MIN_SIZE	const	Scenes/HUD/DebugMenuPopup.gd:75-75	: Vector2 = Vector2(0.0, 26.0)
@@ -116,6 +119,7 @@ CONDITION_MAP	const	Core/DataLoader.gd:68-68	: Dictionary = {
 CONFIG_FILE	const	Tools/dataBuilder.gd:35-35	: String = "config.json"
 CONFIG_PATH	const	Core/DataLoader.gd:22-22	: String = "res://Data/json/config.json"
 CONFIG_PATH	const	Tools/validate_gameData.gd:30-30	: String = JSON_DIR + "/config.json"
+CORNER_RADIUS	const	Scenes/HUD/HudTooltip.gd:34-34	: int = 6
 COUNT_DISPLAY_MAX	const	Scenes/BattleUnit/UnitUI.gd:723-723	: int = 99
 COUNT_FONT_SIZE	const	Scenes/BattleUnit/UnitUI.gd:718-718	: int = 11
 COUNT_MODE_DURATION	const	Core/Unit.gd:22-22	: String = "duration"
@@ -256,6 +260,8 @@ HOVER_SCALE	const	Scenes/Cards/CardUI.gd:22-22	: float = 1.12
 HOVER_TWEEN_TIME	const	Scenes/Cards/CardUI.gd:24-24	: float = 0.12
 HOVER_Z_INDEX	const	Scenes/Cards/CardUI.gd:25-25	: int = 20
 HandBar	class	Scenes/Cards/HandBar.gd:2-2	extends PanelContainer
+HudTooltip	class	Scenes/HUD/HudTooltip.gd:2-2	extends Control
+HudTooltipTest	class	GDTest/HudTooltipTest.gd:1-1	extends GdUnitTestSuite
 ICON_INSET	const	Scenes/BattleUnit/UnitUI.gd:716-716	: float = 3.0
 INNER_RADIUS	const	Scenes/HUD/MoxieOrbUI.gd:13-13	: float = 18.0 * ORB_SCALE
 INTENT_STAGGER	const	Scenes/BattleScene/BattleScene.gd:43-43	: float = 0.08
@@ -306,10 +312,13 @@ ORB_SCALE	const	Scenes/HUD/MoxieOrbUI.gd:9-9	: float = 1.3
 OVERFLOW_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:83-83	: Color = Color(1.0, 0.55, 0.45)
 OutlineGlow	class	Scenes/HUD/OutlineGlow.gd:2-2	extends ColorRect
 PADDING	const	Scenes/HUD/DebugMenuPopup.gd:73-73	: int = 10
+PADDING	const	Scenes/HUD/HudTooltip.gd:32-32	: int = 10
 PAD_X	const	Scenes/HUD/SkillTooltipPopup.gd:8-8	: int = 14
 PAD_Y	const	Scenes/HUD/SkillTooltipPopup.gd:9-9	: int = 11
 PANEL_BG	const	Scenes/HUD/DebugMenuPopup.gd:78-78	: Color = Color(0.07, 0.08, 0.11, 0.97)
+PANEL_BG	const	Scenes/HUD/HudTooltip.gd:41-41	: Color = Color(0.07, 0.08, 0.11, 0.97)
 PANEL_BORDER	const	Scenes/HUD/DebugMenuPopup.gd:79-79	: Color = Color(0.45, 0.78, 0.95, 0.5)
+PANEL_BORDER	const	Scenes/HUD/HudTooltip.gd:42-42	: Color = Color(0.45, 0.78, 0.95, 0.5)
 PANEL_HEIGHT	const	Scenes/HUD/DebugMenuPopup.gd:70-70	: float = 404.0
 PANEL_WIDTH	const	Scenes/HUD/DebugMenuPopup.gd:69-69	: float = 336.0
 PLACEHOLDER_ICON	const	Scenes/BattleUnit/StatusIconCatalog.gd:17-17	: Texture2D
@@ -352,8 +361,10 @@ SANITY_MAX_DICE_SIDES	const	Tools/validate_gameData.gd:77-77	: int = 100
 SANITY_MAX_TARGET_COUNT	const	Tools/validate_gameData.gd:75-75	: int = 10
 SANITY_MIN_HP	const	Tools/validate_gameData.gd:78-78	: int = 1
 SCENE_PATH	const	GDTest/CodeIndexTest.gd:12-12	: String = "res://Fixture/Thing.tscn"
+SCENE_PATH	const	GDTest/HudTooltipTest.gd:13-13	: String
 SCREEN_MARGIN	const	Scenes/HUD/SkillTooltipPopup.gd:10-10	: float = 12.0
 SCRIPT_PATH	const	GDTest/CodeIndexTest.gd:11-11	: String = "res://Fixture/Thing.gd"
+SCRIPT_PATH	const	GDTest/HudTooltipTest.gd:14-14	: String = "res://Scenes/HUD/HudTooltip.gd"
 SEAT_BOTTOM	const	Scenes/HUD/DebugMenuPopup.gd:72-72	: float = 50.0
 SEAT_LEFT	const	Scenes/HUD/DebugMenuPopup.gd:71-71	: float = 18.0
 SECTION_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:81-81	: Color = Color(0.62, 0.72, 0.85)
@@ -410,7 +421,10 @@ TARGET_MODE_MAP	const	Core/DataLoader.gd:43-43	: Dictionary = {
 TEST_DIR_PREFIX	const	Tools/CodeIndexParser.gd:16-16	: String = "GDTest/"
 TEST_OUT_DIR	const	Tools/check_navigation.gd:33-33	: String = "res://reports/navigation-test"
 TITLE_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:80-80	: Color = Color(0.55, 0.86, 1.0)
+TITLE_COLOR	const	Scenes/HUD/HudTooltip.gd:43-43	: Color = Color(0.55, 0.86, 1.0)
+TITLE_FONT_SIZE	const	Scenes/HUD/HudTooltip.gd:36-36	: int = 13
 TOKEN_PATTERN	const	Scenes/HUD/TooltipIconCatalog.gd:38-38	: String
+TOOLTIP_WIDGETS	const	GDTest/HudTooltipTest.gd:16-16	: Array[String] = [
 TargetMode	enum	Skills/EffectBlock.gd:17-26	NONE
 TooltipIconCatalog	class	Scenes/HUD/TooltipIconCatalog.gd:2-2	extends Resource
 TooltipIconCatalogTest	class	GDTest/TooltipIconCatalogTest.gd:1-1	extends GdUnitTestSuite
@@ -514,6 +528,7 @@ _build_ally_context	func	Managers/GameManager.gd:772-814	(ally: Unit, card: Card
 _build_artifacts	func	Tools/gen_code_index.gd:134-143	(global_signals: Array[Dictionary], scenes: Array[Dictionary], data_files: Array[Dictionary]) -> Dictionary
 _build_cards_tab	func	Scenes/HUD/DebugMenuPopup.gd:277-324	(tabs: TabContainer) -> void
 _build_category_fallback_entry	func	Scenes/HUD/TooltipIconCatalog.gd:144-156	(key: String) -> TooltipIconEntry
+_build_chrome	func	Scenes/HUD/HudTooltip.gd:92-102	static () -> StyleBoxFlat
 _build_config	func	Core/DataLoader.gd:458-514	static (config_json: Dictionary, units: Dictionary) -> Dictionary
 _build_debug_targets	func	Scenes/BattleScene/BattleScene.gd:468-477	(state: GameState) -> Array[Dictionary]
 _build_effect_block	func	Core/DataLoader.gd:326-363	static (data: Dictionary, skill_id: String) -> EffectBlock
@@ -522,6 +537,7 @@ _build_fake_3d_rig	func	Scenes/Cards/CardUI.gd:414-474	() -> void
 _build_glow_node	func	Scenes/HUD/MoxieOrbUI.gd:150-155	() -> void
 _build_keyword_index	func	Scenes/HUD/TooltipIconCatalog.gd:272-280	() -> Dictionary[String, TooltipIconEntry]
 _build_keyword_pattern	func	Scenes/HUD/TooltipIconCatalog.gd:283-291	(index: Dictionary[String, TooltipIconEntry]) -> String
+_build_label	func	Scenes/HUD/HudTooltip.gd:108-114	static (text: String, font_size: int, color: Color) -> Label
 _build_layout	func	Scenes/HUD/DebugMenuPopup.gd:235-272	() -> void
 _build_portrait_node	func	Scenes/HUD/MoxieOrbUI.gd:158-169	() -> void
 _build_rails	func	Scenes/HUD/BattleOverlayController.gd:272-307	() -> void
@@ -825,6 +841,7 @@ _initialize	func	Tools/check_scripts.gd:27-45	() -> void
 _initialize	func	Tools/diagnose_spine_atlas.gd:7-49	() -> void
 _initialize	func	Tools/export_xlsx_to_json.gd:16-33	() -> void
 _initialize	func	Tools/gen_code_index.gd:81-106	() -> void
+_instantiate_battle_scene	func	GDTest/HudTooltipTest.gd:37-45	() -> Node
 _int_field	func	Tools/validate_gameData.gd:319-326	(source: Dictionary, key: String, context: String, default_value: int, required: bool) -> int
 _int_value	func	Tools/validate_gameData.gd:296-316	(raw: Variant, context: String, fallback: int) -> int
 _intent_cache	var	Scenes/BattleScene/BattleScene.gd:37-37	: Dictionary[Unit, Dictionary] = {}
@@ -855,6 +872,7 @@ _join_paths	func	Tools/gen_code_index.gd:416-419	(values: PackedStringArray) -> 
 _keys_of	func	Tools/validate_gameData.gd:204-208	(source: Dictionary) -> PackedStringArray
 _kill_intent_tween	func	Scenes/BattleUnit/UnitUI.gd:360-363	() -> void
 _kill_intro_tween	func	Scenes/BattleUnit/UnitUI.gd:691-694	() -> void
+_labels	func	GDTest/HudTooltipTest.gd:49-55	(panel: Control) -> Array[Label]
 _last_status_signature	var	Scenes/BattleUnit/UnitUI.gd:130-130	: String = ""
 _layout_subrects	func	Scenes/HUD/MoxieOrbUI.gd:205-218	() -> void
 _line_of	func	Tools/validate_gameData.gd:1099-1112	(path: String, needle: String, occurrence: int, from_line: int = 0) -> int
@@ -869,6 +887,7 @@ _make_bare_portrait	func	GDTest/EnemyTurnOverlapTest.gd:159-166	(anim: StringNam
 _make_button	func	Scenes/HUD/DebugMenuPopup.gd:461-462	(label: String, command: String, args: Dictionary = {}) -> Button
 _make_card_ui	func	GDTest/CardDrawAnimationTest.gd:21-27	(card: Card) -> CardUI
 _make_card_ui	func	GDTest/CardUITest.gd:19-25	(card: Card) -> CardUI
+_make_custom_tooltip	func	Scenes/HUD/HudTooltip.gd:52-53	(for_text: String) -> Object
 _make_drag_preview	func	Scenes/Cards/CardUI.gd:1143-1156	() -> Control
 _make_enemy	func	GDTest/CardFlashPolicyTest.gd:48-51	() -> Unit
 _make_enemy	func	GDTest/DebugMenuTest.gd:58-59	(max_hp: int = 20) -> Unit
@@ -887,6 +906,7 @@ _make_row	func	Scenes/HUD/DebugMenuPopup.gd:440-445	() -> GridContainer
 _make_section	func	Scenes/HUD/DebugMenuPopup.gd:436-437	(text: String) -> Label
 _make_skill	func	GDTest/DebugMenuTest.gd:36-37	() -> SkillData
 _make_skill	func	GDTest/EnemyTurnOverlapTest.gd:34-35	() -> SkillData
+_make_slab	func	GDTest/HudTooltipTest.gd:28-31	(tooltip_text: String) -> Control
 _make_state	func	GDTest/GameStateMergeTest.gd:11-17	(values: Array[int]) -> GameState
 _make_tab	func	Scenes/HUD/DebugMenuPopup.gd:419-424	(tabs: TabContainer, title: String) -> VBoxContainer
 _make_unit	func	GDTest/StatusCatalogTest.gd:11-15	(max_hp: int = 20) -> Unit
@@ -1322,6 +1342,7 @@ build_inline	func	Scenes/HUD/TooltipIconEntry.gd:85-86	(matched_text: String, ic
 build_inline_with_mode	func	Scenes/HUD/TooltipIconEntry.gd:91-104	(matched_text: String, icon_size: int, mode: DisplayMode) -> String
 build_json_bundle	func	Tools/dataBuilder.gd:107-151	(sheets: Dictionary) -> Dictionary
 build_orb_ultimate_data	func	Skills/SkillPreviewFormatter.gd:133-190	static (unit: Unit, badge_code: String, state: GameState, intent: EnemyIntent = null, tooltip_catalog: TooltipIconCatalog = null) -> Dictionary
+build_tooltip_panel	func	Scenes/HUD/HudTooltip.gd:63-86	static (for_text: String) -> Control
 can_cast_ultimate	var	Core/Unit.gd:60-60	: bool:
 can_cross_merge	func	Core/GameState.gd:225-229	(a: Card, b: Card) -> bool
 can_double_merge	func	Core/GameState.gd:238-245	(merged_card: Card, other_card: Card) -> bool
@@ -1718,6 +1739,7 @@ test_a_card_at_the_fold_angle_is_not_drawn_at_all	func	GDTest/CardMergeAnimation
 test_a_double_merge_merges_a_free_play_card	func	GDTest/CardMergeAnimationTest.gd:446-471	() -> void
 test_a_merge_with_no_release_starts_from_the_cards_own_slot	func	GDTest/CardMergeAnimationTest.gd:212-225	() -> void
 test_a_resting_card_renders_on_the_pixel_grid_of_its_slot	func	GDTest/CardDrawAnimationTest.gd:190-205	() -> void
+test_action_buttons_are_labelless_icons	func	GDTest/HudTooltipTest.gd:143-158	() -> void
 test_ally_highlights_are_never_rewritten_as_the_enemy_warning	func	GDTest/EnemyUltAuraTest.gd:122-138	() -> void
 test_aura_drops_when_the_roll_lands_short	func	GDTest/EnemyUltAuraTest.gd:108-119	() -> void
 test_aura_warns_before_the_roll_then_releases_on_the_cast	func	GDTest/EnemyUltAuraTest.gd:87-105	() -> void
@@ -1778,6 +1800,7 @@ test_header_drag_ignores_other_mouse_buttons	func	GDTest/DebugMenuTest.gd:278-28
 test_header_is_a_wired_drag_handle	func	GDTest/DebugMenuTest.gd:289-296	() -> void
 test_heal_full_restores_the_target_only	func	GDTest/DebugMenuTest.gd:520-530	() -> void
 test_hostile_flash_uses_the_crimson_preset	func	GDTest/CardUITest.gd:76-98	() -> void
+test_hover_hook_returns_the_slab	func	GDTest/HudTooltipTest.gd:92-102	() -> void
 test_hover_scales_the_card_without_warping_it	func	GDTest/CardDrawAnimationTest.gd:281-302	() -> void
 test_icon_only_mode_replaces_the_keyword_with_a_pure_glyph	func	GDTest/TooltipIconCatalogTest.gd:76-86	() -> void
 test_inner_class_is_listed_without_flattening_members	func	GDTest/CodeIndexTest.gd:181-199	() -> void
@@ -1795,6 +1818,7 @@ test_merged_card_appears_in_place_instead_of_flying_in	func	GDTest/CardDrawAnima
 test_merged_card_is_placed_at_its_model_slot	func	GDTest/CardDrawAnimationTest.gd:225-242	() -> void
 test_next_skill_bonus_accumulates	func	GDTest/DebugMenuTest.gd:460-466	() -> void
 test_one_line_enum_is_parsed	func	GDTest/CodeIndexTest.gd:168-178	() -> void
+test_one_line_is_a_description_only	func	GDTest/HudTooltipTest.gd:68-72	() -> void
 test_orb_preview_is_spent_when_the_roll_lands_short	func	GDTest/EnemyUltAuraTest.gd:56-66	() -> void
 test_orb_preview_never_double_counts_into_a_false_ready_glow	func	GDTest/EnemyUltAuraTest.gd:69-84	() -> void
 test_output_is_consumed_by_a_rich_text_label	func	GDTest/TooltipIconCatalogTest.gd:133-145	() -> void
@@ -1819,6 +1843,8 @@ test_script_header_doc_becomes_the_summary	func	GDTest/CodeIndexTest.gd:102-107	
 test_set_hand_only_deals_the_new_cards	func	GDTest/CardDrawAnimationTest.gd:156-170	() -> void
 test_set_hand_reuses_the_cards_already_in_the_row	func	GDTest/CardDrawAnimationTest.gd:137-153	() -> void
 test_shield_tools_add_and_clear	func	GDTest/DebugMenuTest.gd:533-543	() -> void
+test_slab_never_eats_the_hover	func	GDTest/HudTooltipTest.gd:106-112	() -> void
+test_slab_reuses_the_debug_menu_background	func	GDTest/HudTooltipTest.gd:76-87	() -> void
 test_spawned_merged_card_evaporates_instead_of_poisoning_the_deck	func	GDTest/DebugMenuTest.gd:356-364	() -> void
 test_spawning_ignores_the_hand_cap	func	GDTest/DebugMenuTest.gd:325-333	() -> void
 test_status_tools_apply_and_clear	func	GDTest/DebugMenuTest.gd:576-587	() -> void
@@ -1836,7 +1862,9 @@ test_the_survivors_glide_into_the_gap_the_merge_left	func	GDTest/CardMergeAnimat
 test_the_two_cards_are_drawn_detached_from_the_hand_layout	func	GDTest/CardMergeAnimationTest.gd:557-563	() -> void
 test_the_two_cards_are_mounted_where_they_were_and_the_layout_never_moves	func	GDTest/CardMergeAnimationTest.gd:117-160	() -> void
 test_the_two_cards_are_never_hidden_before_the_merged_card	func	GDTest/CardMergeAnimationTest.gd:499-537	() -> void
+test_top_bar_widgets_carry_the_hover_tooltip	func	GDTest/HudTooltipTest.gd:115-138	() -> void
 test_true_damage_bypasses_the_shield	func	GDTest/DebugMenuTest.gd:507-517	() -> void
+test_two_lines_become_a_title_and_a_description	func	GDTest/HudTooltipTest.gd:58-65	() -> void
 test_unit_tool_carries_the_selected_target	func	GDTest/DebugMenuTest.gd:195-217	() -> void
 test_unit_tool_without_a_target_does_nothing	func	GDTest/DebugMenuTest.gd:220-232	() -> void
 test_unknown_command_is_ignored	func	GDTest/DebugMenuTest.gd:641-647	() -> void
