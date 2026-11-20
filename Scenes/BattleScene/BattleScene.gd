@@ -20,7 +20,8 @@ extends GameUI
 @onready var dice_value_label: Label = $HUD/TopBar/Margin/HBox/LeftGroup/DiceStat/Value
 @onready var actions_value_label: Label = $HUD/TopBar/Margin/HBox/CenterGroup/ActionsStat/Value
 @onready var merges_value_label: Label = $HUD/TopBar/Margin/HBox/CenterGroup/MergesStat/Value
-@onready var resource_label: Label = $HUD/TopBar/Margin/HBox/RightGroup/ResourceLabel
+@onready var deck_value_label: Label = $HUD/TopBar/Margin/HBox/RightGroup/DeckStat/Value
+@onready var discard_value_label: Label = $HUD/TopBar/Margin/HBox/RightGroup/DiscardStat/Value
 @onready var convert_button: Button = $HUD/TopBar/Margin/HBox/RightGroup/ConvertButton
 @onready var end_turn_button: Button = $HUD/TopBar/Margin/HBox/RightGroup/EndTurnButton
 @onready var log_label: Label = $HUD/MessageLog
@@ -146,7 +147,8 @@ func _update_top_bar(state: GameState) -> void:
 	dice_value_label.text = str(state.get_dice_size(state.turn_number))
 	actions_value_label.text = str(state.actions_left)
 	merges_value_label.text = str(state.merges_left)
-	resource_label.text = "Deck: %d | Discard: %d" % [state.deck.size(), state.discard.size()]
+	deck_value_label.text = str(state.deck.size())
+	discard_value_label.text = str(state.discard.size())
 
 
 func show_enemy_intents(intents: Array[EnemyIntent]) -> void:
