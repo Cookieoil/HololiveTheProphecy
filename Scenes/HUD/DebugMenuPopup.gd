@@ -73,6 +73,8 @@ const SEAT_BOTTOM: float = 50.0
 const PADDING: int = 10
 ## Square corners (0 px): the panel and the hover tooltip slabs are one flat surface.
 const CORNER_RADIUS: int = 0
+## Accent border width, shared with the hover tooltip slab (HudTooltipTheme.tres).
+const BORDER_WIDTH: int = 2
 const ROW_SEPARATION: int = 5
 const BUTTON_MIN_SIZE: Vector2 = Vector2(0.0, 26.0)
 
@@ -226,7 +228,7 @@ func _apply_chrome() -> void:
 	var box := StyleBoxFlat.new()
 	box.bg_color = PANEL_BG
 	box.border_color = PANEL_BORDER
-	box.set_border_width_all(1)
+	box.set_border_width_all(BORDER_WIDTH)
 	box.set_corner_radius_all(CORNER_RADIUS)
 	box.content_margin_left = float(PADDING)
 	box.content_margin_right = float(PADDING)
