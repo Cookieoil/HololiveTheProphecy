@@ -75,3 +75,41 @@ before it will download an editor version; an unactivated launcher prints
   atlas rectangles if the PNG on disk differs from the packed size.
 - **`_bloom.png` is optional.** Drop `<char_id>_bloom.png` next to the atlas to light up the
   glow mask in `SpinePortrait.gdshader`.
+
+## Troubleshooting the launcher
+
+**Symptom:** launching Spine shows a dialog titled *"Unable to start Spine"* with the hint
+*"Other software has interfered with Spine's operation. Please disable any antivirus or other
+software that manipulates Spine."*
+
+That text is the launcher's generic start-failure hint, **not** an antivirus report, and on
+this machine no antivirus was involved (Defender's real-time protection is off). The launcher
+failed because of its own state folder, `%USERPROFILE%\Spine`:
+
+1. `version.txt` pinned a Spine version that was not installed (`4.2.xx`), so there was nothing
+   to start. Note that running `Spine -u <version>` (or `Spine --update <version>`) records that
+   version there, so a one-off download attempt can leave the launcher stuck on a version you
+   never installed.
+2. `updates\3.8.75` was a 10.9 MB *file* left over from a third-party Spine 3.8 install — not a
+   real `<version>/` editor folder.
+3. `prefs.json`, `views.json`, `recent.json` and `hotkeys.txt` still described a 3.8 session.
+
+**Fix** (back up `%USERPROFILE%\Spine` first):
+
+```powershell
+$s = "$env:USERPROFILE\Spine"
+Remove-Item -LiteralPath "$s\version.txt"                                  # let the launcher choose
+Remove-Item -LiteralPath "$s\updates\3.8.75"                               # bogus leftover
+Remove-Item -LiteralPath "$s\prefs.json", "$s\views.json", "$s\recent.json", "$s\hotkeys.txt"
+& 'C:\Program Files\Spine\Spine.com' --no-auto-start
+```
+
+The launcher then opens and asks for an activation code. Related notes:
+
+- A stale `.lock` in the same folder (left by a crashed session) can also block startup — delete
+  it too. To confirm the launcher itself is healthy, run `Spine.com -v`; it prints
+  `Spine Launcher <version> … Complete.` and exits 0.
+- `%USERPROFILE%\Spine\spine.log` holds the launcher's own output; on a failure it contains the
+  "Other software has interfered" text with no further detail.
+- Only the launcher lives in `C:\Program Files\Spine`. Editors are downloaded into
+  `%USERPROFILE%\Spine\updates\<version>\` after activation.
