@@ -183,7 +183,7 @@ def load_spine_json(path: Path) -> dict:
     if not isinstance(data, dict) or "skeleton" not in data:
         raise ValueError(
             f"{path} has no 'skeleton' section, so it is not a Spine JSON export. "
-            "A .skel binary or a .spine project cannot be patched — export JSON first."
+            "A .skel binary or a .spine project cannot be patched; export JSON first."
         )
     return data
 
@@ -349,7 +349,7 @@ def add_bone(data: dict, name: str, parent: str, offset: float, style: dict, rep
     else:
         report.append(
             f"bone {name}: parent {parent!r} has no length, so it sits on the parent "
-            "origin — move it in Spine"
+            "origin; move it in Spine"
         )
     bone.update(style)
     bones.append(bone)
@@ -435,7 +435,7 @@ def resolve_parents(data: dict, args: argparse.Namespace, report: list) -> tuple
     else:
         candidates = ", ".join(f"{name} ({count})" for name, count in hub_candidates(data))
         report.append(
-            f"Center_Hit_Point parent: {torso!r} — auto-detected as the bone with the most "
+            f"Center_Hit_Point parent: {torso!r}, auto-detected as the bone with the most "
             f"children. Candidates by child count: {candidates}. Check it, or pass --torso."
         )
 
@@ -526,7 +526,7 @@ def run(args: argparse.Namespace) -> int:
     print(f"\nwrote {output}")
 
     skeleton = output.stem
-    print("\nNext step — turn the patched JSON into an editable project:")
+    print("\nNext step: turn the patched JSON into an editable project")
     print(
         "  & 'C:\\Program Files\\Spine\\Spine.com' -i "
         f"{output.as_posix()} -o SpineSource/{skeleton}.spine --to {skeleton} -r"
@@ -536,7 +536,20 @@ def run(args: argparse.Namespace) -> int:
     return 0
 
 
+def make_console_utf8_safe() -> None:
+    """
+    Keep the report from crashing on a legacy Windows code page: a rig with a
+    non-ASCII bone name is echoed in error messages, and the default console
+    encoding cannot always represent it.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> int:
+    make_console_utf8_safe()
     parser = argparse.ArgumentParser(
         description=(
             "Add the I-1 combat rig (Center_Hit_Point, Cast_Origin_Point, "
