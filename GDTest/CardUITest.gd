@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 ## @author TheGreatJellyfish
 ## @version 11/16/2026
 
-const CARD_UI_SCENE_PATH: String = "res://Scenes/GameUI/GraphicalUI/Cards/CardUI.tscn"
+const CARD_UI_SCENE_PATH: String = "res://Scenes/Cards/CardUI.tscn"
 
 ## Mid colours of the OutlineGlow presets a hand card picks between.
 const CRIMSON_MID: Color = Color(0.98, 0.26, 0.24)        # THREAT_CRIMSON

@@ -104,6 +104,16 @@ func consume_moxie() -> void:
 	moxie = 0
 	ult_used_this_turn = true
 	moxie_changed.emit(moxie, max_moxie)
+
+
+## Tester/debug hook: forces the Moxie gauge to `value` and clears the once-per-turn
+## Ultimate lock, so a tester can fire an Ultimate on demand instead of waiting for
+## it to charge (or to re-test the same one).
+## @param value the Moxie to show, clamped to 0..max_moxie
+func set_moxie(value: int) -> void:
+	moxie = clampi(value, 0, max_moxie)
+	ult_used_this_turn = false
+	moxie_changed.emit(moxie, max_moxie)
 	
 ## Absorbs via shield, then applies the remainder to HP. Emits `damaged`
 ## after both values have been updated so UnitUI can react (flinch + bar drop).

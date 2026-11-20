@@ -4,10 +4,14 @@
 # Usage:
 #   pwsh -File Tools/preflight.ps1
 #   pwsh -File Tools/preflight.ps1 -Godot 'C:\path\to\godot.exe'
+#   pwsh -File Tools/preflight.ps1 -FixIndex          # regenerate Docs/ first
+#   pwsh -File Tools/preflight.ps1 -SkipIndexCheck    # leave Docs/ alone
 #
 # Exits 0 when every gate is green, 1 otherwise.
 param(
-    [string]$Godot = 'godot'
+    [string]$Godot = 'godot',
+    [switch]$FixIndex,
+    [switch]$SkipIndexCheck
 )
 
 $ErrorActionPreference = 'Continue'
@@ -28,6 +32,24 @@ if (-not (Test-Path -LiteralPath $godotExe)) {
 
 Write-Host ('Godot: ' + $godotExe) -ForegroundColor DarkGray
 
+$failed = @()
+
+# -FixIndex regenerates the symbol index before the gates run, so a stale index
+# is repaired in the same invocation instead of costing another round trip.
+if ($FixIndex) {
+    Write-Host ''
+    Write-Host '=== Regenerate symbol index (-FixIndex) ===' -ForegroundColor Cyan
+    $fixArgs = @('--headless', '--path', '.', '--script', 'res://Tools/gen_code_index.gd')
+    $fix = Start-Process -FilePath $godotExe -ArgumentList $fixArgs -NoNewWindow -Wait -PassThru
+    if ($fix.ExitCode -ne 0) {
+        Write-Host ('FAILED (exit ' + $fix.ExitCode + '): Regenerate symbol index') -ForegroundColor Red
+        $failed += 'Regenerate symbol index'
+    }
+    else {
+        Write-Host 'PASSED: Regenerate symbol index' -ForegroundColor Green
+    }
+}
+
 $gates = @(
     @{ Name = 'Import project';       Args = @('--headless', '--path', '.', '--import') },
     @{ Name = 'Validate game data';   Args = @('--headless', '--path', '.', 'res://Tools/validator.tscn', '--', '--strict') },
@@ -35,7 +57,17 @@ $gates = @(
     @{ Name = 'Unit tests (gdUnit4)'; Args = @('--headless', '--path', '.', '-s', 'res://addons/gdUnit4/bin/GdUnitCmdTool.gd', '-a', 'res://GDTest', '-c', '--ignoreHeadlessMode') }
 )
 
-$failed = @()
+# The generated navigation set (Docs/) must still match the sources, otherwise
+# the map the next reader trusts is lying. The harness also checks coverage,
+# ranges, links, scenes, signals and data against the sources, exercises the
+# generator in a scratch directory, and prints the read-cost benchmark. Same
+# command the CI `project` job runs.
+if ($SkipIndexCheck) {
+    Write-Host 'Skipping the navigation index gate (-SkipIndexCheck).' -ForegroundColor Yellow
+}
+else {
+    $gates += @{ Name = 'Navigation index checks'; Args = @('--headless', '--path', '.', '--script', 'res://Tools/check_navigation.gd') }
+}
 
 foreach ($gate in $gates) {
     Write-Host ''

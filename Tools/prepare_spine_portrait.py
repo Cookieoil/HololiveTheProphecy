@@ -12,7 +12,7 @@ python tools/prepare_spine_portrait.py \
     --json downloads/300101_zhujue.json \
     --bloom downloads/300101_zhujue_bloom.png \
     --name 300101_zhujue \
-    --out res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue
+    --out res://Scenes/BattleUnit/Spine/300101_zhujue
 """
 
 from __future__ import annotations

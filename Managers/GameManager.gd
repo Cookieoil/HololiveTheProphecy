@@ -18,6 +18,13 @@ const WAVE_MODE_MAP: Dictionary = {
 	"full_turn": GameState.WaveTransition.FULL_TURN,
 	"immediate_skip": GameState.WaveTransition.IMMEDIATE_SKIP,
 }
+
+## Fraction of an enemy's skill animation that plays before the next enemy may
+## start its own. Below 1.0 the previous enemy's wind-down overlaps the next
+## one's wind-up (the "fast mode" feel), so a three-enemy phase no longer costs
+## three full animation tails back to back. 1.0 restores strictly sequential
+## turns. Enemy Ultimates always play in full, so the dramatic beat stays intact.
+const ENEMY_SKILL_OVERLAP_LEAD: float = 0.6
 #endregion
 
 #region Helpers
@@ -308,6 +315,20 @@ func _player_action_phase() -> void:
 				
 			"hand":
 				pass
+
+			"debug":
+				_handle_debug_command(action)
+				# A debug tool can clear a wave (or finish off the last enemy), so
+				# run the exact same wave check the "play" branch does instead of
+				# inventing a second path for it.
+				if state.all_enemies_dead():
+					if state.wave_transition_mode == GameState.WaveTransition.IMMEDIATE_SKIP \
+							and _try_advance_wave():
+						current_intents.clear() # New wave skips acting this turn
+						ui.show_game_state(state)
+						ui.show_enemy_intents(current_intents)
+					else:
+						break # FULL_TURN / FINAL_WAVE: exit player phase immediately
 				
 			"end_turn":
 				ui.show_message("Ending player turn.")
@@ -448,6 +469,302 @@ func _handle_convert() -> void:
 	ui.show_message("Converted 1 action → 1 merge. (Actions:%d Merges:%d)" % [
 		state.actions_left, state.merges_left
 	])
+#endregion
+
+
+#region Debug Commands
+## Highest hand cap the Debug menu's stepper allows, so a stray click cannot set a
+## four-digit cap.
+const DEBUG_HAND_CAP_LIMIT: int = 20
+## Scope values of the Debug menu's target selector. Mirrors DebugMenuPopup.Scope
+## without this manager having to reference a UI class.
+const DEBUG_SCOPE_ALLIES: int = 0
+const DEBUG_SCOPE_ENEMIES: int = 1
+const DEBUG_SCOPE_ALL: int = 2
+
+## Tester-only mutations behind the in-game Debug menu (scenes/HUD/DebugMenuPopup.gd).
+##
+## They are applied *inside* the normal player-action loop rather than by the UI: the
+## loop then refreshes the hand/HUD itself and re-awaits input, exactly like it does
+## for a real action. That is what keeps `current_intents`, the wave machine and the
+## HUD in step — a debug tool never mutates the model behind the loop's back.
+##
+## Command ids are the CMD_* constants on DebugMenuPopup; the two lists stay in sync.
+## @param action - { "command": String, "args": Dictionary }
+func _handle_debug_command(action: Dictionary) -> void:
+	var command: String = str(action.get("command", ""))
+	var args: Dictionary = _coerce_dict(action.get("args", {}))
+
+	match command:
+		"spawn_random":
+			_debug_spawn_random(_coerce_int(args.get("count", 1), 1))
+		"spawn_custom":
+			_debug_spawn_custom(
+				_coerce_int(args.get("value", 3), 3),
+				_coerce_int(args.get("tier", 0), 0)
+			)
+		"draw":
+			_debug_draw(state.draw_n_cards(maxi(0, _coerce_int(args.get("count", 1), 1))))
+		"draw_to_max":
+			_debug_draw(state.draw_cards_to_limit())
+		"buff_hand":
+			_debug_buff_hand(_coerce_int(args.get("amount", 1), 1))
+		"discard_random":
+			_debug_discard_random()
+		"clear_hand":
+			_debug_clear_hand()
+		"grant_actions":
+			state.actions_left += _coerce_int(args.get("amount", 1), 1)
+			_debug_log("Actions: %d, Merges: %d" % [state.actions_left, state.merges_left])
+		"grant_merges":
+			state.merges_left += _coerce_int(args.get("amount", 1), 1)
+			_debug_log("Actions: %d, Merges: %d" % [state.actions_left, state.merges_left])
+		"step_max_hand":
+			var cap_delta: int = _coerce_int(args.get("delta", 1), 1)
+			state.max_hand_size = clampi(state.max_hand_size + cap_delta, 1, DEBUG_HAND_CAP_LIMIT)
+			_debug_log("Hand cap: %d card(s)." % state.max_hand_size)
+		"grant_next_bonus":
+			state.next_skill_bonus += _coerce_int(args.get("amount", 1), 1)
+			_debug_log("Next skill bonus: +%d" % state.next_skill_bonus)
+		"step_dice":
+			state.dice_size_modifier += _coerce_int(args.get("delta", 1), 1)
+			_debug_log("Dice size modifier: %+d (next rolls use d%d)." % [
+				state.dice_size_modifier, state.get_dice_size(state.turn_number)
+			])
+			# Re-roll so the tester sees the new dice size immediately instead of
+			# waiting for the next turn.
+			_roll_enemy_intents()
+			ui.show_enemy_intents(current_intents)
+		"fill_moxie":
+			_debug_set_moxie(_debug_targets(args), true)
+		"drain_moxie":
+			_debug_set_moxie(_debug_targets(args), false)
+		"heal_full":
+			_debug_heal(_debug_targets(args))
+		"damage":
+			_debug_damage(_debug_targets(args), _coerce_int(args.get("amount", 1), 1), false)
+		"true_damage":
+			_debug_damage(_debug_targets(args), _coerce_int(args.get("amount", 1), 1), true)
+		"add_shield":
+			_debug_shield(_debug_targets(args), _coerce_int(args.get("amount", 1), 1))
+		"clear_shield":
+			_debug_clear_shield(_debug_targets(args))
+		"kill":
+			_debug_kill(_debug_targets(args))
+		"apply_status":
+			_debug_apply_status(
+				_debug_targets(args),
+				str(args.get("status_id", "")),
+				_coerce_int(args.get("amount", 1), 1)
+			)
+		"clear_statuses":
+			_debug_clear_statuses(_debug_targets(args))
+		"reroll_intents":
+			_roll_enemy_intents()
+			ui.show_enemy_intents(current_intents)
+			_debug_log("Rerolled the enemy intents.")
+		"respawn_wave":
+			_spawn_wave(state.current_wave)
+			ui.show_game_state(state)
+			_roll_enemy_intents()
+			ui.show_enemy_intents(current_intents)
+			_debug_log("Respawned wave %d." % (state.current_wave + 1))
+		"clear_wave":
+			# Let the turn loop's own all-enemies-dead check advance the wave or
+			# declare victory, so this needs no wave code of its own.
+			_debug_kill(state.get_living_enemies())
+		_:
+			_debug_log("Unknown debug command '%s'." % command)
+
+
+## Coerces a Variant into a Dictionary (payloads cross the UI boundary as Variant).
+func _coerce_dict(value: Variant) -> Dictionary:
+	if value is Dictionary:
+		var dict: Dictionary = value
+		return dict
+	return {}
+
+
+## Resolves a { "scope": int, "slot": int } payload into the affected units.
+## slot >= 0 always means one specific slot of its own row; slot -1 means the whole
+## scope. A payload with no target selects the ally row only, so a malformed command
+## can never sweep the whole board.
+func _debug_targets(args: Dictionary) -> Array[Unit]:
+	var result: Array[Unit] = []
+	var scope: int = _coerce_int(args.get("scope", DEBUG_SCOPE_ALLIES), DEBUG_SCOPE_ALLIES)
+	var slot: int = _coerce_int(args.get("slot", -1), -1)
+
+	if slot >= 0:
+		var row: Array[Unit] = state.allies if scope == DEBUG_SCOPE_ALLIES else state.enemies
+		if slot < row.size():
+			result.append(row[slot])
+		return result
+
+	if scope == DEBUG_SCOPE_ALLIES or scope == DEBUG_SCOPE_ALL:
+		result.append_array(state.allies)
+	if scope == DEBUG_SCOPE_ENEMIES or scope == DEBUG_SCOPE_ALL:
+		result.append_array(state.enemies)
+	return result
+
+
+## One-line confirmation in the message log, so a tester can see what a tool did.
+func _debug_log(message: String) -> void:
+	ui.show_message(ColorUtils.colorize("[debug] ", ColorUtils.COLOR_HEADER) + message)
+
+
+## "Striker 12/12, Healer 8/10" — the HP line every unit tool reports.
+func _debug_hp_summary(units: Array[Unit]) -> String:
+	var parts := PackedStringArray()
+	for unit: Unit in units:
+		parts.append("%s %d/%d" % [unit.data.display_name, unit.current_hp, unit.max_hp])
+	return ", ".join(parts)
+
+
+func _debug_spawn_random(count: int) -> void:
+	var spawned: int = 0
+	for _i: int in maxi(0, count):
+		state.hand.append(state.spawn_debug_card(randi_range(1, 6)))
+		spawned += 1
+	if spawned == 0:
+		return
+	_debug_log("Spawned %d random card(s). Hand %d / %d." % [
+		spawned, state.hand.size(), state.max_hand_size
+	])
+
+
+func _debug_spawn_custom(value: int, tier: int) -> void:
+	# tier: 0 = base V, 1 = merged MV, 2 = double-merged DMV
+	var card: Card = state.spawn_debug_card(value, tier >= 1, tier >= 2)
+	state.hand.append(card)
+	_debug_log("Spawned %s%s. Hand %d / %d." % [
+		str(card.get_effective_value()),
+		card.get_suffix(),
+		state.hand.size(),
+		state.max_hand_size,
+	])
+
+
+func _debug_draw(drawn: Array[Card]) -> void:
+	if drawn.is_empty():
+		_debug_log("Nothing left to draw (deck and discard are both empty).")
+		return
+	_debug_log("Drew %d card(s). Hand %d / %d." % [
+		drawn.size(), state.hand.size(), state.max_hand_size
+	])
+
+
+func _debug_buff_hand(amount: int) -> void:
+	if state.hand.is_empty():
+		_debug_log("Hand is empty, nothing to buff.")
+		return
+	for card: Card in state.hand:
+		var before: int = card.get_effective_value()
+		card.value_buff += amount
+		# CardUI re-renders the number on this signal.
+		EventBus.card_value_changed.emit(card, before, card.get_effective_value())
+	_debug_log("Buffed %d card(s) by +%d." % [state.hand.size(), amount])
+
+
+func _debug_discard_random() -> void:
+	if state.hand.is_empty():
+		_debug_log("Hand is empty, nothing to discard.")
+		return
+	var index: int = randi_range(0, state.hand.size() - 1)
+	var card: Card = state.hand[index]
+	state.discard_card(card)
+	_debug_log("Discarded %s from hand." % ColorUtils.colorize(
+		str(card.get_effective_value()) + card.get_suffix(), ColorUtils.COLOR_CARD
+	))
+
+
+func _debug_clear_hand() -> void:
+	if state.hand.is_empty():
+		_debug_log("Hand is already empty.")
+		return
+	var cleared: int = state.hand.size()
+	for card: Card in state.hand.duplicate():
+		state.discard_card(card)
+	_debug_log("Discarded %d card(s) from hand." % cleared)
+
+
+func _debug_set_moxie(units: Array[Unit], fill: bool) -> void:
+	for unit: Unit in units:
+		unit.set_moxie(unit.max_moxie if fill else 0)
+		EventBus.moxie_changed.emit(unit, unit.moxie, unit.max_moxie)
+	_debug_log(
+		("Filled Moxie (Ultimates ready) on %d unit(s)." if fill else "Zeroed Moxie on %d unit(s).")
+		% units.size()
+	)
+
+
+func _debug_heal(units: Array[Unit]) -> void:
+	for unit: Unit in units:
+		var restored: int = unit.heal(unit.max_hp)
+		if restored > 0:
+			EventBus.unit_healed.emit(unit, restored)
+	_debug_log("Full heal -> %s" % _debug_hp_summary(units))
+
+
+func _debug_damage(units: Array[Unit], amount: int, true_damage: bool) -> void:
+	for unit: Unit in units:
+		var lost: int = unit.deal_true_damage(amount) if true_damage else unit.take_damage(amount)
+		if lost > 0:
+			EventBus.damage_dealt.emit(unit, unit, amount, lost)
+		if unit.is_dead:
+			EventBus.unit_died.emit(unit)
+	_debug_log("%s %d -> %s" % [
+		"True damage" if true_damage else "Damage", amount, _debug_hp_summary(units)
+	])
+
+
+func _debug_shield(units: Array[Unit], amount: int) -> void:
+	for unit: Unit in units:
+		var gained: int = unit.gain_shield(amount)
+		if gained > 0:
+			EventBus.shield_gained.emit(unit, gained)
+	_debug_log("Shield +%d -> %s" % [amount, _debug_hp_summary(units)])
+
+
+func _debug_clear_shield(units: Array[Unit]) -> void:
+	for unit: Unit in units:
+		var removed: int = unit.reduce_shield(unit.shield)
+		if removed > 0:
+			EventBus.shield_reduced.emit(unit, removed)
+	_debug_log("Cleared shield on %d unit(s)." % units.size())
+
+
+func _debug_kill(units: Array[Unit]) -> void:
+	var killed: int = 0
+	for unit: Unit in units:
+		if unit.is_dead:
+			continue
+		unit.deal_true_damage(unit.current_hp)
+		unit.reset_shield()
+		EventBus.unit_died.emit(unit)
+		killed += 1
+	if killed == 0:
+		_debug_log("Nothing to defeat: the target is already down.")
+		return
+	_debug_log("Defeated %d unit(s)." % killed)
+
+
+func _debug_apply_status(units: Array[Unit], status_id: String, amount: int) -> void:
+	var applied: int = 0
+	for unit: Unit in units:
+		if unit.apply_status(status_id, amount) > 0:
+			EventBus.unit_statuses_changed.emit(unit)
+			applied += 1
+	if applied == 0:
+		_debug_log("No %s applied (defeated units reject statuses)." % status_id)
+		return
+	_debug_log("%s +%d on %d unit(s)." % [status_id.capitalize(), amount, applied])
+
+
+func _debug_clear_statuses(units: Array[Unit]) -> void:
+	for unit: Unit in units:
+		unit.clear_statuses()
+		EventBus.unit_statuses_changed.emit(unit)
+	_debug_log("Cleared statuses on %d unit(s)." % units.size())
 #endregion
 
 
@@ -607,7 +924,9 @@ func _resolve_enemy_turns() -> void:
 		var skill_index: int = 1 if intent.effective_value % 2 == 1 else 2
 		var rank: int = 1 if intent.condition_met else 0
 	
-		await ui.play_unit_skill(intent.enemy, skill_index, rank)
+		# Return at the impact beat instead of the end of the animation, so the
+		# next enemy starts its attack while this one is still winding down.
+		await ui.play_unit_skill(intent.enemy, skill_index, rank, ENEMY_SKILL_OVERLAP_LEAD)
 	
 		# Clear value modifiers after this enemy's action resolves
 		intent.enemy.clear_value_modifier()

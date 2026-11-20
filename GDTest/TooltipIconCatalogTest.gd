@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 ## @author TheGreatJellyfish
 ## @version 11/16/2026
 
-const CATALOG_PATH: String = "res://Scenes/GameUI/GraphicalUI/BattleScene/Assests/TooltipIcons.tres"
+const CATALOG_PATH: String = "res://Scenes/BattleScene/Assets/TooltipIcons.tres"
 
 ## Fresh (uncached) catalog so a test can safely mutate entries.
 func _fresh_catalog() -> TooltipIconCatalog:

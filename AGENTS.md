@@ -6,12 +6,25 @@
 - The project uses an **EventBus** autoload for global signals. Use it instead of creating hard references between unrelated nodes.
 
 ## Project Map
-- `res://Core/` — Core game loops and base classes.
+- `res://Core/` — Core game loops and base classes, including `GameUI.gd` (the abstract UI contract `BattleScene` implements).
 - `res://Data/` — Game data, resources, and configuration.
-- `res://Managers/` — Global game managers.
-- `res://Scenes/` — Game scenes (`.tscn`), UI, and related assets.
+- `res://Managers/` — Global game managers (`EventBus`, `ColorUtils`, `GameManager`).
+- `res://Scenes/` — All UI, flat, one level deep (the old `GameUI/GraphicalUI` nesting is gone): `BattleScene/` (main scene + `Assets/`), `BattleUnit/`, `Cards/`, `HUD/`, `Textures/`.
+- `res://Scenes/HUD/DebugMenuPopup.gd` — tester-only tool palette behind the `Debug` button / `F1` (card overflow spawns, resources, unit HP/status/Moxie, wave tools). It is view-only: it emits `debug_command_requested`, and `GameManager._handle_debug_command()` applies each tool as a `"debug"` action inside the normal player-action loop, so a debug tool can never desync the turn machine. Its header is a drag handle, so the panel can be moved off whatever is being inspected.
+- `res://Shaders/` — Shared shaders (`FakeCard3D.gdshader`, preloaded by the card UI).
 - `res://Skills/` — Ability and skill logic.
 - `res://Tools/` — Editor tools, Python scripts, and utilities.
+
+## Code Navigation (read this before opening files)
+- **`Docs/CODEBASE_MAP.md` is the generated overview — read it first.** It is deliberately small: section 1 lists every game script, section 2 every test (`class_name`, size, role), section 3 lists every `EventBus` signal with its emitters and listeners, section 4 maps scenes to scripts, and section 5 lists the shape and keys of every JSON data file.
+- **Per-script detail lives in its own page:** `Docs/map/<path>.md` (e.g. `Docs/map/Scenes/Cards/CardUI.md`) carries signals, constants, exports, onready nodes and the public API with line ranges, plus `Uses` / `Used by`. Scene pages (`*.scene.md`) carry the node tree, so `@onready` paths can be checked without opening the `.tscn`.
+- **Find a symbol instead of grepping sources:** `rg -n '^get_effective_value\t' Docs/symbols.tsv` returns `path:start-end` in a single line; drop the `^name\t` anchor to search loosely.
+- **Read only the range the index gives you** (`Core/Card.gd:74-75`), never a whole file to find one function.
+- **All of `Docs/` is generated** by `Tools/gen_code_index.gd` (the parsing lives in `Tools/CodeIndexParser.gd`) — never hand-edit it. Regenerate after changing any first-party script, scene or data file:
+  `godot --headless --path . --script res://Tools/gen_code_index.gd` (or `pwsh -File Tools/preflight.ps1 -FixIndex`).
+- **Staleness and correctness are a gate:** `Tools/check_navigation.gd` re-checks the committed set against the sources (declaration coverage, line ranges, links, scenes, signals, data), exercises the generator in a scratch directory (`res://reports/navigation-test/`) and prints a read-cost benchmark. `Tools/preflight.ps1` runs it (skip with `-SkipIndexCheck`) and so does the CI `project` job, so a forgotten regeneration fails the build instead of leaving a stale map behind. `-- --benchmark` prints only the cost report.
+- **The parser is unit tested:** `GDTest/CodeIndexTest.gd` locks in the tricky cases with inline fixtures — wrapped signatures, header-doc detection, enum forms, function ranges, `.tscn` attributes and node depths, JSON shapes, dependency scanning.
+- The index walks `res://` subfolders only: `addons/`, `Trash/`, `bin/`, `reports/`, `.godot/` and files sitting directly in the project root are ignored, which keeps the output identical on every checkout.
 
 ## Strict Coding Rules
 - **100% Static Typing:** Every variable, parameter, and function return MUST have explicit types (`var speed: float = 200.0`, `func take_damage(amount: int) -> void:`). Untyped declarations are compiler errors.
@@ -53,13 +66,14 @@
 - **CI gates** (`.github/workflows/validate_game_data.yml`) run on every pull request (deliberately no `paths:` filter — a required check that never runs would block every PR) and on every push to `main`, split into three jobs:
   - `version` — resolves the Godot version from `project.godot` once, for the other jobs.
   - `validate` — the data gate: the validator with `--strict`, so any error **or warning** fails the build. Keep this job id and its missing `name:`; `main` requires the `validate` status check.
-  - `project` — compiles every script and runs the gdUnit4 suite.
+  - `project` — compiles every script, verifies the generated symbol index in `Docs/` still matches the sources, and runs the gdUnit4 suite.
   Errors/warnings are annotated inline on the PR, summarised on the job page, and the JUnit/HTML report is kept as the `gdunit4-reports` artifact. A red job means bad game data or a broken script — never merge past it.
-- **Local pre-flight before pushing** (the same three gates CI runs, all headless):
+- **Local pre-flight before pushing** (the same gates CI runs, all headless):
   - Validate data: `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
   - Compile every script: `godot --headless --path . --script res://Tools/check_scripts.gd`
+  - Symbol index is current: `godot --headless --path . --script res://Tools/check_navigation.gd`
   - Unit tests: `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
-  - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all three gates and exits `1` on any red gate.
+  - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all four gates and exits `1` on any red gate. Add `-FixIndex` to regenerate `Docs/` before the gates run, or `-SkipIndexCheck` to leave the generated index alone while iterating.
   - **Windows gotcha:** Steam's `godot.exe` is a GUI-subsystem binary, so PowerShell never waits for it and `$LASTEXITCODE` stays empty (a gate can look "failed" while it actually passed). Launch each gate with `Start-Process -Wait -PassThru` and judge `.ExitCode` — that is exactly what `Tools/preflight.ps1` does.
 - **Never commit `reports/`** (gdUnit4 output) or Godot's `~*` atomic-write temp files; both are gitignored.
 - **Branch protection**: `main` requires **both** the `validate` and `Scripts and tests` status checks (confirmed with `gh api repos/:owner/:repo/branches/main/protection`), so never rename either job id — and keep `validate` without a `name:` so its check context stays exactly `validate`. Direct pushes are permitted (`pr_required: false`) and the branch need not be up to date with base (`strict: false`), but admins cannot bypass the rules (`enforce_admins: true`) and force pushes and deletions are disabled. Prefer a pull request for game-data changes so the gates run before the change lands.

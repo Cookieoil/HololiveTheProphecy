@@ -191,7 +191,26 @@ func end_player_turn_cleanup() -> void:
 	for card: Card in played_this_turn:
 		_reset_and_discard(card)
 	played_this_turn.clear()
-	
+
+
+## Tester/debug hook: builds a card that lives outside the deck's source set.
+##
+## The card is registered with *no* merge sources, so `_extract_base_cards()` makes
+## it evaporate when it is played or discarded instead of pushing its value into the
+## discard pile. Without that, a spawned "20 DMV" token would decompose into a
+## permanent 20-value base card and quietly poison the deck on the next reshuffle.
+## @param value         the card's value (min 1)
+## @param merged        true for an MV card
+## @param double_merged true for a DMV card
+## @return Card - the spawned card, already registered as ephemeral
+func spawn_debug_card(value: int, merged: bool = false, double_merged: bool = false) -> Card:
+	var card: Card = Card.new(maxi(1, value))
+	card.is_merged = merged or double_merged
+	card.is_double_merged = double_merged
+	var no_sources: Array[Card] = []
+	_merged_sources[card] = no_sources
+	return card
+
 #endregion
 
 #region Merge Operations

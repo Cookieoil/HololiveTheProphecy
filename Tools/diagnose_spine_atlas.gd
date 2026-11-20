@@ -1,6 +1,6 @@
 extends SceneTree
 
-const ROOT := "res://Scenes/GameUI/GraphicalUI/BattleUnit/Spine/300101_zhujue"
+const ROOT := "res://Scenes/BattleUnit/Spine/300101_zhujue"
 const PNG_PATH := ROOT + "/300101_zhujue.png"
 const ATLAS_PATH := ROOT + "/300101_zhujue.atlas"
 
