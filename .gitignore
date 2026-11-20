@@ -30,5 +30,10 @@ Thumbs.db
 # Scenes/BattleUnit/Spine/. See Tools/spine/README.md.
 SpineSource/
 
+# Python bytecode from the Tools/ scripts (prepare_spine_portrait.py,
+# rig_combat_actor.py, ...) — never commit it.
+__pycache__/
+*.pyc
+
 # gdUnit4 test reports: regenerated on every test run, never commit them
 reports/

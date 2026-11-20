@@ -67,6 +67,51 @@ version; an unactivated launcher prints `An activation code is required.` See
    The gate discovers every rig under `res://Scenes/BattleUnit/Spine/` automatically, so a new
    `<char_id>/` folder is covered without editing the script.
 
+## Adding the combat rig from a JSON export
+
+Spine has **no scripting, macro or automation API**, so nothing here can drive the editor UI.
+What a script *can* do is patch the data: `Tools/rig_combat_actor.py` takes a Spine JSON export
+and writes a copy with the whole I-1 combat rig in it.
+
+- adds the bones `Center_Hit_Point` and `Cast_Origin_Point`,
+- adds the events `event_vfx_spawn` and `event_hit_frame`,
+- keys both events into the attack animations you choose.
+
+```powershell
+# report only, nothing written
+python Tools/rig_combat_actor.py --input rig.json --dry-run
+
+# key every animation whose name looks like an attack, with default timings
+python Tools/rig_combat_actor.py --input rig.json --output rig_combat.json --all-attacks
+
+# explicit parents and timings: a fraction of the animation, seconds, or frames at 30 fps
+python Tools/rig_combat_actor.py --input rig.json --output rig_combat.json `
+    --torso hip --cast-parent hand --anim skill1:0.3:0.55 --anim unique:0.75s:12f
+```
+
+- **Parents.** Without `--torso` the bone with the most children is used, and the top candidates
+  are printed — check that line, because a rig with a multi-bone prop can pick the prop.
+- **Bone placement.** New bones sit at 50% (`--hit-bone-offset`) and 100%
+  (`--cast-bone-offset`) along their parent bone's length; a parent without a length puts them on
+  its origin and says so.
+- **Timings.** `0.55` is a fraction of the animation, `0.75s` is seconds, `12f` is a frame at
+  `--fps`. A bare number above 1 is rejected as ambiguous. Defaults are 30% and 55%.
+- **Idempotent.** An existing bone, event or event key is left alone, so the script can be re-run
+  after an artist has adjusted the rig. `--force` re-times keys it wrote before.
+- **Output style.** The writer reproduces Spine's own pretty-printed JSON byte for byte
+  (indentation, inline objects, and Java's `Double.toString` numbers such as `5.4E-4`), so a
+  re-export from the editor produces no spurious diff.
+
+Turn the patched JSON into an editable project, then refine and export:
+
+```powershell
+& 'C:\Program Files\Spine\Spine.com' -i SpineSource/<char_id>_combat.json `
+    -o SpineSource/<char_id>.spine --to <char_id> -r
+```
+
+Placing the two bones exactly where the art wants them, and re-timing the hit keys to the impact
+frame, is still an editor job — the script only removes the mechanical part.
+
 ## Why the exports look the way they do
 
 - **Binary `.skel`, not JSON.** Smaller and faster to load. Use `Tools/spine/binary.json`.
