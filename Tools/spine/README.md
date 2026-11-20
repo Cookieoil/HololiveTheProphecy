@@ -18,8 +18,7 @@ logs `Skeleton version X does not match runtime version Y`. So:
 | Spine 4.2.xx editor | ❌ the 4.3 runtime rejects the data |
 
 `Tools/prepare_spine_portrait.py` and `Tools/check_spine_runtime.gd` both enforce `4.3`.
-`Tools/export_spine_to_godot.ps1` needs **Spine 4.3.26 or newer**, because the CLI gained
-`-o`/`-e` export settings that the script relies on.
+Any `4.3.xx` patch works; 4.3.26 is the current stable release.
 
 The installed launcher is **Spine Launcher 4.3.08**, so the default version it downloads is
 already correct. The launcher must be **activated** (your Spine account / activation code)
