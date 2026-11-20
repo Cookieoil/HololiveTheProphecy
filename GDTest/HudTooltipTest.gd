@@ -237,3 +237,10 @@ func test_action_buttons_are_labelless_icons() -> void:
 		assert_bool(button.icon != null).is_true()
 		assert_bool(button.expand_icon).is_true()
 		assert_bool(button.custom_minimum_size.x <= 34.0).is_true()
+		# No button chrome: the default styleboxes' padding would shrink the 28 px icon to
+		# a 14 px glyph, while every other icon draws its glyph at 20 px inside the same
+		# 28 px box. Padding stays at zero in every state, so hovering cannot resize it.
+		for state: String in ["normal", "hover", "pressed", "disabled"]:
+			var box: StyleBox = button.get_theme_stylebox(state)
+			assert_int(int(box.get_margin(SIDE_LEFT))).is_equal(0)
+			assert_int(int(box.get_margin(SIDE_TOP))).is_equal(0)
