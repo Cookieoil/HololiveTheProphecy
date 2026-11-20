@@ -71,6 +71,8 @@ const PANEL_HEIGHT: float = 404.0
 const SEAT_LEFT: float = 18.0
 const SEAT_BOTTOM: float = 50.0
 const PADDING: int = 10
+## Square corners (0 px): the panel and the hover tooltip slabs are one flat surface.
+const CORNER_RADIUS: int = 0
 const ROW_SEPARATION: int = 5
 const BUTTON_MIN_SIZE: Vector2 = Vector2(0.0, 26.0)
 
@@ -218,13 +220,14 @@ func _move_by(delta: Vector2) -> void:
 	offset_bottom = top + height
 
 
-## Dark slab with an accent border, matched to SkillTooltipPopup.
+## Dark slab with an accent border and square corners, matched to SkillTooltipPopup and
+## the hover tooltips (HudTooltip).
 func _apply_chrome() -> void:
 	var box := StyleBoxFlat.new()
 	box.bg_color = PANEL_BG
 	box.border_color = PANEL_BORDER
 	box.set_border_width_all(1)
-	box.set_corner_radius_all(6)
+	box.set_corner_radius_all(CORNER_RADIUS)
 	box.content_margin_left = float(PADDING)
 	box.content_margin_right = float(PADDING)
 	box.content_margin_top = float(PADDING)

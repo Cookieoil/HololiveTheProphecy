@@ -16,8 +16,8 @@ extends Control
 ## description. A description is never wrapped, so it stays on one line that fits.
 ##
 ## The slab reuses the debug menu's chrome (DebugMenuPopup: dark background, accent
-## border, 6 px corners, 10 px padding), so a hover tooltip and the tester palette read
-## as the same surface; HudTooltipTest locks the two palettes together.
+## border, square corners, 10 px padding), so a hover tooltip and the tester palette
+## read as the same surface; HudTooltipTest locks the two palettes together.
 ##
 ## `_make_custom_tooltip()` hands the slab to the engine, which owns the hover timing,
 ## the placement and the lifetime (`Viewport::_gui_show_tooltip` adds it to its tooltip
@@ -30,8 +30,9 @@ extends Control
 #region Constants
 ## Inner padding of the slab, in pixels. Matches DebugMenuPopup.PADDING.
 const PADDING: int = 10
-## Corner radius and border width of the slab, matching DebugMenuPopup._apply_chrome().
-const CORNER_RADIUS: int = 6
+## Square corners (0 px): the slab and the debug menu are one flat HUD surface.
+const CORNER_RADIUS: int = 0
+## Border width of the slab, matching DebugMenuPopup._apply_chrome().
 const BORDER_WIDTH: int = 1
 const TITLE_FONT_SIZE: int = 13
 const BODY_FONT_SIZE: int = 12
@@ -88,7 +89,7 @@ static func build_tooltip_panel(for_text: String) -> Control:
 
 
 #region Private Methods
-## The debug menu's chrome: dark slab, accent border, rounded corners, inner padding.
+## The debug menu's chrome: dark slab, accent border, square corners, inner padding.
 static func _build_chrome() -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = PANEL_BG

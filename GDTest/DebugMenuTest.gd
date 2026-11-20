@@ -134,6 +134,21 @@ func test_menu_starts_closed_and_toggles() -> void:
 	assert_bool(popup.is_open()).is_false()
 
 
+## The panel and the hover tooltip slabs are one flat surface: square on all four edges.
+func test_panel_chrome_has_square_corners() -> void:
+	var popup: DebugMenuPopup = DebugMenuPopup.new()
+	add_child(popup)
+
+	var box: StyleBoxFlat = popup.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_bool(box != null).is_true()
+	if box == null:
+		return
+	assert_int(box.corner_radius_top_left).is_equal(0)
+	assert_int(box.corner_radius_top_right).is_equal(0)
+	assert_int(box.corner_radius_bottom_left).is_equal(0)
+	assert_int(box.corner_radius_bottom_right).is_equal(0)
+
+
 func test_close_button_closes_the_menu_and_reports_it() -> void:
 	var popup: DebugMenuPopup = DebugMenuPopup.new()
 	add_child(popup)
