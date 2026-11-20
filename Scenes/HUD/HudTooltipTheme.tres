@@ -10,14 +10,12 @@
 ; ends exactly at the accent border. It also lifts the debug menu's hint tooltips onto
 ; the same slab.
 ;
-; Two deliberate differences from DebugMenuPopup's chrome, both measured in a windowed
-; probe (GDTest/HudTooltipTest locks them):
-;  * the border is opaque and carries the colour the debug menu's semi-transparent
-;    border *renders as* (PANEL_BORDER over PANEL_BG). A semi-transparent border is
-;    drawn far fainter inside that popup window than in a plain panel - the tooltip
-;    outline measured 1/5th of the debug menu's - while an opaque colour renders exact.
-;  * the border is 3 px instead of 2 px, because the popup's outline reads thinner than
-;    a panel's at the same width.
+; One deliberate difference from DebugMenuPopup's chrome, measured in a windowed probe
+; (GDTest/HudTooltipTest locks it): the border is opaque and carries the colour the
+; debug menu's semi-transparent border *renders as* (PANEL_BORDER over PANEL_BG). A
+; semi-transparent border is drawn far fainter inside that popup window than in a plain
+; panel - the tooltip outline measured 1/5th of the debug menu's - while an opaque colour
+; renders exactly. Width, background, corners and padding are the debug menu's.
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_tooltip"]
 content_margin_left = 10.0
@@ -25,10 +23,10 @@ content_margin_top = 10.0
 content_margin_right = 10.0
 content_margin_bottom = 10.0
 bg_color = Color(0.07, 0.08, 0.11, 0.97)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
 border_color = Color(0.26, 0.43, 0.53, 1)
 
 [resource]
