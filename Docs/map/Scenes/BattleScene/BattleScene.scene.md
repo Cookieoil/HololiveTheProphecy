@@ -31,13 +31,13 @@ Root script: `Scenes/BattleScene/BattleScene.gd`
             - MergesStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
               - Icon `TextureRect`
               - Value `Label`
-          - RightGroup `HBoxContainer`
             - DeckStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
               - Icon `TextureRect`
               - Value `Label`
             - DiscardStat `HBoxContainer` — script `Scenes/HUD/HudTooltip.gd`
               - Icon `TextureRect`
               - Value `Label`
+          - RightGroup `HBoxContainer`
             - ConvertButton `Button` — script `Scenes/HUD/HudTooltip.gd`
             - EndTurnButton `Button` — script `Scenes/HUD/HudTooltip.gd`
     - MessageLog `Label`

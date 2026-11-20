@@ -15,6 +15,48 @@ background_canvas_max_layer = 1
 glow_enabled = true
 glow_intensity = 0.8
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_icon_button"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_icon_button_hover"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.45, 0.78, 0.95, 0.18)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.45, 0.78, 0.95, 0.85)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+expand_margin_left = 2.0
+expand_margin_top = 2.0
+expand_margin_right = 2.0
+expand_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_icon_button_pressed"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.45, 0.78, 0.95, 0.34)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.6, 0.87, 1.0, 1.0)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+expand_margin_left = 2.0
+expand_margin_top = 2.0
+expand_margin_right = 2.0
+expand_margin_bottom = 2.0
+
 [node name="Main" type="Node" unique_id=311251633]
 script = ExtResource("1_cb2vx")
 icon_catalog = ExtResource("2_hqvvd")
@@ -165,60 +207,68 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "2"
 
+[node name="DeckStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/CenterGroup" unique_id=681888237]
+layout_mode = 2
+theme_override_constants/separation = 6
+tooltip_text = "Deck\nCards left to draw. It reshuffles when it runs out."
+script = ExtResource("8_hudtip")
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/CenterGroup/DeckStat" unique_id=681888238]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/CenterGroup/DeckStat" unique_id=681888239]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "12"
+
+[node name="DiscardStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/CenterGroup" unique_id=681888240]
+layout_mode = 2
+theme_override_constants/separation = 6
+tooltip_text = "Discard\nCards played or discarded. They come back when the deck runs out."
+script = ExtResource("8_hudtip")
+
+[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/CenterGroup/DiscardStat" unique_id=681888241]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_phsvg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/CenterGroup/DiscardStat" unique_id=681888242]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "0"
+
 [node name="RightGroup" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox" unique_id=863329915]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 alignment = 2
 
-[node name="DeckStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=681888237]
-layout_mode = 2
-theme_override_constants/separation = 6
-tooltip_text = "Deck\nCards left to draw. It reshuffles when it runs out."
-script = ExtResource("8_hudtip")
-
-[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/RightGroup/DeckStat" unique_id=681888238]
-custom_minimum_size = Vector2(28, 28)
-layout_mode = 2
-texture = ExtResource("4_phsvg")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/RightGroup/DeckStat" unique_id=681888239]
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "12"
-
-[node name="DiscardStat" type="HBoxContainer" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=681888240]
-layout_mode = 2
-theme_override_constants/separation = 6
-tooltip_text = "Discard\nCards played or discarded. They come back when the deck runs out."
-script = ExtResource("8_hudtip")
-
-[node name="Icon" type="TextureRect" parent="HUD/TopBar/Margin/HBox/RightGroup/DiscardStat" unique_id=681888241]
-custom_minimum_size = Vector2(28, 28)
-layout_mode = 2
-texture = ExtResource("4_phsvg")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Value" type="Label" parent="HUD/TopBar/Margin/HBox/RightGroup/DiscardStat" unique_id=681888242]
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "0"
-
 [node name="ConvertButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=197317561]
-custom_minimum_size = Vector2(34, 34)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 tooltip_text = "Convert\nConvert 1 action into 1 merge."
+focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_icon_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_icon_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_icon_button_pressed")
 icon = ExtResource("4_phsvg")
 expand_icon = true
 script = ExtResource("8_hudtip")
 
 [node name="EndTurnButton" type="Button" parent="HUD/TopBar/Margin/HBox/RightGroup" unique_id=1980702320]
-custom_minimum_size = Vector2(34, 34)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 tooltip_text = "End Turn\nEnd your turn to start the enemy turn."
+focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_icon_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_icon_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_icon_button_pressed")
 icon = ExtResource("4_phsvg")
 expand_icon = true
 script = ExtResource("8_hudtip")
