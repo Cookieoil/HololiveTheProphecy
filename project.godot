@@ -66,6 +66,10 @@ folder_colors={
 "res://reports/": "blue"
 }
 
+[gui]
+
+theme/custom="res://Scenes/HUD/HudTooltipTheme.tres"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

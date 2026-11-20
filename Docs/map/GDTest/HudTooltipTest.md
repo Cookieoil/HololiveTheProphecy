@@ -1,30 +1,37 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/HudTooltipTest.gd` — `class_name HudTooltipTest` extends `GdUnitTestSuite`
 
-`163` lines · [back to the map](../../CODEBASE_MAP.md)
+`223` lines · [back to the map](../../CODEBASE_MAP.md)
 
-> Locks the top-bar hover tooltips (HudTooltip). Every icon in the bar is the same placeholder logo, so each stat and each icon-only action button describes itsel…
+> Locks the top-bar hover tooltips (HudTooltip) and the slab they are drawn on (the tooltip theme in HudTooltipTheme.tres). Every icon in the bar is the same plac…
 
 Constants:
-- L13 `SCENE_PATH: String`
-- L14 `SCRIPT_PATH: String = "res://Scenes/HUD/HudTooltip.gd"`
-- L16 `TOOLTIP_WIDGETS: Array[String] = [` — Top-bar widgets that must show a hover tooltip, in bar order.
+- L19 `SCENE_PATH: String`
+- L20 `SCRIPT_PATH: String = "res://Scenes/HUD/HudTooltip.gd"`
+- L21 `THEME_PATH: String = "res://Scenes/HUD/HudTooltipTheme.tres"`
+- L23 `THEME_SETTING: String = "gui/theme/custom"` — Project setting that puts the theme in charge of the engine's tooltip popup.
+- L25 `THEME_TYPE: String = "TooltipPanel"` — Theme type and item the engine's tooltip popup asks for its background.
+- L26 `THEME_ITEM: String = "panel"`
+- L28 `TOOLTIP_WIDGETS: Array[String] = [` — Top-bar widgets that must show a hover tooltip, in bar order.
 
 Public API:
-- L58-65 `test_two_lines_become_a_title_and_a_description() -> void`
-- L68-72 `test_one_line_is_a_description_only() -> void`
-- L76-91 `test_slab_reuses_the_debug_menu_background() -> void` — The requested background: the debug menu's chrome, not Godot's default tooltip look.
-- L96-106 `test_hover_hook_returns_the_slab() -> void` — The engine hook: returning a Control is what makes Godot show this slab instead of its own tooltip popup.
-- L110-116 `test_slab_never_eats_the_hover() -> void` — The slab is opened *by* a hover, so neither it nor its children may take that hover.
-- L119-142 `test_top_bar_widgets_carry_the_hover_tooltip() -> void`
-- L147-162 `test_action_buttons_are_labelless_icons() -> void` — The word moved out of the buttons: they are icon-only squares now that the tooltip names them.
+- L79-86 `test_two_lines_become_a_title_and_a_description() -> void`
+- L89-93 `test_one_line_is_a_description_only() -> void`
+- L99-121 `test_slab_reuses_the_debug_menu_background() -> void` — The requested background: the debug menu's chrome, not Godot's built-in tooltip look. Because the engine paints its own tooltip popup behind the content, the sl…
+- L126-135 `test_slab_never_grows_past_its_own_border() -> void` — The leak itself: an expand margin grows the background past the slab's own border, so the slab must never carry one.
+- L141-151 `test_project_theme_reaches_the_tooltip_panel() -> void` — Wiring: the theme only reaches the engine's tooltip popup as the *project* theme (a theme on the scene or on the main window does not get that far), so the proj…
+- L156-166 `test_hover_hook_returns_the_tooltip_content() -> void` — The engine hook: returning a Control from `_make_custom_tooltip()` is what makes Godot show our content inside its tooltip popup.
+- L170-176 `test_tooltip_never_eats_the_hover() -> void` — The tooltip is opened *by* a hover, so neither it nor its children may take that hover.
+- L179-202 `test_top_bar_widgets_carry_the_hover_tooltip() -> void`
+- L207-222 `test_action_buttons_are_labelless_icons() -> void` — The word moved out of the buttons: they are icon-only squares now that the tooltip names them.
 
 Private:
-- L28-31 `_make_slab`
-- L37-45 `_instantiate_battle_scene`
-- L49-55 `_labels`
+- L40-43 `_make_content`
+- L49-57 `_instantiate_battle_scene`
+- L61-67 `_labels`
+- L71-76 `_tooltip_slab`
 
 Uses: BattleScene, DebugMenuPopup, HudTooltip
 Used by: —
-Loads: res://Scenes/BattleScene/BattleScene.tscn, res://Scenes/HUD/HudTooltip.gd
+Loads: res://Scenes/BattleScene/BattleScene.tscn, res://Scenes/HUD/HudTooltip.gd, res://Scenes/HUD/HudTooltipTheme.tres
 

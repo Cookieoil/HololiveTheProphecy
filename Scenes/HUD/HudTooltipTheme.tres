@@ -1,0 +1,27 @@
+[gd_resource type="Theme" load_steps=2 format=3]
+
+; Project theme (project.godot -> gui/theme/custom). It exists for one reason: Godot
+; puts a custom tooltip (Control._make_custom_tooltip) inside its own TooltipPanel
+; popup, and that popup paints this stylebox behind the content. In the built-in theme
+; it is a 50% black panel with 8 px horizontal and 2 px vertical content margins, which
+; framed the tooltip slab in a dark band that stuck out past its own border - wider on
+; the sides than on the top and bottom. Here the popup *is* the slab: the debug menu's
+; chrome, square corners, even 10 px padding, and no expand margin, so the dark surface
+; ends exactly at the accent border. It also lifts the debug menu's hint tooltips onto
+; the same slab. GDTest/HudTooltipTest locks these values against DebugMenuPopup's
+; palette, so change them together.
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_tooltip"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.07, 0.08, 0.11, 0.97)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.45, 0.78, 0.95, 0.5)
+
+[resource]
+TooltipPanel/styles/panel = SubResource("StyleBoxFlat_hud_tooltip")
