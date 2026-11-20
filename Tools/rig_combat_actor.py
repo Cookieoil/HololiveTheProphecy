@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -80,6 +81,11 @@ def format_number(value: object) -> str:
     """
     if isinstance(value, int):
         return str(value)
+    if not math.isfinite(value):
+        # Spine JSON cannot represent NaN or infinity, and writing one would
+        # produce a file that no JSON reader accepts. run() rejects them up
+        # front with the offending path, so this is only a safety net.
+        raise ValueError(f"cannot write the non-finite number {value!r}")
 
     text = repr(float(value))
     sign = ""
@@ -186,6 +192,29 @@ def load_spine_json(path: Path) -> dict:
             "A .skel binary or a .spine project cannot be patched; export JSON first."
         )
     return data
+
+
+def find_non_finite(value: object, path: str = "") -> str:
+    """
+    The JSON path of the first NaN or infinity in the data, or "" when every
+    number is finite.
+
+    `json.loads` happily parses `NaN` and `Infinity`, but Spine JSON cannot
+    represent them, so a file containing one would be written out corrupt.
+    """
+    if isinstance(value, float) and not math.isfinite(value):
+        return path or "<root>"
+    if isinstance(value, dict):
+        for key, item in value.items():
+            found = find_non_finite(item, f"{path}.{key}" if path else str(key))
+            if found:
+                return found
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            found = find_non_finite(item, f"{path}[{index}]")
+            if found:
+                return found
+    return ""
 
 
 def spine_version(data: dict) -> str:
@@ -449,17 +478,28 @@ def resolve_parents(data: dict, args: argparse.Namespace, report: list) -> tuple
 
 
 def selected_animations(data: dict, args: argparse.Namespace) -> list:
-    """The `(name, spawn, hit)` specs to key, from --anim and --all-attacks."""
-    specs = [parse_anim_spec(spec) for spec in args.anim]
+    """
+    The `(name, spawn, hit, auto)` specs to key, from --anim and --all-attacks.
+
+    `auto` marks an animation that --all-attacks picked, which lets a pose-only
+    animation be skipped instead of failing the whole run.
+    """
+    specs = []
+    for text in args.anim:
+        name, spawn, hit = parse_anim_spec(text)
+        specs.append((name, spawn, hit, False))
     names = {spec[0] for spec in specs}
 
     if args.all_attacks:
         animations = data.get("animations")
-        pattern = re.compile(args.attack_pattern)
+        try:
+            pattern = re.compile(args.attack_pattern)
+        except re.error as exc:
+            raise ValueError(f"--attack-pattern is not a valid regular expression: {exc}") from exc
         if isinstance(animations, dict):
             for name in sorted(animations):
                 if pattern.search(name) and name not in names:
-                    specs.append((name, None, None))
+                    specs.append((name, None, None, True))
                     names.add(name)
     return specs
 
@@ -468,6 +508,13 @@ def run(args: argparse.Namespace) -> int:
     """Patch the input export and, unless --dry-run, write the result."""
     report: list = []
     data = load_spine_json(args.input)
+
+    bad_number = find_non_finite(data)
+    if bad_number:
+        raise ValueError(
+            f"{args.input} holds a non-finite number at {bad_number}. Spine JSON cannot "
+            "represent NaN or infinity, so that export is corrupt; re-export it from Spine."
+        )
 
     version = spine_version(data)
     if version and not version.startswith(f"{SPINE_RUNTIME_MAJOR_MINOR}."):
@@ -479,6 +526,14 @@ def run(args: argparse.Namespace) -> int:
         )
 
     torso, cast_parent = resolve_parents(data, args, report)
+    for label, value in (
+        ("--spawn-fraction", args.spawn_fraction),
+        ("--hit-fraction", args.hit_fraction),
+        ("--hit-bone-offset", args.hit_bone_offset),
+        ("--cast-bone-offset", args.cast_bone_offset),
+    ):
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{label} must be a fraction between 0 and 1, got {value}")
     add_bone(data, HIT_BONE, torso, args.hit_bone_offset, HIT_BONE_STYLE, report)
     add_bone(data, CAST_BONE, cast_parent, args.cast_bone_offset, CAST_BONE_STYLE, report)
     add_event(data, SPAWN_EVENT, report)
@@ -490,10 +545,19 @@ def run(args: argparse.Namespace) -> int:
             "no animations selected, so the events are declared but not keyed "
             "(use --anim or --all-attacks)"
         )
-    for name, spawn_text, hit_text in specs:
+    for name, spawn_text, hit_text, auto in specs:
         animation = require_animation(data, name)
         duration = animation_duration(animation)
-        if duration <= 0.0:
+        uses_defaults = spawn_text is None and hit_text is None
+        if duration <= 0.0 and uses_defaults:
+            if auto:
+                # --all-attacks can match a pose-only animation; skipping it must
+                # not fail the animations that do have keys.
+                report.append(
+                    f"animation {name}: skipped, it has no keyed times for the default "
+                    f"timings (pass --anim {name}:0.2s:0.5s to key it anyway)"
+                )
+                continue
             raise ValueError(
                 f"animation {name!r} has no keyed times, so a fraction of its duration cannot "
                 f"be resolved. Pass explicit values, e.g. --anim {name}:0.2s:0.5s"
@@ -508,6 +572,17 @@ def run(args: argparse.Namespace) -> int:
             if hit_text
             else duration * args.hit_fraction
         )
+        if hit_seconds < spawn_seconds:
+            raise ValueError(
+                f"animation {name!r}: the hit key ({hit_seconds:g}s) would land before the spawn "
+                f"key ({spawn_seconds:g}s). Swap the values, or pass "
+                f"--anim {name}:<spawn>:<hit>."
+            )
+        if duration > 0.0 and max(spawn_seconds, hit_seconds) > duration:
+            report.append(
+                f"animation {name}: a key lands past the animation end ({duration:g}s), which "
+                "lengthens the animation; check the timings"
+            )
         key_events(animation, name, spawn_seconds, hit_seconds, args.force, report)
 
     print(f"{args.input}: Spine {version or 'unknown'}")
