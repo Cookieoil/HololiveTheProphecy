@@ -118,11 +118,11 @@ func test_slab_reuses_the_debug_menu_background() -> void:
 	)
 	assert_bool(box.border_color.is_equal_approx(outline)).is_true()
 	assert_bool(box.border_color.a == 1.0).is_true()
-	# One pixel heavier: the popup's outline reads thinner than a panel's at one width.
-	assert_int(box.border_width_left).is_equal(3)
-	assert_int(box.border_width_top).is_equal(3)
-	assert_int(box.border_width_right).is_equal(3)
-	assert_int(box.border_width_bottom).is_equal(3)
+	# Same outline weight as the debug menu, so the two surfaces stay one chrome.
+	assert_int(box.border_width_left).is_equal(DebugMenuPopup.BORDER_WIDTH)
+	assert_int(box.border_width_top).is_equal(DebugMenuPopup.BORDER_WIDTH)
+	assert_int(box.border_width_right).is_equal(DebugMenuPopup.BORDER_WIDTH)
+	assert_int(box.border_width_bottom).is_equal(DebugMenuPopup.BORDER_WIDTH)
 	# Square corners on all four edges, like the debug menu itself.
 	assert_int(box.corner_radius_top_left).is_equal(0)
 	assert_int(box.corner_radius_top_right).is_equal(0)
