@@ -42,9 +42,10 @@ BBC_TAG_NAMES	const	Scenes/HUD/TooltipIconCatalog.gd:32-32	: PackedStringArray =
 BEZEL_DEFAULT_ALPHA	const	Scenes/HUD/MoxieOrbUI.gd:72-72	= 0.94
 BODY_COLOR	const	Scenes/HUD/HudTooltip.gd:38-38	: Color = Color(0.80, 0.85, 0.93)
 BODY_FONT_SIZE	const	Scenes/HUD/HudTooltip.gd:32-32	: int = 12
+BORDER_WIDTH	const	Scenes/HUD/DebugMenuPopup.gd:77-77	: int = 2
 BUFF_FRAME_COLOR	const	Scenes/BattleUnit/UnitUI.gd:726-726	: Color = Color(0.36, 0.78, 1.0, 0.95)
 BUFF_TILE_COLOR	const	Scenes/BattleUnit/UnitUI.gd:725-725	: Color = Color(0.10, 0.26, 0.42, 0.95)
-BUTTON_MIN_SIZE	const	Scenes/HUD/DebugMenuPopup.gd:77-77	: Vector2 = Vector2(0.0, 26.0)
+BUTTON_MIN_SIZE	const	Scenes/HUD/DebugMenuPopup.gd:79-79	: Vector2 = Vector2(0.0, 26.0)
 BattleOverlayController	class	Scenes/HUD/BattleOverlayController.gd:2-2	extends Node
 BattleScene	class	Scenes/BattleScene/BattleScene.gd:2-2	extends GameUI
 CAP_EXPAND_SPEED	const	Scenes/BattleUnit/UnitUI.gd:96-96	: float = 18.0
@@ -273,7 +274,7 @@ KINDS	const	Tools/check_navigation.gd:41-41	: PackedStringArray
 LAYOUT_SETTLE_MILLIS	const	GDTest/CardMergeAnimationTest.gd:34-34	: int = 60
 LETTER_OFFSET	const	Tools/xlsx_reader.gd:18-18	: int = 64
 LINE_SEPARATION	const	Scenes/HUD/HudTooltip.gd:34-34	: int = 2
-LOCKED_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:87-87	: Color = Color(1.0, 0.72, 0.35)
+LOCKED_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:89-89	: Color = Color(1.0, 0.72, 0.35)
 MAP_DIR	const	Tools/check_navigation.gd:27-27	: String = "res://Docs/map"
 MAP_DIR_NAME	const	Tools/gen_code_index.gd:46-46	: String = "map"
 MAP_FILE_NAME	const	Tools/gen_code_index.gd:44-44	: String = "CODEBASE_MAP.md"
@@ -309,13 +310,13 @@ N_TARGET_MODES	const	Tools/validate_gameData.gd:65-65	: PackedStringArray
 ORB_GLOW_BLEED	const	Scenes/HUD/MoxieOrbUI.gd:14-14	: float = 13.0 * ORB_SCALE
 ORB_RADIUS	const	Scenes/HUD/MoxieOrbUI.gd:12-12	: float = 25.5 * ORB_SCALE
 ORB_SCALE	const	Scenes/HUD/MoxieOrbUI.gd:9-9	: float = 1.3
-OVERFLOW_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:85-85	: Color = Color(1.0, 0.55, 0.45)
+OVERFLOW_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:87-87	: Color = Color(1.0, 0.55, 0.45)
 OutlineGlow	class	Scenes/HUD/OutlineGlow.gd:2-2	extends ColorRect
 PADDING	const	Scenes/HUD/DebugMenuPopup.gd:73-73	: int = 10
 PAD_X	const	Scenes/HUD/SkillTooltipPopup.gd:8-8	: int = 14
 PAD_Y	const	Scenes/HUD/SkillTooltipPopup.gd:9-9	: int = 11
-PANEL_BG	const	Scenes/HUD/DebugMenuPopup.gd:80-80	: Color = Color(0.07, 0.08, 0.11, 0.97)
-PANEL_BORDER	const	Scenes/HUD/DebugMenuPopup.gd:81-81	: Color = Color(0.45, 0.78, 0.95, 0.5)
+PANEL_BG	const	Scenes/HUD/DebugMenuPopup.gd:82-82	: Color = Color(0.07, 0.08, 0.11, 0.97)
+PANEL_BORDER	const	Scenes/HUD/DebugMenuPopup.gd:83-83	: Color = Color(0.45, 0.78, 0.95, 0.5)
 PANEL_HEIGHT	const	Scenes/HUD/DebugMenuPopup.gd:70-70	: float = 404.0
 PANEL_WIDTH	const	Scenes/HUD/DebugMenuPopup.gd:69-69	: float = 336.0
 PLACEHOLDER_ICON	const	Scenes/BattleUnit/StatusIconCatalog.gd:17-17	: Texture2D
@@ -331,8 +332,8 @@ PREVIEW_SPARK_MID_LIGHTEN	const	Scenes/HUD/MoxieOrbUI.gd:85-85	= 0.28
 Preset	enum	Scenes/HUD/OutlineGlow.gd:6-10	RUNETERRA_BLUE
 QUAD_SIZE	const	Scenes/Cards/CardUI.gd:34-34	: Vector2 = Vector2(140, 185)
 QUAD_SIZE	const	Scenes/Cards/ForgePlate.gd:22-22	: Vector2 = Vector2(140, 185)
-READOUT_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:84-84	: Color = Color(0.80, 0.85, 0.93)
-READY_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:86-86	: Color = Color(0.55, 1.0, 0.68)
+READOUT_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:86-86	: Color = Color(0.80, 0.85, 0.93)
+READY_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:88-88	: Color = Color(0.55, 1.0, 0.68)
 REGENERATION_HEAL_PER_TICK	const	Core/Unit.gd:27-27	: int = 3
 REGEN_STEP	const	Scenes/HUD/DebugMenuPopup.gd:65-65	: int = 2
 RENDER_SUPERSAMPLE	const	Scenes/Cards/CardUI.gd:37-37	: float = 2.0
@@ -346,7 +347,7 @@ ROOT	const	Tools/diagnose_spine_atlas.gd:3-3
 ROOT_DIR	const	Tools/check_navigation.gd:30-30	: String = "res://"
 ROOT_DIR	const	Tools/check_scripts.gd:22-22	: String = "res://"
 ROOT_DIR	const	Tools/gen_code_index.gd:40-40	: String = "res://"
-ROW_SEPARATION	const	Scenes/HUD/DebugMenuPopup.gd:76-76	: int = 5
+ROW_SEPARATION	const	Scenes/HUD/DebugMenuPopup.gd:78-78	: int = 5
 RUNETERRA_BLUE_MID	const	GDTest/CardUITest.gd:14-14	: Color = Color(0.18, 0.70, 1.00) # RUNETERRA_BLUE
 RUNETERRA_BLUE_MID	const	GDTest/EnemyUltAuraTest.gd:16-16	: Color = Color(0.18, 0.70, 1.00) # RUNETERRA_BLUE
 SAMPLE_BUFF_ICON	const	Scenes/HUD/TooltipIconCatalog.gd:28-28	: Texture2D
@@ -364,7 +365,7 @@ SCRIPT_PATH	const	GDTest/CodeIndexTest.gd:11-11	: String = "res://Fixture/Thing.
 SCRIPT_PATH	const	GDTest/HudTooltipTest.gd:20-20	: String = "res://Scenes/HUD/HudTooltip.gd"
 SEAT_BOTTOM	const	Scenes/HUD/DebugMenuPopup.gd:72-72	: float = 50.0
 SEAT_LEFT	const	Scenes/HUD/DebugMenuPopup.gd:71-71	: float = 18.0
-SECTION_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:83-83	: Color = Color(0.62, 0.72, 0.85)
+SECTION_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:85-85	: Color = Color(0.62, 0.72, 0.85)
 SEGMENT_DIVIDERS	const	Scenes/HUD/MoxieOrbUI.gd:15-15	: int
 SETTLE_DAMPING	const	Scenes/Cards/CardUI.gd:63-63	: float = 6.5
 SETTLE_FREQUENCY	const	Scenes/Cards/CardUI.gd:62-62	: float = 7.0
@@ -421,7 +422,7 @@ THEME_ITEM	const	GDTest/HudTooltipTest.gd:26-26	: String = "panel"
 THEME_PATH	const	GDTest/HudTooltipTest.gd:21-21	: String = "res://Scenes/HUD/HudTooltipTheme.tres"
 THEME_SETTING	const	GDTest/HudTooltipTest.gd:23-23	: String = "gui/theme/custom"
 THEME_TYPE	const	GDTest/HudTooltipTest.gd:25-25	: String = "TooltipPanel"
-TITLE_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:82-82	: Color = Color(0.55, 0.86, 1.0)
+TITLE_COLOR	const	Scenes/HUD/DebugMenuPopup.gd:84-84	: Color = Color(0.55, 0.86, 1.0)
 TITLE_COLOR	const	Scenes/HUD/HudTooltip.gd:37-37	: Color = Color(0.55, 0.86, 1.0)
 TITLE_FONT_SIZE	const	Scenes/HUD/HudTooltip.gd:31-31	: int = 13
 TOKEN_PATTERN	const	Scenes/HUD/TooltipIconCatalog.gd:38-38	: String
@@ -493,7 +494,7 @@ _append_signal_table	func	Tools/gen_code_index.gd:742-758	(out: PackedStringArra
 _append_text	func	Tools/check_navigation.gd:580-581	(res_path: String, text: String) -> void
 _apply_cached_intents	func	Scenes/BattleScene/BattleScene.gd:174-178	() -> void
 _apply_card_mod	func	Skills/EffectBlock.gd:486-501	(ctx: SkillContext, card: Card, value: int) -> void
-_apply_chrome	func	Scenes/HUD/DebugMenuPopup.gd:225-235	() -> void
+_apply_chrome	func	Scenes/HUD/DebugMenuPopup.gd:227-237	() -> void
 _apply_config	func	Managers/GameManager.gd:78-96	(config: Dictionary) -> void
 _apply_draw_pose	func	Scenes/Cards/CardUI.gd:690-709	(t: float, start_offset: Vector2, arc: float) -> void
 _apply_flat_pose	func	Scenes/Cards/CardUI.gd:721-732	() -> void
@@ -527,7 +528,7 @@ _bracket_index	func	Tools/validate_gameData.gd:1127-1138	(message: String, marke
 _brand_tween	var	Scenes/Cards/CardUI.gd:172-172	: Tween
 _build_ally_context	func	Managers/GameManager.gd:772-814	(ally: Unit, card: Card) -> SkillContext
 _build_artifacts	func	Tools/gen_code_index.gd:134-143	(global_signals: Array[Dictionary], scenes: Array[Dictionary], data_files: Array[Dictionary]) -> Dictionary
-_build_cards_tab	func	Scenes/HUD/DebugMenuPopup.gd:280-327	(tabs: TabContainer) -> void
+_build_cards_tab	func	Scenes/HUD/DebugMenuPopup.gd:282-329	(tabs: TabContainer) -> void
 _build_category_fallback_entry	func	Scenes/HUD/TooltipIconCatalog.gd:144-156	(key: String) -> TooltipIconEntry
 _build_config	func	Core/DataLoader.gd:458-514	static (config_json: Dictionary, units: Dictionary) -> Dictionary
 _build_debug_targets	func	Scenes/BattleScene/BattleScene.gd:468-477	(state: GameState) -> Array[Dictionary]
@@ -538,10 +539,10 @@ _build_glow_node	func	Scenes/HUD/MoxieOrbUI.gd:150-155	() -> void
 _build_keyword_index	func	Scenes/HUD/TooltipIconCatalog.gd:272-280	() -> Dictionary[String, TooltipIconEntry]
 _build_keyword_pattern	func	Scenes/HUD/TooltipIconCatalog.gd:283-291	(index: Dictionary[String, TooltipIconEntry]) -> String
 _build_label	func	Scenes/HUD/HudTooltip.gd:83-89	static (text: String, font_size: int, color: Color) -> Label
-_build_layout	func	Scenes/HUD/DebugMenuPopup.gd:238-275	() -> void
+_build_layout	func	Scenes/HUD/DebugMenuPopup.gd:240-277	() -> void
 _build_portrait_node	func	Scenes/HUD/MoxieOrbUI.gd:158-169	() -> void
 _build_rails	func	Scenes/HUD/BattleOverlayController.gd:272-307	() -> void
-_build_resources_tab	func	Scenes/HUD/DebugMenuPopup.gd:330-365	(tabs: TabContainer) -> void
+_build_resources_tab	func	Scenes/HUD/DebugMenuPopup.gd:332-367	(tabs: TabContainer) -> void
 _build_ring_node	func	Scenes/HUD/MoxieOrbUI.gd:172-185	() -> void
 _build_skills	func	Core/DataLoader.gd:254-276	static (skills_json: Dictionary) -> Dictionary
 _build_stars_and_indicators	func	Scenes/Cards/CardUI.gd:1077-1102	() -> void
@@ -549,7 +550,7 @@ _build_status_fallback_entry	func	Scenes/HUD/TooltipIconCatalog.gd:123-139	(key:
 _build_tooltip	func	Scenes/HUD/BattleOverlayController.gd:310-318	() -> void
 _build_ui	func	Scenes/HUD/SkillTooltipPopup.gd:39-120	() -> void
 _build_units	func	Core/DataLoader.gd:375-392	static (units_json: Dictionary, default_is_enemy: bool, skills: Dictionary) -> Dictionary
-_build_units_tab	func	Scenes/HUD/DebugMenuPopup.gd:368-419	(tabs: TabContainer) -> void
+_build_units_tab	func	Scenes/HUD/DebugMenuPopup.gd:370-421	(tabs: TabContainer) -> void
 _build_used_by	func	Tools/gen_code_index.gd:397-409	() -> Dictionary
 _build_waves	func	Core/DataLoader.gd:408-441	static (waves_json: Dictionary, units: Dictionary) -> Array
 _bundle_count	func	Tools/validate_gameData.gd:426-428	(bundle: Dictionary, key: String) -> int
@@ -591,7 +592,7 @@ _clear_container	func	Scenes/HUD/BattleOverlayController.gd:259-264	(box: Contai
 _clear_merge_plates	func	Scenes/Cards/CardUI.gd:1050-1054	() -> void
 _clear_pending_hits	func	Scenes/BattleUnit/UnitUI.gd:1190-1193	() -> void
 _clone_unit	func	Core/DataLoader.gd:445-455	static (original: UnitData) -> UnitData
-_close_button	var	Scenes/HUD/DebugMenuPopup.gd:99-99	: Button
+_close_button	var	Scenes/HUD/DebugMenuPopup.gd:101-101	: Button
 _coerce	func	Tools/dataBuilder.gd:405-459	(raw: String, spec: Dictionary, enums: Dictionary, sheet: String, row_number: int) -> Variant
 _coerce_dict	func	Managers/GameManager.gd:581-585	(value: Variant) -> Dictionary
 _coerce_int	func	Core/Unit.gd:355-371	(value: Variant, fallback: int) -> int
@@ -627,7 +628,7 @@ _create_material	func	Scenes/BattleUnit/SpinePortrait.gd:503-518	() -> void
 _create_spine_sprite	func	Scenes/BattleUnit/SpinePortrait.gd:457-500	() -> void
 _current_ally_units	var	Scenes/HUD/BattleOverlayController.gd:22-22	: Array[Unit] = []
 _current_enemy_units	var	Scenes/HUD/BattleOverlayController.gd:23-23	: Array[Unit] = []
-_current_target_args	func	Scenes/HUD/DebugMenuPopup.gd:474-478	() -> Dictionary
+_current_target_args	func	Scenes/HUD/DebugMenuPopup.gd:476-480	() -> Dictionary
 _database_fingerprint	func	Tools/validate_gameData.gd:1244-1261	(database: GameDatabase) -> String
 _db	var	Core/DataLoader.gd:84-84	: GameDatabase = null
 _dead	var	Scenes/BattleUnit/SpinePortrait.gd:62-62	: bool = false
@@ -655,7 +656,7 @@ _debug_spawn_random	func	Managers/GameManager.gd:623-632	(count: int) -> void
 _debug_state	func	Scenes/BattleScene/BattleScene.gd:442-445	() -> GameState
 _debug_target_entry	func	Scenes/BattleScene/BattleScene.gd:480-485	(code: String, unit: Unit, slot: int, is_ally: bool) -> Dictionary
 _debug_targets	func	Managers/GameManager.gd:592-607	(args: Dictionary) -> Array[Unit]
-_deck_label	var	Scenes/HUD/DebugMenuPopup.gd:93-93	: Label
+_deck_label	var	Scenes/HUD/DebugMenuPopup.gd:95-95	: Label
 _deck_offset	func	Scenes/Cards/HandBar.gd:349-352	(slot: int) -> Vector2
 _declaration_text	func	Tools/gen_code_index.gd:686-698	(record: Dictionary, with_value: bool) -> String
 _def_bool	func	Core/Unit.gd:330-337	(def: Dictionary, key: String, fallback: bool) -> bool
@@ -675,7 +676,7 @@ _display_shield	var	Scenes/BattleUnit/UnitUI.gd:105-105	: float = 0.0
 _docs_dir	var	Tools/gen_code_index.gd:77-77	: String = DEFAULT_DOCS_DIR
 _drag_header	func	GDTest/DebugMenuTest.gd:262-265	(popup: DebugMenuPopup, delta: Vector2) -> void
 _drag_in_progress	var	Scenes/Cards/CardUI.gd:160-160	: bool = false
-_dragging	var	Scenes/HUD/DebugMenuPopup.gd:103-103	: bool = false
+_dragging	var	Scenes/HUD/DebugMenuPopup.gd:105-105	: bool = false
 _draw	func	Scenes/HUD/MoxieOrbUI.gd:487-588	() -> void
 _draw	func	Scenes/HUD/SkillTooltipPopup.gd:236-271	() -> void
 _draw_card	func	Skills/EffectBlock.gd:546-554	(ctx: SkillContext) -> void
@@ -758,7 +759,7 @@ _fresh_catalog	func	GDTest/TooltipIconCatalogTest.gd:13-14	() -> TooltipIconCata
 _function_named	func	GDTest/CodeIndexTest.gd:63-69	(info: Dictionary, name: String) -> Dictionary
 _gain_shield	func	Skills/EffectBlock.gd:337-356	(ctx: SkillContext, targets: Array[Unit], amount: int) -> void
 _game_infos	func	Tools/gen_code_index.gd:527-528	() -> Array[Dictionary]
-_gated_buttons	var	Scenes/HUD/DebugMenuPopup.gd:106-106	: Array[Button] = []
+_gated_buttons	var	Scenes/HUD/DebugMenuPopup.gd:108-108	: Array[Button] = []
 _get_animation_duration	func	Scenes/BattleUnit/SpinePortrait.gd:550-570	(anim_name: StringName) -> float
 _get_array	func	Core/DataLoader.gd:247-252	static (source: Dictionary, key: String) -> Array
 _get_bool	func	Core/DataLoader.gd:200-218	static (source: Dictionary, key: String, fallback: bool) -> bool
@@ -794,8 +795,8 @@ _grid	func	Tools/dataBuilder.gd:222-227	(sheets: Dictionary, sheet_name: String)
 _gui_input	func	Scenes/BattleUnit/UnitUI.gd:451-454	(event: InputEvent) -> void
 _gui_input	func	Scenes/Cards/CardUI.gd:317-325	(event: InputEvent) -> void
 _gui_input	func	Scenes/HUD/MoxieOrbUI.gd:419-434	(event: InputEvent) -> void
-_hand_cap_label	var	Scenes/HUD/DebugMenuPopup.gd:95-95	: Label
-_hand_label	var	Scenes/HUD/DebugMenuPopup.gd:92-92	: Label
+_hand_cap_label	var	Scenes/HUD/DebugMenuPopup.gd:97-97	: Label
+_hand_label	var	Scenes/HUD/DebugMenuPopup.gd:94-94	: Label
 _handle_ally_ultimate	func	Managers/GameManager.gd:406-434	(ally: Unit) -> void
 _handle_convert	func	Managers/GameManager.gd:463-471	() -> void
 _handle_debug_command	func	Managers/GameManager.gd:494-577	(action: Dictionary) -> void
@@ -805,7 +806,7 @@ _has_cached_ally_colors	var	Scenes/HUD/MoxieOrbUI.gd:108-108	: bool = false
 _has_enum	func	Tools/dataBuilder.gd:463-464	(enums: Dictionary, enum_name: String) -> bool
 _has_merge_release	var	Scenes/Cards/HandBar.gd:46-46	: bool = false
 _has_portrait	var	Scenes/HUD/MoxieOrbUI.gd:116-116	: bool = false
-_header	var	Scenes/HUD/DebugMenuPopup.gd:101-101	: HBoxContainer
+_header	var	Scenes/HUD/DebugMenuPopup.gd:103-103	: HBoxContainer
 _header_label	var	Scenes/HUD/SkillTooltipPopup.gd:23-23	: Label
 _heal	func	Skills/EffectBlock.gd:379-398	(ctx: SkillContext, targets: Array[Unit], amount: int) -> void
 _help_requested	var	Tools/validate_gameData.gd:124-124	: bool = false
@@ -829,7 +830,7 @@ _init	func	Core/Unit.gd:81-89	(unit_data: UnitData, slot: int = 0) -> void
 _init	func	Scenes/BattleUnit/StatusIconCatalog.gd:42-43	() -> void
 _init	func	Scenes/Cards/CardDrag.gd:10-12	(p_card: Card, p_source: HandBar) -> void
 _init	func	Scenes/Cards/ForgePlate.gd:34-43	() -> void
-_init	func	Scenes/HUD/DebugMenuPopup.gd:115-126	() -> void
+_init	func	Scenes/HUD/DebugMenuPopup.gd:117-128	() -> void
 _init	func	Scenes/HUD/MoxieOrbUI.gd:131-140	() -> void
 _init	func	Scenes/HUD/OutlineGlow.gd:44-55	() -> void
 _init	func	Scenes/HUD/SkillTooltipPopup.gd:31-36	() -> void
@@ -884,7 +885,7 @@ _lookup_index	func	Scenes/HUD/TooltipIconCatalog.gd:263-268	(index: Dictionary[S
 _make_ally	func	GDTest/EnemyTurnOverlapTest.gd:50-58	() -> Unit
 _make_ally_data	func	GDTest/DebugMenuTest.gd:40-48	(max_hp: int = 20) -> UnitData
 _make_bare_portrait	func	GDTest/EnemyTurnOverlapTest.gd:159-166	(anim: StringName, lead: float) -> SpinePortrait
-_make_button	func	Scenes/HUD/DebugMenuPopup.gd:464-465	(label: String, command: String, args: Dictionary = {}) -> Button
+_make_button	func	Scenes/HUD/DebugMenuPopup.gd:466-467	(label: String, command: String, args: Dictionary = {}) -> Button
 _make_card_ui	func	GDTest/CardDrawAnimationTest.gd:21-27	(card: Card) -> CardUI
 _make_card_ui	func	GDTest/CardUITest.gd:19-25	(card: Card) -> CardUI
 _make_content	func	GDTest/HudTooltipTest.gd:40-43	(tooltip_text: String) -> Control
@@ -895,22 +896,22 @@ _make_enemy	func	GDTest/DebugMenuTest.gd:58-59	(max_hp: int = 20) -> Unit
 _make_enemy	func	GDTest/EnemyTurnOverlapTest.gd:38-47	(max_hp: int = 40) -> Unit
 _make_enemy	func	GDTest/EnemyUltAuraTest.gd:20-26	(max_moxie: int = 20) -> Unit
 _make_enemy_data	func	GDTest/DebugMenuTest.gd:51-55	(max_hp: int = 20) -> UnitData
-_make_gated_button	func	Scenes/HUD/DebugMenuPopup.gd:452-460	(label: String, on_press: Callable) -> Button
+_make_gated_button	func	Scenes/HUD/DebugMenuPopup.gd:454-462	(label: String, on_press: Callable) -> Button
 _make_hand_bar	func	GDTest/CardDrawAnimationTest.gd:32-44	() -> HandBar
 _make_hand_bar	func	GDTest/CardMergeAnimationTest.gd:39-51	() -> HandBar
-_make_label	func	Scenes/HUD/DebugMenuPopup.gd:430-436	(text: String, font_size: int, color: Color) -> Label
+_make_label	func	Scenes/HUD/DebugMenuPopup.gd:432-438	(text: String, font_size: int, color: Color) -> Label
 _make_manager	func	GDTest/CardFlashPolicyTest.gd:27-41	(hand_values: Array[int]) -> GameManager
 _make_manager	func	GDTest/DebugMenuTest.gd:64-77	() -> GameManager
 _make_manager	func	GDTest/EnemyTurnOverlapTest.gd:61-73	(enemies: Array[Unit]) -> GameManager
 _make_orb	func	GDTest/EnemyUltAuraTest.gd:29-33	(enemy: Unit) -> MoxieOrbUI
-_make_row	func	Scenes/HUD/DebugMenuPopup.gd:443-448	() -> GridContainer
-_make_section	func	Scenes/HUD/DebugMenuPopup.gd:439-440	(text: String) -> Label
+_make_row	func	Scenes/HUD/DebugMenuPopup.gd:445-450	() -> GridContainer
+_make_section	func	Scenes/HUD/DebugMenuPopup.gd:441-442	(text: String) -> Label
 _make_skill	func	GDTest/DebugMenuTest.gd:36-37	() -> SkillData
 _make_skill	func	GDTest/EnemyTurnOverlapTest.gd:34-35	() -> SkillData
 _make_state	func	GDTest/GameStateMergeTest.gd:11-17	(values: Array[int]) -> GameState
-_make_tab	func	Scenes/HUD/DebugMenuPopup.gd:422-427	(tabs: TabContainer, title: String) -> VBoxContainer
+_make_tab	func	Scenes/HUD/DebugMenuPopup.gd:424-429	(tabs: TabContainer, title: String) -> VBoxContainer
 _make_unit	func	GDTest/StatusCatalogTest.gd:11-15	(max_hp: int = 20) -> Unit
-_make_unit_button	func	Scenes/HUD/DebugMenuPopup.gd:469-470	(label: String, command: String, args: Dictionary = {}) -> Button
+_make_unit_button	func	Scenes/HUD/DebugMenuPopup.gd:471-472	(label: String, command: String, args: Dictionary = {}) -> Button
 _make_unit_ui	func	GDTest/EnemyUltAuraTest.gd:38-44	(enemy: Unit) -> UnitUI
 _make_visual_copy	func	Scenes/Cards/CardUI.gd:1162-1181	() -> PanelContainer
 _manual_statuses	var	Scenes/BattleUnit/UnitUI.gd:131-131	: Array[Dictionary] = []
@@ -936,7 +937,7 @@ _merged_modes	var	Tools/validate_gameData.gd:94-94	: PackedStringArray = PackedS
 _merged_sources	var	Core/GameState.gd:35-35	: Dictionary[Card, Array] = {}
 _modify_card	func	Skills/EffectBlock.gd:453-483	(ctx: SkillContext, value: int) -> void
 _mount_merge_plate	func	Scenes/Cards/CardUI.gd:894-900	(plate: ForgePlate, start_centre: Vector2, plate_name: String) -> void
-_move_by	func	Scenes/HUD/DebugMenuPopup.gd:210-220	(delta: Vector2) -> void
+_move_by	func	Scenes/HUD/DebugMenuPopup.gd:212-222	(delta: Vector2) -> void
 _next_action_order	var	Scenes/BattleUnit/SpinePortrait.gd:68-68	: int = 0
 _next_deal_slot	func	Scenes/Cards/HandBar.gd:332-338	() -> int
 _next_id	var	Core/Card.gd:11-11	: int = 0
@@ -947,20 +948,20 @@ _notification	func	Scenes/Cards/CardUI.gd:1194-1216	(what: int) -> void
 _notification	func	Scenes/HUD/MoxieOrbUI.gd:188-202	(what: int) -> void
 _num_bb	func	Skills/SkillPreviewFormatter.gd:328-329	static (n: int) -> String
 _object_bool	func	Scenes/BattleUnit/StatusIconCatalog.gd:231-238	(target: Object, prop_name: String, fallback: bool) -> bool
-_on_action_pressed	func	Scenes/HUD/DebugMenuPopup.gd:538-539	(command: String, args: Dictionary) -> void
+_on_action_pressed	func	Scenes/HUD/DebugMenuPopup.gd:540-541	(command: String, args: Dictionary) -> void
 _on_ally_ultimate_requested	func	Scenes/BattleScene/BattleScene.gd:302-303	(ally: Unit) -> void
 _on_card_dropped_on_unit	func	Scenes/BattleScene/BattleScene.gd:287-292	(card: Card, unit: Unit) -> void
 _on_card_mouse_entered	func	Scenes/Cards/CardUI.gd:505-514	() -> void
 _on_card_mouse_exited	func	Scenes/Cards/CardUI.gd:517-522	() -> void
 _on_card_value_changed	func	Scenes/Cards/CardUI.gd:1368-1379	(changed_card: Card, old_value: int, new_value: int) -> void
-_on_close_pressed	func	Scenes/HUD/DebugMenuPopup.gd:534-535	() -> void
+_on_close_pressed	func	Scenes/HUD/DebugMenuPopup.gd:536-537	() -> void
 _on_debug_button_pressed	func	Scenes/BattleScene/BattleScene.gd:405-410	() -> void
 _on_debug_command_requested	func	Scenes/BattleScene/BattleScene.gd:427-430	(command: String, args: Dictionary) -> void
 _on_event_card_discarded	func	Scenes/Cards/HandBar.gd:426-427	(card: Card) -> void
 _on_event_card_drawn	func	Scenes/Cards/HandBar.gd:420-421	(card: Card) -> void
 _on_event_card_played	func	Scenes/Cards/HandBar.gd:414-415	(card: Card, _ally: Unit) -> void
 _on_fade_out_finished	func	Scenes/HUD/OutlineGlow.gd:106-113	() -> void
-_on_header_gui_input	func	Scenes/HUD/DebugMenuPopup.gd:524-531	(event: InputEvent) -> void
+_on_header_gui_input	func	Scenes/HUD/DebugMenuPopup.gd:526-533	(event: InputEvent) -> void
 _on_intent_mouse_entered	func	Scenes/BattleUnit/UnitUI.gd:295-297	() -> void
 _on_intent_mouse_exited	func	Scenes/BattleUnit/UnitUI.gd:300-302	() -> void
 _on_merge_folded	func	Scenes/Cards/CardUI.gd:962-980	() -> void
@@ -970,12 +971,12 @@ _on_orb_hover_ended	func	Scenes/HUD/BattleOverlayController.gd:475-479	(_orb: Mo
 _on_orb_hover_started	func	Scenes/HUD/BattleOverlayController.gd:461-472	(orb: MoxieOrbUI, unit: Unit) -> void
 _on_return_finished	func	Scenes/Cards/CardUI.gd:1286-1297	(layer: CanvasLayer) -> void
 _on_row_children_changed	func	Scenes/HUD/BattleOverlayController.gd:228-229	(_node: Node) -> void
-_on_spawn_custom_pressed	func	Scenes/HUD/DebugMenuPopup.gd:553-557	() -> void
+_on_spawn_custom_pressed	func	Scenes/HUD/DebugMenuPopup.gd:555-559	() -> void
 _on_spine_animation_completed	func	Scenes/BattleUnit/SpinePortrait.gd:305-327	(_sprite: Object, _state: Object, track_entry: Object) -> void
 _on_sprite_action_finished	func	Scenes/BattleUnit/UnitUI.gd:589-592	(anim: StringName) -> void
 _on_sprite_action_started	func	Scenes/BattleUnit/UnitUI.gd:583-586	(anim: StringName) -> void
 _on_ultimate_cast	func	Scenes/HUD/BattleOverlayController.gd:488-491	(caster: Unit, _skill_name: String) -> void
-_on_unit_action_pressed	func	Scenes/HUD/DebugMenuPopup.gd:544-550	(command: String, args: Dictionary) -> void
+_on_unit_action_pressed	func	Scenes/HUD/DebugMenuPopup.gd:546-552	(command: String, args: Dictionary) -> void
 _on_unit_card_hover_ended	func	Scenes/HUD/BattleOverlayController.gd:440-444	(unit: Unit) -> void
 _on_unit_card_hover_started	func	Scenes/HUD/BattleOverlayController.gd:429-437	(unit: Unit, card: Card, anchor_rect: Rect2) -> void
 _on_unit_clicked	func	Scenes/BattleScene/BattleScene.gd:295-296	(unit: Unit) -> void
@@ -1064,7 +1065,7 @@ _ready	func	Tools/validate_gameData.gd:128-142	() -> void
 _ready_blend	var	Scenes/HUD/MoxieOrbUI.gd:122-122	: float = 0.0
 _ready_hand	func	GDTest/CardMergeAnimationTest.gd:95-102	(bar: HandBar, values: Array[int]) -> GameState
 _rebuild_category_icons	func	Scenes/HUD/SkillTooltipPopup.gd:215-233	(categories: PackedStringArray) -> void
-_rebuild_targets	func	Scenes/HUD/DebugMenuPopup.gd:483-497	(targets: Array[Dictionary]) -> void
+_rebuild_targets	func	Scenes/HUD/DebugMenuPopup.gd:485-499	(targets: Array[Dictionary]) -> void
 _recorder	func	GDTest/CardFlashPolicyTest.gd:44-45	(manager: GameManager) -> RecordingUI
 _recorder	func	GDTest/EnemyTurnOverlapTest.gd:76-77	(manager: GameManager) -> RecordingUI
 _reduce_shield	func	Skills/EffectBlock.gd:358-376	(ctx: SkillContext, targets: Array[Unit], amount: int) -> void
@@ -1135,7 +1136,7 @@ _schedule_delayed_hit	func	Scenes/BattleUnit/SpinePortrait.gd:187-199	(delay: fl
 _script_fixture	func	GDTest/CodeIndexTest.gd:15-45	() -> String
 _script_page_path	func	Tools/gen_code_index.gd:264-265	(repo_path_value: String) -> String
 _script_paths	var	Tools/gen_code_index.gd:71-71	: PackedStringArray = PackedStringArray()
-_seat_above_bottom_left	func	Scenes/HUD/DebugMenuPopup.gd:196-204	() -> void
+_seat_above_bottom_left	func	Scenes/HUD/DebugMenuPopup.gd:198-206	() -> void
 _set_debug_interactive	func	Scenes/BattleScene/BattleScene.gd:420-422	(interactive: bool) -> void
 _set_hud_hidden	func	Scenes/BattleUnit/UnitUI.gd:611-636	(hidden: bool, instant: bool = false, duration_override: float = -1.0) -> void
 _set_intensity	func	Scenes/HUD/OutlineGlow.gd:167-169	(val: float) -> void
@@ -1163,7 +1164,7 @@ _skill_meta	var	Tools/validate_gameData.gd:110-110	: Dictionary = {}
 _skills_json	var	Tools/validate_gameData.gd:117-117	: Dictionary = {}
 _skip_workbook	var	Tools/validate_gameData.gd:84-84	: bool = false
 _slide_tween	var	Scenes/Cards/CardUI.gd:147-147	: Tween
-_snap_int	func	Scenes/HUD/DebugMenuPopup.gd:502-517	(snapshot: Dictionary, key: String, fallback: int) -> int
+_snap_int	func	Scenes/HUD/DebugMenuPopup.gd:504-519	(snapshot: Dictionary, key: String, fallback: int) -> int
 _snapshot	func	GDTest/DebugMenuTest.gd:85-98	(hand: int = 3, max_hand: int = 7) -> Dictionary
 _snapshot_slots	func	Scenes/Cards/HandBar.gd:272-276	() -> Dictionary[CardUI, Vector2]
 _sorted_effects	func	Core/DataLoader.gd:300-322	static (entry: Dictionary) -> Array
@@ -1175,7 +1176,7 @@ _stagger_style	var	Scenes/BattleUnit/UnitUI.gd:79-79	: StyleBoxEmpty
 _start_brand_pop	func	Scenes/Cards/CardUI.gd:1010-1029	() -> void
 _status_def	func	Core/Unit.gd:314-321	(status_id: String) -> Dictionary
 _status_ids	var	Tools/validate_gameData.gd:95-95	: PackedStringArray = PackedStringArray()
-_status_label	var	Scenes/HUD/DebugMenuPopup.gd:91-91	: Label
+_status_label	var	Scenes/HUD/DebugMenuPopup.gd:93-93	: Label
 _status_signature	func	Scenes/BattleUnit/UnitUI.gd:781-789	(statuses: Array[Dictionary]) -> String
 _statuses_dirty	var	Scenes/BattleUnit/UnitUI.gd:133-133	: bool = true
 _stop_pose_tweens	func	Scenes/Cards/CardUI.gd:680-686	() -> void
@@ -1198,16 +1199,16 @@ _sync_ring_shader	func	Scenes/HUD/MoxieOrbUI.gd:324-375	() -> void
 _sync_size	func	Scenes/HUD/OutlineGlow.gd:116-118	() -> void
 _sync_unit_row	func	Scenes/BattleScene/BattleScene.gd:336-367	(container: HBoxContainer, units: Array[Unit], is_ally: bool) -> void
 _sync_wrap_widths	func	Scenes/HUD/SkillTooltipPopup.gd:135-141	(content_w: float) -> void
-_target_entries	var	Scenes/HUD/DebugMenuPopup.gd:108-108	: Array[Dictionary] = []
+_target_entries	var	Scenes/HUD/DebugMenuPopup.gd:110-110	: Array[Dictionary] = []
 _target_hp	var	Scenes/BattleUnit/UnitUI.gd:107-107	: float = 0.0
-_target_labels	var	Scenes/HUD/DebugMenuPopup.gd:110-110	: PackedStringArray = PackedStringArray()
+_target_labels	var	Scenes/HUD/DebugMenuPopup.gd:112-112	: PackedStringArray = PackedStringArray()
 _target_modes	var	Tools/validate_gameData.gd:89-89	: PackedStringArray = PackedStringArray()
-_target_selector	var	Scenes/HUD/DebugMenuPopup.gd:96-96	: OptionButton
+_target_selector	var	Scenes/HUD/DebugMenuPopup.gd:98-98	: OptionButton
 _target_shield	var	Scenes/BattleUnit/UnitUI.gd:108-108	: float = 0.0
 _targets	func	GDTest/DebugMenuTest.gd:101-108	() -> Array[Dictionary]
 _test_infos	func	Tools/gen_code_index.gd:531-532	() -> Array[Dictionary]
 _texts	var	Tools/gen_code_index.gd:74-74	: Dictionary = {}
-_tier_selector	var	Scenes/HUD/DebugMenuPopup.gd:97-97	: OptionButton
+_tier_selector	var	Scenes/HUD/DebugMenuPopup.gd:99-99	: OptionButton
 _tilt	func	GDTest/CardDrawAnimationTest.gd:57-63	(ui: CardUI, param: StringName) -> float
 _tilt	func	GDTest/CardMergeAnimationTest.gd:85-91	(ui: CardUI, param: StringName) -> float
 _tint	func	Scenes/HUD/MoxieOrbUI.gd:591-592	static (c: Color, a: float) -> Color
@@ -1224,7 +1225,7 @@ _tooltip_slab	func	GDTest/HudTooltipTest.gd:71-76	() -> StyleBoxFlat
 _tree_fingerprints	func	Tools/check_navigation.gd:133-140	(dir_path: String) -> Dictionary
 _trigger_death_shatter	func	Scenes/BattleUnit/UnitUI.gd:995-1032	() -> void
 _try_advance_wave	func	Managers/GameManager.gd:972-994	() -> bool
-_turn_label	var	Scenes/HUD/DebugMenuPopup.gd:94-94	: Label
+_turn_label	var	Scenes/HUD/DebugMenuPopup.gd:96-96	: Label
 _type_name	func	Tools/validate_gameData.gd:244-259	(value: Variant) -> String
 _ult_warning_active	var	Scenes/BattleUnit/UnitUI.gd:86-86	: bool = false
 _unhandled_key_input	func	Scenes/BattleScene/BattleScene.gd:377-386	(event: InputEvent) -> void
@@ -1258,7 +1259,7 @@ _validate_waves	func	Tools/validate_gameData.gd:784-812	(waves_json: Dictionary)
 _validate_workbook	func	Tools/validate_gameData.gd:392-423	() -> void
 _value_at	func	GDTest/GameStateMergeTest.gd:21-23	(state: GameState, index: int) -> int
 _value_sources	var	Tools/validate_gameData.gd:90-90	: PackedStringArray = PackedStringArray()
-_value_spin	var	Scenes/HUD/DebugMenuPopup.gd:98-98	: SpinBox
+_value_spin	var	Scenes/HUD/DebugMenuPopup.gd:100-100	: SpinBox
 _value_tween	var	Scenes/Cards/CardUI.gd:166-166	: Tween
 _vbox	var	Scenes/HUD/SkillTooltipPopup.gd:22-22	: VBoxContainer
 _visual_root	var	Scenes/Cards/CardUI.gd:186-186	: Control
@@ -1375,7 +1376,7 @@ clear_temp_buffs	func	Core/Card.gd:91-93	() -> void
 clear_unit_intent	func	Core/GameUI.gd:42-44	(_unit: Unit) -> void
 clear_unit_intent	func	Scenes/BattleScene/BattleScene.gd:167-171	(unit: Unit) -> void
 clear_value_modifier	func	Core/Unit.gd:184-185	() -> void
-close_menu	func	Scenes/HUD/DebugMenuPopup.gd:181-183	() -> void
+close_menu	func	Scenes/HUD/DebugMenuPopup.gd:183-185	() -> void
 collect_keys	func	Tools/CodeIndexParser.gd:710-723	static (values: Array, depth: int) -> PackedStringArray
 colorize	func	Managers/ColorUtils.gd:14-15	static (text: String, color: String) -> String
 compute_value_from_inputs	func	Skills/EffectBlock.gd:208-250	(card_val: int, stored_val: int, state: GameState, sample_target: Unit = null) -> int
@@ -1549,7 +1550,7 @@ is_merged	var	Core/Card.gd:16-16	: bool = false
 is_merged	var	Skills/SkillContext.gd:17-17	: bool = false
 is_merging	func	Scenes/Cards/CardUI.gd:771-772	() -> bool
 is_odd	func	Core/Card.gd:80-81	() -> bool
-is_open	func	Scenes/HUD/DebugMenuPopup.gd:173-174	() -> bool
+is_open	func	Scenes/HUD/DebugMenuPopup.gd:175-176	() -> bool
 is_resource_path_char	func	Tools/CodeIndexParser.gd:666-667	static (character: String) -> bool
 is_skill_animation	func	Scenes/BattleUnit/SpinePortrait.gd:599-604	(anim_name: StringName) -> bool
 join_doc	func	Tools/CodeIndexParser.gd:488-498	static (doc: PackedStringArray) -> String
@@ -1595,7 +1596,7 @@ on_card_played	func	Core/GameUI.gd:46-47	(_card: Card, _state: GameState) -> voi
 on_card_played	func	Scenes/BattleScene/BattleScene.gd:81-83	(card: Card, state: GameState) -> void
 on_cards_merged	func	Core/GameUI.gd:54-60	(_source_a: Card, _source_b: Card, _result: Card, _state: GameState) -> void
 on_cards_merged	func	Scenes/BattleScene/BattleScene.gd:89-91	(source_a: Card, source_b: Card, result: Card, state: GameState) -> void
-open_menu	func	Scenes/HUD/DebugMenuPopup.gd:177-178	() -> void
+open_menu	func	Scenes/HUD/DebugMenuPopup.gd:179-180	() -> void
 orb_activated	signal	Scenes/HUD/MoxieOrbUI.gd:5-5	(unit: Unit)
 orb_hover_ended	signal	Scenes/HUD/MoxieOrbUI.gd:7-7	(orb: MoxieOrbUI, unit: Unit)
 orb_hover_started	signal	Scenes/HUD/MoxieOrbUI.gd:6-6	(orb: MoxieOrbUI, unit: Unit)
@@ -1639,7 +1640,7 @@ ready_glow_preset	export	Scenes/HUD/MoxieOrbUI.gd:98-98	: OutlineGlow.Preset = O
 rebuild_for_units	func	Scenes/HUD/BattleOverlayController.gd:61-113	(ally_uis: Array[UnitUI], enemy_uis: Array[UnitUI]) -> void
 recalculate	func	Core/EnemyIntent.gd:20-23	() -> void
 reduce_shield	func	Core/Unit.gd:166-170	(amount: int) -> int
-refresh	func	Scenes/HUD/DebugMenuPopup.gd:135-156	(snapshot: Dictionary, targets: Array[Dictionary]) -> void
+refresh	func	Scenes/HUD/DebugMenuPopup.gd:137-158	(snapshot: Dictionary, targets: Array[Dictionary]) -> void
 register_default_entries	func	Scenes/HUD/TooltipIconCatalog.gd:64-66	() -> void
 register_default_icons	func	Scenes/BattleUnit/StatusIconCatalog.gd:48-52	() -> void
 reload	func	Core/DataLoader.gd:136-138	static () -> void
@@ -1663,7 +1664,7 @@ set_custom_flow_texture	func	Scenes/HUD/OutlineGlow.gd:162-164	(tex: Texture2D) 
 set_dead	func	Scenes/BattleUnit/SpinePortrait.gd:426-444	(value: bool) -> void
 set_dice_progression	func	Core/GameState.gd:98-99	(prog: Array[int]) -> void
 set_flash_active	func	Scenes/Cards/CardUI.gd:280-283	(active: bool, hostile: bool = false) -> void
-set_gameplay_enabled	func	Scenes/HUD/DebugMenuPopup.gd:161-170	(enabled: bool) -> void
+set_gameplay_enabled	func	Scenes/HUD/DebugMenuPopup.gd:163-172	(enabled: bool) -> void
 set_hand	func	Scenes/Cards/HandBar.gd:133-152	(cards: Array[Card]) -> void
 set_hit_flash	func	Scenes/BattleUnit/SpinePortrait.gd:135-137	(strength: float) -> void
 set_intent_ult_warning	func	Scenes/BattleUnit/UnitUI.gd:289-292	(warn: bool) -> void
@@ -1740,7 +1741,7 @@ test_a_card_at_the_fold_angle_is_not_drawn_at_all	func	GDTest/CardMergeAnimation
 test_a_double_merge_merges_a_free_play_card	func	GDTest/CardMergeAnimationTest.gd:446-471	() -> void
 test_a_merge_with_no_release_starts_from_the_cards_own_slot	func	GDTest/CardMergeAnimationTest.gd:212-225	() -> void
 test_a_resting_card_renders_on_the_pixel_grid_of_its_slot	func	GDTest/CardDrawAnimationTest.gd:190-205	() -> void
-test_action_buttons_are_labelless_icons	func	GDTest/HudTooltipTest.gd:207-222	() -> void
+test_action_buttons_are_labelless_icons	func	GDTest/HudTooltipTest.gd:208-223	() -> void
 test_ally_highlights_are_never_rewritten_as_the_enemy_warning	func	GDTest/EnemyUltAuraTest.gd:122-138	() -> void
 test_aura_drops_when_the_roll_lands_short	func	GDTest/EnemyUltAuraTest.gd:108-119	() -> void
 test_aura_warns_before_the_roll_then_releases_on_the_cast	func	GDTest/EnemyUltAuraTest.gd:87-105	() -> void
@@ -1801,7 +1802,7 @@ test_header_drag_ignores_other_mouse_buttons	func	GDTest/DebugMenuTest.gd:293-30
 test_header_is_a_wired_drag_handle	func	GDTest/DebugMenuTest.gd:304-311	() -> void
 test_heal_full_restores_the_target_only	func	GDTest/DebugMenuTest.gd:535-545	() -> void
 test_hostile_flash_uses_the_crimson_preset	func	GDTest/CardUITest.gd:76-98	() -> void
-test_hover_hook_returns_the_tooltip_content	func	GDTest/HudTooltipTest.gd:156-166	() -> void
+test_hover_hook_returns_the_tooltip_content	func	GDTest/HudTooltipTest.gd:157-167	() -> void
 test_hover_scales_the_card_without_warping_it	func	GDTest/CardDrawAnimationTest.gd:281-302	() -> void
 test_icon_only_mode_replaces_the_keyword_with_a_pure_glyph	func	GDTest/TooltipIconCatalogTest.gd:76-86	() -> void
 test_inner_class_is_listed_without_flattening_members	func	GDTest/CodeIndexTest.gd:181-199	() -> void
@@ -1828,7 +1829,7 @@ test_page_file_names_are_derived_from_the_source_path	func	GDTest/CodeIndexTest.
 test_panel_chrome_has_square_corners	func	GDTest/DebugMenuTest.gd:138-149	() -> void
 test_player_effect_flash_is_friendly	func	GDTest/CardFlashPolicyTest.gd:97-108	() -> void
 test_player_skill_still_waits_for_the_full_animation	func	GDTest/EnemyTurnOverlapTest.gd:123-136	() -> void
-test_project_theme_reaches_the_tooltip_panel	func	GDTest/HudTooltipTest.gd:141-151	() -> void
+test_project_theme_reaches_the_tooltip_panel	func	GDTest/HudTooltipTest.gd:142-152	() -> void
 test_refresh_flags_an_over_cap_hand	func	GDTest/DebugMenuTest.gd:185-193	() -> void
 test_refresh_lists_targets_and_keeps_the_selection	func	GDTest/DebugMenuTest.gd:196-207	() -> void
 test_regeneration_counts_down_and_heals	func	GDTest/StatusCatalogTest.gd:30-41	() -> void
@@ -1846,8 +1847,8 @@ test_script_header_doc_becomes_the_summary	func	GDTest/CodeIndexTest.gd:102-107	
 test_set_hand_only_deals_the_new_cards	func	GDTest/CardDrawAnimationTest.gd:156-170	() -> void
 test_set_hand_reuses_the_cards_already_in_the_row	func	GDTest/CardDrawAnimationTest.gd:137-153	() -> void
 test_shield_tools_add_and_clear	func	GDTest/DebugMenuTest.gd:548-558	() -> void
-test_slab_never_grows_past_its_own_border	func	GDTest/HudTooltipTest.gd:126-135	() -> void
-test_slab_reuses_the_debug_menu_background	func	GDTest/HudTooltipTest.gd:99-121	() -> void
+test_slab_never_grows_past_its_own_border	func	GDTest/HudTooltipTest.gd:127-136	() -> void
+test_slab_reuses_the_debug_menu_background	func	GDTest/HudTooltipTest.gd:99-122	() -> void
 test_spawned_merged_card_evaporates_instead_of_poisoning_the_deck	func	GDTest/DebugMenuTest.gd:371-379	() -> void
 test_spawning_ignores_the_hand_cap	func	GDTest/DebugMenuTest.gd:340-348	() -> void
 test_status_tools_apply_and_clear	func	GDTest/DebugMenuTest.gd:591-602	() -> void
@@ -1865,8 +1866,8 @@ test_the_survivors_glide_into_the_gap_the_merge_left	func	GDTest/CardMergeAnimat
 test_the_two_cards_are_drawn_detached_from_the_hand_layout	func	GDTest/CardMergeAnimationTest.gd:557-563	() -> void
 test_the_two_cards_are_mounted_where_they_were_and_the_layout_never_moves	func	GDTest/CardMergeAnimationTest.gd:117-160	() -> void
 test_the_two_cards_are_never_hidden_before_the_merged_card	func	GDTest/CardMergeAnimationTest.gd:499-537	() -> void
-test_tooltip_never_eats_the_hover	func	GDTest/HudTooltipTest.gd:170-176	() -> void
-test_top_bar_widgets_carry_the_hover_tooltip	func	GDTest/HudTooltipTest.gd:179-202	() -> void
+test_tooltip_never_eats_the_hover	func	GDTest/HudTooltipTest.gd:171-177	() -> void
+test_top_bar_widgets_carry_the_hover_tooltip	func	GDTest/HudTooltipTest.gd:180-203	() -> void
 test_true_damage_bypasses_the_shield	func	GDTest/DebugMenuTest.gd:522-532	() -> void
 test_two_lines_become_a_title_and_a_description	func	GDTest/HudTooltipTest.gd:79-86	() -> void
 test_unit_tool_carries_the_selected_target	func	GDTest/DebugMenuTest.gd:210-232	() -> void
@@ -1880,7 +1881,7 @@ test_wrapped_signature_keeps_arguments_and_return_type	func	GDTest/CodeIndexTest
 test_zero_moxie_clears_the_gauge_and_the_used_lock	func	GDTest/DebugMenuTest.gd:498-506	() -> void
 tick_round_end_statuses	func	Core/Unit.gd:240-296	() -> Array[Dictionary]
 tilt	func	Scenes/Cards/ForgePlate.gd:131-138	() -> Vector2
-toggle_menu	func	Scenes/HUD/DebugMenuPopup.gd:186-190	() -> void
+toggle_menu	func	Scenes/HUD/DebugMenuPopup.gd:188-192	() -> void
 tooltip_icon_catalog	export	Scenes/BattleScene/BattleScene.gd:7-7	: TooltipIconCatalog
 tooltip_icon_catalog	var	Scenes/HUD/BattleOverlayController.gd:10-10	: TooltipIconCatalog
 try_merge	func	Core/GameState.gd:320-338	(a: Card, b: Card) -> Card
