@@ -139,9 +139,36 @@ for byte.
 *"Other software has interfered with Spine's operation. Please disable any antivirus or other
 software that manipulates Spine."*
 
-That text is the launcher's generic start-failure hint — an anti-tamper message — **not** an
-antivirus report, and on this machine no antivirus was involved (Defender's real-time protection
-is off). The launcher failed because of its own state folder, `%USERPROFILE%\Spine`:
+That text is the launcher's anti-tamper hint: Spine refuses to run when another process has
+injected code into it, or when its own state folder is inconsistent. Both happened on this machine
+and both produce the *same* dialog, so check them in this order.
+
+### 1. Antivirus injection (check this first)
+
+Bitdefender Antivirus Free 27 is installed here, and its hooks manager injects `bdhkm64.dll` and
+`atcuf64.dll` into processes started from the desktop shell. Spine sees those injected modules and
+refuses to start. Confirm it while the failing dialog is on screen:
+
+```powershell
+Get-Process Spine | ForEach-Object { $_.Modules } |
+    Where-Object FileName -match 'bitdefender' | Select-Object ModuleName
+# bdhkm64.dll, atcuf64.dll  =>  Bitdefender is the cause
+```
+
+The injection is inherited by children, so *every* user-facing launch fails: the Start-menu and
+desktop shortcuts, `explorer.exe <link>`, a `cmd.exe` wrapper, a scheduled task and a WMI
+`Win32_Process.Create` all end in this dialog — while the same command run from a shell Bitdefender
+did not hook (a VS Code terminal here) starts the editor. That is exactly the "it opens when you
+run it, but not when I click it" symptom. Fix it in Bitdefender, not in the launcher:
+
+- Protection → Antivirus → Settings → **Manage Exclusions** → add the folders
+  `C:\Program Files\Spine` and `%USERPROFILE%\Spine`.
+- Protection → Advanced Threat Defense → Settings → **Manage Applications** → add
+  `C:\Program Files\Spine\Spine.exe` as *Allowed*.
+- Still failing? Pause Bitdefender for 5 minutes and click the shortcut: if the editor appears, the
+  exclusion did not land in the right list (or Bitdefender has to go).
+
+### 2. The launcher's own state folder, `%USERPROFILE%\Spine`
 
 1. `version.txt` pinned Spine **3.8.75**, while `updates\3.8.75` held the editor payload of a
    *third-party* 3.8 install (file dated 2019-12-24) instead of one this launcher downloaded
