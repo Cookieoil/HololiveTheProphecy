@@ -8,6 +8,7 @@ extends GameUI
 @export var unit_ui_scene: PackedScene = preload("res://Scenes/BattleUnit/UnitUI.tscn")
 @export var turn_dice_progression: Array[int] = []
 ## Tester tools (the Debug button + F1). Turn off for a build that must not show them.
+## A release export hides them regardless of this flag — see `_debug_tools_allowed`.
 @export var debug_menu_enabled: bool = true
 
 @onready var hand_bar: HandBar = $HUD/HandBar
@@ -389,8 +390,16 @@ func _sync_unit_row(container: HBoxContainer, units: Array[Unit], is_ally: bool)
 ## normal action queue, so a debug tool is handled by exactly the same turn-loop code
 ## as a real action and can never desynchronise the wave machine, the enemy intents
 ## or the HUD.
+##
+## The overlay only ever exists in a debug build: `_debug_tools_allowed()` combines the
+## inspector toggle with the build type, so a release export cannot mount the panel or
+## emit a "debug" action even if `debug_menu_enabled` was left on.
+func _debug_tools_allowed() -> bool:
+	return debug_menu_enabled and GameManager.debug_tools_enabled()
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not debug_menu_enabled:
+	if not _debug_tools_allowed():
 		return
 	var key_event: InputEventKey = event as InputEventKey
 	if key_event == null or not key_event.pressed or key_event.echo:
@@ -404,7 +413,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 ## Builds the tester overlay. The panel is created in code, so the battle scene has
 ## no extra nodes to keep in sync and the .tscn only carries the toggle button.
 func _setup_debug_menu() -> void:
-	if not debug_menu_enabled:
+	if not _debug_tools_allowed():
 		debug_layer.visible = false
 		return
 
@@ -440,7 +449,7 @@ func _set_debug_interactive(interactive: bool) -> void:
 ## A tool was pressed. It goes onto the action queue as a normal "debug" action,
 ## which the turn loop then validates and applies (see GameManager).
 func _on_debug_command_requested(command: String, args: Dictionary) -> void:
-	if debug_menu == null or not _awaiting_player_action:
+	if debug_menu == null or not _debug_tools_allowed() or not _awaiting_player_action:
 		return
 	action_decided.emit({"type": "debug", "command": command, "args": args})
 

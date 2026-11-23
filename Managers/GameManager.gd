@@ -481,6 +481,28 @@ const DEBUG_HAND_CAP_LIMIT: int = 20
 const DEBUG_SCOPE_ALLIES: int = 0
 const DEBUG_SCOPE_ENEMIES: int = 1
 const DEBUG_SCOPE_ALL: int = 2
+## Values for `debug_build_override`: the engine decides, or the suite forces the
+## release / debug answer so the gate below can be exercised without an export.
+const DEBUG_BUILD_ENGINE: int = -1
+const DEBUG_BUILD_FORCED_OFF: int = 0
+const DEBUG_BUILD_FORCED_ON: int = 1
+## Test seam for `debug_tools_enabled()`. `DEBUG_BUILD_ENGINE` is the default and the
+## only value game code ever leaves behind; GDTest/DebugMenuTest.gd sets it to
+## `DEBUG_BUILD_FORCED_OFF` to prove a release build refuses every debug command. It
+## cannot be written from exported data, so it can never re-enable the tools in a
+## release build.
+static var debug_build_override: int = DEBUG_BUILD_ENGINE
+
+## Build-type gate for every tester tool (the Debug menu, the F1 hotkey and the
+## "debug" action). Editor runs and debug exports report `true`; a **release** export
+## reports `false`, so a shipped build can never open the overlay or apply a debug
+## command — even if `BattleScene.debug_menu_enabled` was left on in the inspector or
+## the scene file was edited by hand. The headless gdUnit4 run uses the editor binary,
+## so the tools stay available to the suite.
+static func debug_tools_enabled() -> bool:
+	if debug_build_override >= 0:
+		return debug_build_override == DEBUG_BUILD_FORCED_ON
+	return OS.is_debug_build()
 
 ## Tester-only mutations behind the in-game Debug menu (scenes/HUD/DebugMenuPopup.gd).
 ##
@@ -492,6 +514,11 @@ const DEBUG_SCOPE_ALL: int = 2
 ## Command ids are the CMD_* constants on DebugMenuPopup; the two lists stay in sync.
 ## @param action - { "command": String, "args": Dictionary }
 func _handle_debug_command(action: Dictionary) -> void:
+	# A release build refuses every tool here, not just in the UI: the turn loop is
+	# the authority, so hiding the overlay is not the only line of defence.
+	if not debug_tools_enabled():
+		_debug_log("Debug tools are disabled in release builds.")
+		return
 	var command: String = str(action.get("command", ""))
 	var args: Dictionary = _coerce_dict(action.get("args", {}))
 

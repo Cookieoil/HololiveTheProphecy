@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Managers/GameManager.gd` — `class_name GameManager` extends `Node`
 
-`1057` lines · [back to the map](../../CODEBASE_MAP.md)
+`1084` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext.
 
@@ -14,6 +14,9 @@ Constants:
 - L481 `DEBUG_SCOPE_ALLIES: int = 0` — Scope values of the Debug menu's target selector. Mirrors DebugMenuPopup.Scope without this manager having to reference a UI class.
 - L482 `DEBUG_SCOPE_ENEMIES: int = 1`
 - L483 `DEBUG_SCOPE_ALL: int = 2`
+- L486 `DEBUG_BUILD_ENGINE: int = -1` — Values for `debug_build_override`: the engine decides, or the suite forces the release / debug answer so the gate below can be exercised without an export.
+- L487 `DEBUG_BUILD_FORCED_OFF: int = 0`
+- L488 `DEBUG_BUILD_FORCED_ON: int = 1`
 
 State:
 - L9 `state: GameState`
@@ -21,9 +24,11 @@ State:
 - L11 `current_intents: Array[EnemyIntent] = []`
 - L12 `game_running: bool = false`
 - L13 `instructions_shown: bool = false`
+- L494 `debug_build_override: int = DEBUG_BUILD_ENGINE` — Test seam for `debug_tools_enabled()`. `DEBUG_BUILD_ENGINE` is the default and the only value game code ever leaves behind; GDTest/DebugMenuTest.gd sets it to `…
 
 Public API:
 - L58-76 `setup_game(ally_data: Array[UnitData], wave_defs: Array, p_ui: GameUI, config: Dictionary = {}) -> void` — The game state initializer (kickoff): 1. It takes the starting data to configures the game state. 2. Initialize both allies and enemies to assign them unit data…
+- L502-505 `static debug_tools_enabled() -> bool` — Build-type gate for every tester tool (the Debug menu, the F1 hotkey and the "debug" action). Editor runs and debug exports report `true`; a **release** export…
 
 Private:
 - L31-33 `_color_unit`
@@ -43,34 +48,34 @@ Private:
 - L436-440 `_refresh_enemy_intents`
 - L441-460 `_handle_merge`
 - L463-471 `_handle_convert`
-- L494-577 `_handle_debug_command`
-- L581-585 `_coerce_dict`
-- L592-607 `_debug_targets`
-- L611-612 `_debug_log`
-- L616-620 `_debug_hp_summary`
-- L623-632 `_debug_spawn_random`
-- L635-644 `_debug_spawn_custom`
-- L647-653 `_debug_draw`
-- L656-665 `_debug_buff_hand`
-- L668-677 `_debug_discard_random`
-- L680-687 `_debug_clear_hand`
-- L690-697 `_debug_set_moxie`
-- L700-705 `_debug_heal`
-- L708-717 `_debug_damage`
-- L720-725 `_debug_shield`
-- L728-733 `_debug_clear_shield`
-- L736-748 `_debug_kill`
-- L751-760 `_debug_apply_status`
-- L763-767 `_debug_clear_statuses`
-- L772-814 `_build_ally_context`
-- L817-856 `_build_enemy_context`
-- L860-880 `_resolve_skill`
-- L885-895 `_roll_enemy_intents`
-- L898-948 `_resolve_enemy_turns`
-- L949-967 `_execute_enemy_ultimate`
-- L972-994 `_try_advance_wave`
-- L1002-1018 `_end_of_turn_cleanup`
-- L1022-1054 `_log_status_event`
+- L516-604 `_handle_debug_command`
+- L608-612 `_coerce_dict`
+- L619-634 `_debug_targets`
+- L638-639 `_debug_log`
+- L643-647 `_debug_hp_summary`
+- L650-659 `_debug_spawn_random`
+- L662-671 `_debug_spawn_custom`
+- L674-680 `_debug_draw`
+- L683-692 `_debug_buff_hand`
+- L695-704 `_debug_discard_random`
+- L707-714 `_debug_clear_hand`
+- L717-724 `_debug_set_moxie`
+- L727-732 `_debug_heal`
+- L735-744 `_debug_damage`
+- L747-752 `_debug_shield`
+- L755-760 `_debug_clear_shield`
+- L763-775 `_debug_kill`
+- L778-787 `_debug_apply_status`
+- L790-794 `_debug_clear_statuses`
+- L799-841 `_build_ally_context`
+- L844-883 `_build_enemy_context`
+- L887-907 `_resolve_skill`
+- L912-922 `_roll_enemy_intents`
+- L925-975 `_resolve_enemy_turns`
+- L976-994 `_execute_enemy_ultimate`
+- L999-1021 `_try_advance_wave`
+- L1029-1045 `_end_of_turn_cleanup`
+- L1049-1081 `_log_status_event`
 
 Uses: Card, DiceRoller, EnemyIntent, GameState, GameUI, SkillContext, SkillData, SkillEffect, Unit, UnitData
 Used by: GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd, Tools/check_navigation.gd, Tools/validate_gameData.gd

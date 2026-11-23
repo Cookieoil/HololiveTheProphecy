@@ -663,6 +663,55 @@ func test_unknown_command_is_ignored() -> void:
 #endregion
 
 
+#region Build-type gate
+
+## The engine is in charge by default: the suite must never leave a forced answer
+## behind for another test file to inherit.
+func before_test() -> void:
+	GameManager.debug_build_override = GameManager.DEBUG_BUILD_ENGINE
+
+
+func after_test() -> void:
+	GameManager.debug_build_override = GameManager.DEBUG_BUILD_ENGINE
+
+
+## The headless run uses the editor binary, so the tools stay available here. If this
+## ever fails, the rest of the suite is running against a release binary.
+func test_a_debug_build_keeps_the_tools_available() -> void:
+	assert_bool(GameManager.debug_tools_enabled()).is_true()
+
+
+## A release export must never mount the overlay, even though the shipped scene file
+## still carries `debug_menu_enabled = true`.
+func test_a_release_build_never_mounts_the_overlay() -> void:
+	GameManager.debug_build_override = GameManager.DEBUG_BUILD_FORCED_OFF
+
+	var packed: PackedScene = load("res://Scenes/BattleScene/BattleScene.tscn") as PackedScene
+	var scene: BattleScene = packed.instantiate() as BattleScene
+	add_child(scene)
+	auto_free(scene)
+
+	assert_object(scene.debug_menu).is_null()
+	assert_bool(scene.debug_layer.visible).is_false()
+	# The toggle and F1 share the same gate, so neither can bring the panel back.
+	scene._on_debug_button_pressed()
+	assert_object(scene.debug_menu).is_null()
+
+
+## And a debug action that somehow reaches the turn loop is refused there too: the
+## manager is the authority, not the UI.
+func test_a_release_build_refuses_a_debug_command() -> void:
+	GameManager.debug_build_override = GameManager.DEBUG_BUILD_FORCED_OFF
+	var manager: GameManager = _make_manager()
+	var enemy: Unit = manager.state.enemies[0]
+
+	_run(manager, "kill", {"scope": GameManager.DEBUG_SCOPE_ENEMIES, "slot": 0})
+
+	assert_bool(enemy.is_dead).is_false()
+	assert_int(enemy.current_hp).is_equal(enemy.max_hp)
+#endregion
+
+
 #region Scene wiring
 
 ## The battle scene is the only place the toggle button, the hotkey and the panel
