@@ -1,11 +1,11 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/DebugMenuTest.gd` — `class_name DebugMenuTest` extends `GdUnitTestSuite`
 
-`742` lines · [back to the map](../../CODEBASE_MAP.md)
+`791` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is view-only: it reports readouts, gates its tools while the turn loop…
 
-Sections: Panel (view-only) tests · Header drag (the panel can be moved out of the way) · Card tools (overflow, merge tiers, hand operations) · Resource tools · Unit tools · Wave tools · Scene wiring
+Sections: Panel (view-only) tests · Header drag (the panel can be moved out of the way) · Card tools (overflow, merge tiers, hand operations) · Resource tools · Unit tools · Wave tools · Build-type gate · Scene wiring
 - L16 `class RecordingUI extends GameUI` (members are not indexed)
 
 Public API:
@@ -47,9 +47,14 @@ Public API:
 - L632-638 `test_reroll_intents_skips_defeated_enemies() -> void`
 - L641-653 `test_dice_step_rerolls_with_the_new_dice() -> void`
 - L656-662 `test_unknown_command_is_ignored() -> void`
-- L670-698 `test_battle_scene_mounts_and_toggles_the_debug_menu() -> void` — The battle scene is the only place the toggle button, the hotkey and the panel meet, so this loads the real scene and checks they are actually connected.
-- L701-715 `test_battle_scene_locks_the_tools_until_the_player_turn_starts() -> void`
-- L720-738 `test_battle_scene_applies_a_tool_through_the_turn_loop() -> void` — _ready() runs the loop up to its first player action, so a tool press goes straight onto the queue and the turn loop applies it for real.
+- L670-671 `before_test() -> void` — The engine is in charge by default: the suite must never leave a forced answer behind for another test file to inherit.
+- L674-675 `after_test() -> void`
+- L680-681 `test_a_debug_build_keeps_the_tools_available() -> void` — The headless run uses the editor binary, so the tools stay available here. If this ever fails, the rest of the suite is running against a release binary.
+- L686-698 `test_a_release_build_never_mounts_the_overlay() -> void` — A release export must never mount the overlay, even though the shipped scene file still carries `debug_menu_enabled = true`.
+- L703-711 `test_a_release_build_refuses_a_debug_command() -> void` — And a debug action that somehow reaches the turn loop is refused there too: the manager is the authority, not the UI.
+- L719-747 `test_battle_scene_mounts_and_toggles_the_debug_menu() -> void` — The battle scene is the only place the toggle button, the hotkey and the panel meet, so this loads the real scene and checks they are actually connected.
+- L750-764 `test_battle_scene_locks_the_tools_until_the_player_turn_starts() -> void`
+- L769-787 `test_battle_scene_applies_a_tool_through_the_turn_loop() -> void` — _ready() runs the loop up to its first player action, so a tool press goes straight onto the queue and the turn loop applies it for real.
 
 Private:
 - L36-37 `_make_skill`

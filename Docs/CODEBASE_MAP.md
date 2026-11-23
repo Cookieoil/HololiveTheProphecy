@@ -39,8 +39,8 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Data/gameDatabase.gd`](map/Data/gameDatabase.md) | `GameDatabase` | 27 | Skill definitions keyed by skill_id (effects embedded). |
 | [`Managers/ColorUtils.gd`](map/Managers/ColorUtils.md) | — | 17 | Color definitions for BBCode |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks, not game logic. depend on these signals — they are fire-and-forg… |
-| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1057 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
-| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 502 | extends GameUI, 2 signal(s), 6 export(s), 37 function(s) |
+| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1084 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
+| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 511 | extends GameUI, 2 signal(s), 6 export(s), 38 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 632 | extends Control, 3 signal(s), 28 export(s), 36 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 331 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup and automatic inspection of Unit buff/debuff state. Two dictiona… |
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
@@ -82,7 +82,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 99 | Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/debuff and the hostile (enemy-caused) red glow preset. |
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 292 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigation set (Docs/). Each fixture is an inline script so the test nev… |
-| [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 742 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is view-only: it reports readouts, gates its tools while the turn loop… |
+| [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 791 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is view-only: it reports readouts, gates its tools while the turn loop… |
 | [`GDTest/EnemyTurnOverlapTest.gd`](map/GDTest/EnemyTurnOverlapTest.md) | `EnemyTurnOverlapTest` | 232 | Locks the enemy-turn overlap ("fast mode" pacing): - consecutive enemies hand control to the next one at the impact beat of their skill animation, so wind-downs… |
 | [`GDTest/EnemyUltAuraTest.gd`](map/GDTest/EnemyUltAuraTest.md) | `EnemyUltAuraTest` | 139 | Locks in the enemy Ultimate warning lifecycle. The crimson character aura and the Moxie orb preview both describe one *pending* roll, so neither may outlive the… |
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the card the player merged *into*, so a merge never teleports the result to the far right. |

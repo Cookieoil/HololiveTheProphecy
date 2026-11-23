@@ -140,14 +140,15 @@ for byte.
 software that manipulates Spine."*
 
 That text is the launcher's anti-tamper hint: Spine refuses to run when another process has
-injected code into it, or when its own state folder is inconsistent. Both happened on this machine
-and both produce the *same* dialog, so check them in this order.
+injected code into it, or when its own state folder is inconsistent. Both produce the *same*
+dialog, so check them in this order.
 
 ### 1. Antivirus injection (check this first)
 
-Bitdefender Antivirus Free 27 is installed here, and its hooks manager injects `bdhkm64.dll` and
-`atcuf64.dll` into processes started from the desktop shell. Spine sees those injected modules and
-refuses to start. Confirm it while the failing dialog is on screen:
+An antivirus hooks manager injects its own DLLs into processes started from the desktop shell.
+Spine sees those injected modules and refuses to start. Confirm it while the failing dialog is on
+screen (the `bitdefender` pattern below is the product this was diagnosed with — substitute
+whichever antivirus is installed):
 
 ```powershell
 Get-Process Spine | ForEach-Object { $_.Modules } |
@@ -157,16 +158,17 @@ Get-Process Spine | ForEach-Object { $_.Modules } |
 
 The injection is inherited by children, so *every* user-facing launch fails: the Start-menu and
 desktop shortcuts, `explorer.exe <link>`, a `cmd.exe` wrapper, a scheduled task and a WMI
-`Win32_Process.Create` all end in this dialog — while the same command run from a shell Bitdefender
-did not hook (a VS Code terminal here) starts the editor. That is exactly the "it opens when you
-run it, but not when I click it" symptom. Fix it in Bitdefender, not in the launcher:
+`Win32_Process.Create` all end in this dialog — while the same command run from a shell the
+antivirus did not hook (a VS Code terminal, for instance) starts the editor. That is exactly the
+"it opens when you run it, but not when I click it" symptom. Fix it in the antivirus, not in the
+launcher. The equivalent Bitdefender settings are:
 
 - Protection → Antivirus → Settings → **Manage Exclusions** → add the folders
   `C:\Program Files\Spine` and `%USERPROFILE%\Spine`.
 - Protection → Advanced Threat Defense → Settings → **Manage Applications** → add
   `C:\Program Files\Spine\Spine.exe` as *Allowed*.
-- Still failing? Pause Bitdefender for 5 minutes and click the shortcut: if the editor appears, the
-  exclusion did not land in the right list (or Bitdefender has to go).
+- Still failing? Pause the antivirus for 5 minutes and click the shortcut: if the editor appears,
+  the exclusion did not land in the right list (or the antivirus has to go).
 
 ### 2. The launcher's own state folder, `%USERPROFILE%\Spine`
 
@@ -233,27 +235,18 @@ with no interference text.
 download — brought the interference dialog straight back, because the pin has to match the
 launcher's own update record. Pick the editor with `-u <version>` instead.
 
-### The third-party 3.8.75 repack
+### A stale third-party state folder
 
-A cracked "Spine 2D Pro 3.8.75 made by MKS" install sits in `%USERPROFILE%\Downloads\gAME\`.
-Its `install.bat` is the source of the original mess:
+The original mess came from an old, unrelated Spine install that had been copied over the shared
+state folder: it left a 3.8.75 `version.txt` pin, an `updates\3.8.75` payload this launcher never
+downloaded itself, and a Desktop shortcut pointing at its own launcher. That shortcut always ends
+in the interference dialog, and running it can re-pin `%USERPROFILE%\Spine` to 3.8.75 — which
+breaks the installed launcher again. Deleting the pin and the payload (step 2 above) is the fix;
+never run such a shortcut on a machine with a licensed launcher installed.
 
-```bat
-reg import spine.reg
-xcopy Spine %USERPROFILE%\Spine\ /e /y
-Shortcut.exe /f:"%USERPROFILE%\Desktop\Spine.lnk" /a:c /t:"%~dp0\Spine.exe"
-```
-
-It copies its own 3.8.75 state (the 2019-12-24 payload plus a `version.txt` pin) into the shared
-state folder, imports Java prefs pinning the launcher to 3.8.75, and rewrites the Desktop
-shortcut to point at its own 2019 launcher. That shortcut always ends in the interference dialog,
-and running it can re-pin `%USERPROFILE%\Spine` to 3.8.75 — which breaks the installed launcher
-again. The repack folder is deleted (121 MB); the original shortcut is kept in
-`Documents\SpineRepair-2026-11-20\Spine-repack-3.8.75.lnk.bak`.
-
-One detail worth keeping: `install.bat` hardcodes `%USERPROFILE%\Desktop`, but this machine's
-desktop is **redirected to OneDrive** (`HKCU\...\Explorer\User Shell Folders\Desktop` =
-`%USERPROFILE%\OneDrive\Desktop`), so that shortcut never actually appeared on the visible
-desktop — only the Start-menu entry did. Create desktop shortcuts on the *effective* desktop
+One detail worth keeping: an install like that hardcodes `%USERPROFILE%\Desktop`, but a desktop
+**redirected to OneDrive** (`HKCU\...\Explorer\User Shell Folders\Desktop` =
+`%USERPROFILE%\OneDrive\Desktop`) means the shortcut never appears on the visible desktop — only
+the Start-menu entry does. Create desktop shortcuts on the *effective* desktop
 (`[Environment]::GetFolderPath('Desktop')`), which is where the working `Spine.lnk` lives now; a
 second copy sits in the stale `%USERPROFILE%\Desktop` folder.

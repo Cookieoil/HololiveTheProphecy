@@ -63,11 +63,11 @@ runs every gate.
   bytes and estimated tokens each documented recipe reads versus opening the source files.
 
 ## Terminal environment (Windows / PowerShell 7)
-- The default integrated terminal is PowerShell 7 from `C:\Users\vmv03\Tools\PowerShell7`
+- The default integrated terminal is PowerShell 7 from `$env:USERPROFILE\Tools\PowerShell7`
   (upgraded from PS 5.1, whose shell integration never reported command completion).
 - A freshly opened shell may carry a stale PATH. If `pwsh`, `rg`, `fd`, `uv`, `gh`, `node`,
   `gdformat` or `jq` are "not recognized", prepend the user-space toolchain:
-  `$env:Path = "C:\Users\vmv03\Tools\PowerShell7;C:\Users\vmv03\Tools\bin;$env:USERPROFILE\.local\bin;C:\Program Files\GitHub CLI;C:\Program Files\nodejs;C:\ffmpeg;" + [Environment]::GetEnvironmentVariable('Path','Machine')`
+  `$env:Path = "$env:USERPROFILE\Tools\PowerShell7;$env:USERPROFILE\Tools\bin;$env:USERPROFILE\.local\bin;C:\Program Files\GitHub CLI;C:\Program Files\nodejs;C:\ffmpeg;" + [Environment]::GetEnvironmentVariable('Path','Machine')`
 - `gh` is installed **and authenticated** as `Cookieoil` (token scopes `gist`, `read:org`,
   `repo`, `workflow`), so `gh pr create`, `gh pr checks`, `gh pr merge`, `gh run list` and
   `gh api` work as-is; re-run `gh auth login` only if `gh auth status` reports otherwise.
