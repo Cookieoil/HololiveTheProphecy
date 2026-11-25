@@ -4,7 +4,7 @@
 		"base_categories": ["damage"],
 		"description": "Deal [Value] damage to an enemy and apply 2 Gloom.",
 		"merged_categories": ["draw", "buff", "damage"],
-		"merged_description": "Merged: Discard a card to draw 1 card and add its Value to this damage.",
+		"merged_description": "Merged: First, discard a card to draw 1 card and add its Value to this damage.",
 		"merged_mode": "and_merged_first",
 		"condition_threshold": 0,
 		"effects": [
@@ -259,7 +259,7 @@
 		"description": "Deal [Value + Shield] damage to an enemy.",
 		"merged_categories": ["damage", "debuff"],
 		"merged_description": "Merged: Reduce its next roll by [Value / 2] (max 5).",
-		"merged_mode": "and_merged_first",
+		"merged_mode": "and_base_first",
 		"condition_threshold": 0,
 		"effects": [
 			{
@@ -307,8 +307,8 @@
 				"order": 1,
 				"trigger": "merged",
 				"action": "apply_modifier",
-				"target_mode": "pick_n_enemy",
-				"target_count": 1,
+				"target_mode": "cached",
+				"target_count": 0,
 				"value_source": "card_value",
 				"value_multiplier": 1,
 				"value_divisor": 2,
@@ -472,7 +472,7 @@
 		"base_categories": ["damage"],
 		"description": "Deal [Value + Highest Card in Hand / 2] damage to an enemy.",
 		"merged_categories": ["damage", "debuff"],
-		"merged_description": "Merged: Break [Value * 2] Shield on that enemy.",
+		"merged_description": "Merged: First, break [Value * 2] Shield on that enemy.",
 		"merged_mode": "and_merged_first",
 		"condition_threshold": 0,
 		"effects": [

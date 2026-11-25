@@ -126,7 +126,11 @@ func _color_card(card: Card) -> String:
 func _resolve_targets(ctx: SkillContext) -> Array[Unit]:
 	match target_mode:
 		TargetMode.NONE:
-			ctx.targets = []
+			# A block that needs no unit targets must NOT erase targets cached by an
+			# earlier block in the same skill. A merged skill like healer_1 / buff_1
+			# picks an enemy first, then runs a utility block (add_bonus, target_mode
+			# none), then deals cached damage; clearing ctx.targets here would force a
+			# second target prompt. Leave the cache untouched.
 			return []
 			
 		TargetMode.CASTER:

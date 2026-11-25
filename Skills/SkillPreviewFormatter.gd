@@ -335,14 +335,14 @@ static func _substitute_tokens(
 				n = maxi(1, val / maxi(1, rhs))
 		result = result.replace(m.get_string(0), _num_bb(n))
 
-	# 3. Replace Highest / Lowest card tokens (for Ultimates like Striker's "8 + Highest Card")
+	# 3. Replace Highest / Lowest card tokens (for Ultimates like Striker's "[8 + Highest Card in Hand]")
 	if state != null:
 		var hi_card := state.get_highest_card_in_hand(exclude_card)
 		var hi_val := hi_card.get_effective_value() if hi_card != null else 0
 		var hi_math_rx := RegEx.new()
-		hi_math_rx.compile("(\\d+)\\s*\\+\\s*Highest Card(?:\\s+in\\s+Hand)?")
-		var hm := hi_math_rx.search(result)
-		if hm != null:
+		# The outer [ ] are optional and consumed, so no stray brackets survive.
+		hi_math_rx.compile("\\[?(\\d+)\\s*\\+\\s*Highest Card(?:\\s+in\\s+Hand)?\\]?")
+		for hm: RegExMatch in hi_math_rx.search_all(result):
 			var total := int(hm.get_string(1)) + hi_val
 			var hi_hint: String = "(+%d from highest card)" % hi_val if hi_val > 0 else "(+highest card in hand)"
 			result = result.replace(hm.get_string(0), "%s [color=%s]%s[/color]" % [
