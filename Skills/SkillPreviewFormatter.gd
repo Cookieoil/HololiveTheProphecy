@@ -282,8 +282,7 @@ static func _substitute_tokens(
 	if caster != null:
 		var shield_rx := RegEx.new()
 		shield_rx.compile("\\[Value\\s*\\+\\s*(?:Caster's\\s+)?Shield\\]")
-		var shield_match := shield_rx.search(result)
-		if shield_match != null:
+		for shield_match: RegExMatch in shield_rx.search_all(result):
 			var shield_val: int = caster.shield
 			var total: int = val + shield_val
 			var shield_hint: String = "(+%d from Shield)" % shield_val if shield_val > 0 else "(+1 per Shield)"
@@ -291,8 +290,7 @@ static func _substitute_tokens(
 
 	var hand_rx := RegEx.new()
 	hand_rx.compile("\\[Value\\s*\\+\\s*Highest\\s+Card(?:\\s+in\\s+Hand)?\\s*/\\s*(\\d+)\\]")
-	var hand_match := hand_rx.search(result)
-	if hand_match != null:
+	for hand_match: RegExMatch in hand_rx.search_all(result):
 		var divisor: int = int(hand_match.get_string(1))
 		var hand_val: int = 0
 		if state != null:
@@ -307,8 +305,7 @@ static func _substitute_tokens(
 
 	var div_add_rx := RegEx.new()
 	div_add_rx.compile("\\[Value\\s*/\\s*(\\d+)\\s*\\+\\s*(\\d+)\\]")
-	var div_add_match := div_add_rx.search(result)
-	if div_add_match != null:
+	for div_add_match: RegExMatch in div_add_rx.search_all(result):
 		var divisor: int = int(div_add_match.get_string(1))
 		var add: int = int(div_add_match.get_string(2))
 		var divided: int = maxi(1, val / maxi(1, divisor)) if val > 0 else 0
@@ -317,8 +314,7 @@ static func _substitute_tokens(
 
 	var times_rx := RegEx.new()
 	times_rx.compile("\\[Value\\s*(?:x|\\*)\\s*(\\d+)\\]")
-	var times_match := times_rx.search(result)
-	if times_match != null:
+	for times_match: RegExMatch in times_rx.search_all(result):
 		var mult: int = int(times_match.get_string(1))
 		result = result.replace(times_match.get_string(0), _num_bb(val * mult))
 

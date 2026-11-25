@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Skills/SkillPreviewFormatter.gd` — `class_name SkillPreviewFormatter` extends `RefCounted`
 
-`378` lines · [back to the map](../../CODEBASE_MAP.md)
+`374` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > extends RefCounted, 8 function(s)
 
@@ -21,11 +21,11 @@ Public API:
 Private:
 - L195-239 `_resolve_description_lines`
 - L242-252 `_estimate_post_blocks_value`
-- L255-366 `_substitute_tokens`
-- L369-373 `_pick_sample_target`
-- L376-377 `_num_bb`
+- L255-362 `_substitute_tokens`
+- L365-369 `_pick_sample_target`
+- L372-373 `_num_bb`
 
 Uses: Card, EffectBlock, EnemyIntent, GameState, SkillData, SkillEffect, TooltipIconCatalog, Unit
-Used by: GDTest/AllyKitTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/BattleOverlayController.gd, Tools/check_navigation.gd
+Used by: GDTest/AllyKitTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/BattleOverlayController.gd, Tools/check_navigation.gd
 Loads: res://Data/json/skills.json.
 
