@@ -47,6 +47,13 @@ static func _as_int(value: Variant) -> int:
 		var float_value: float = value
 		return int(float_value)
 	return int(str(value))
+## Removes the BBCode tags the formatter emits, so a stray token bracket like the
+## leftover "[13 ...]" from a mis-consumed [N + Highest Card] shows up in a check.
+static func _strip_bbcode(text: String) -> String:
+	var rx := RegEx.new()
+	rx.compile("\\[/?(?:color|font_size|b|i)(?:=[^\\]]*)?\\]")
+	return rx.sub(text, "", true)
+
 #endregion
 
 #region Threshold parity
@@ -166,4 +173,97 @@ func test_living_caster_still_fires_effects() -> void:
 		return arr
 	await block.execute(ctx)
 	assert_int(target.current_hp).is_equal(15)  # 20 - 5
+#endregion
+
+#region Target-cache preservation
+## Reproduces the merged healer_1 / buff_1 order: pick an enemy, run a utility
+## block (target_mode none), then deal cached damage. The utility block must not
+## erase the cached target, or the damage block would prompt a SECOND time.
+func test_utility_block_preserves_cached_targets() -> void:
+	var caster: Unit = _make_ally(3)
+	var enemy: Unit = _make_enemy(30)
+	var state: GameState = GameState.new()
+	state.enemies = [enemy]
+	var picks: Array[int] = [0]
+	var ctx: SkillContext = SkillContext.new(caster, null, state)
+	ctx.card_value = 5
+	ctx.pick_n_target = func(_count: int, _filter: Callable) -> Array[Unit]:
+		picks[0] += 1
+		var arr: Array[Unit] = [enemy]
+		return arr
+
+	# merged block: pick + reduce the enemy's roll (caches the target)
+	var mod: EffectBlock = EffectBlock.new()
+	mod.action_type = EffectBlock.Action.APPLY_MODIFIER
+	mod.target_mode = EffectBlock.TargetMode.PICK_N_ENEMY
+	mod.target_count = 1
+	mod.value_source = EffectBlock.ValueSource.CARD_VALUE
+	mod.value_divisor = 2
+	mod.value_cap = 5
+	await mod.execute(ctx)
+
+	# base utility block: must NOT wipe ctx.targets
+	var bonus: EffectBlock = EffectBlock.new()
+	bonus.action_type = EffectBlock.Action.ADD_BONUS
+	bonus.target_mode = EffectBlock.TargetMode.NONE
+	bonus.value_source = EffectBlock.ValueSource.FIXED
+	bonus.fixed_amount = 0
+	await bonus.execute(ctx)
+
+	# base damage block: must reuse the cached target (no second prompt)
+	var strike: EffectBlock = EffectBlock.new()
+	strike.action_type = EffectBlock.Action.DEAL_DAMAGE
+	strike.target_mode = EffectBlock.TargetMode.CACHED_OR_PICK_ENEMY
+	strike.target_count = 1
+	strike.value_source = EffectBlock.ValueSource.CARD_VALUE
+	await strike.execute(ctx)
+
+	assert_int(picks[0]).is_equal(1)  # exactly one target prompt
+	assert_int(enemy.current_hp).is_equal(25)  # 30 - 5
+
+## The add_bonus fix-up must still reach the damage block when it adds value.
+func test_bonus_before_cached_damage_still_applies() -> void:
+	var caster: Unit = _make_ally(0)
+	var enemy: Unit = _make_enemy(30)
+	var state: GameState = GameState.new()
+	state.enemies = [enemy]
+	var ctx: SkillContext = SkillContext.new(caster, null, state)
+	ctx.card_value = 5
+	ctx.pick_n_target = func(_count: int, _filter: Callable) -> Array[Unit]:
+		var arr: Array[Unit] = [enemy]
+		return arr
+	var bonus: EffectBlock = EffectBlock.new()
+	bonus.action_type = EffectBlock.Action.ADD_BONUS
+	bonus.target_mode = EffectBlock.TargetMode.NONE
+	bonus.value_source = EffectBlock.ValueSource.FIXED
+	bonus.fixed_amount = 3
+	await bonus.execute(ctx)
+	var strike: EffectBlock = EffectBlock.new()
+	strike.action_type = EffectBlock.Action.DEAL_DAMAGE
+	strike.target_mode = EffectBlock.TargetMode.CACHED_OR_PICK_ENEMY
+	strike.target_count = 1
+	strike.value_source = EffectBlock.ValueSource.CARD_VALUE
+	await strike.execute(ctx)
+	assert_int(enemy.current_hp).is_equal(22)  # 30 - (5 + 3)
+#endregion
+
+#region No stray brackets
+## After substitution every description must be plain prose once the BBCode is
+## stripped: a leftover token like "[13 (+5 from highest card)]" fails here.
+func test_no_stray_brackets_after_substitution() -> void:
+	var db: GameDatabase = _db()
+	var state: GameState = GameState.new()
+	state.hand = [Card.new(5), Card.new(3), Card.new(2)]
+	var caster: Unit = _make_ally(4)
+	for skill_id: String in db.skills.keys():
+		var skill: SkillData = db.skills[skill_id]
+		for text: String in [skill.description, skill.merged_description]:
+			if text.strip_edges() == "":
+				continue
+			var resolved: String = SkillPreviewFormatter._substitute_tokens(
+				text, 6, state, [], caster, null, 0
+			)
+			var plain: String = _strip_bbcode(resolved)
+			assert_str(plain).not_contains("[")
+			assert_str(plain).not_contains("]")
 #endregion
