@@ -57,6 +57,7 @@ enum ValueSource {
 	TARGET_MISSING_HP, # first cached target's missing HP
 	HIGHEST_CARD_IN_HAND, # highest card in player's hand
 	LOWEST_CARD_IN_HAND, # lowest card in player's hand
+	CASTER_SHIELD, # caster's current shield (for shield-slam effects)
 	STORED_VALUE, # ctx.stored_value (set by a prior block)
 }
 
@@ -204,12 +205,12 @@ func _check_condition(ctx: SkillContext) -> bool:
 #endregion 
 
 #region Phase 3: Resolve Values
-#region Phase 3: Resolve Values
 func compute_value_from_inputs(
 	card_val: int,
 	stored_val: int,
 	state: GameState,
-	sample_target: Unit = null
+	sample_target: Unit = null,
+	caster: Unit = null
 ) -> int:
 	var base: int = 0
 	match value_source:
@@ -237,6 +238,9 @@ func compute_value_from_inputs(
 					base = low.get_effective_value()
 		ValueSource.STORED_VALUE:
 			base = stored_val
+		ValueSource.CASTER_SHIELD:
+			if caster != null:
+				base = caster.shield
 	
 	## Method: (base x multiplier / divisor) + offset, capped
 	var divisor := maxi(1, value_divisor)
@@ -251,7 +255,7 @@ func compute_value_from_inputs(
 
 func _resolve_value(ctx: SkillContext) -> int:
 	var first_target: Unit = ctx.targets[0] if not ctx.targets.is_empty() else null
-	return compute_value_from_inputs(ctx.card_value, ctx.stored_value, ctx.game_state, first_target)
+	return compute_value_from_inputs(ctx.card_value, ctx.stored_value, ctx.game_state, first_target, ctx.caster)
 #endregion
 
 #region Phase 4: Execute Action
@@ -423,6 +427,8 @@ func _deal_true_damage(ctx: SkillContext, targets: Array[Unit], amount: int) -> 
 
 
 func _add_bonus(ctx: SkillContext, value: int) -> void:
+	if value == 0:
+		return
 	ctx.card_value += value
 	var val_colored: String = ColorUtils.colorize(str(value), ColorUtils.COLOR_CARD)
 	var total_colored: String = ColorUtils.colorize(str(ctx.card_value) + " V", ColorUtils.COLOR_CARD)

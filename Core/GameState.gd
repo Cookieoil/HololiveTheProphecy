@@ -356,9 +356,13 @@ func _merge_slot(a: Card, b: Card) -> int:
 
 #region Hand Queries
 ## Returns the card with the highest effective value in hand, or null.
-func get_highest_card_in_hand() -> Card:
+## If `exclude` is provided, that card is skipped (used during hover previews
+## where the card being dragged should not count toward its own damage bonus).
+func get_highest_card_in_hand(exclude: Card = null) -> Card:
 	var best: Card = null
 	for c: Card in hand:
+		if c == exclude:
+			continue
 		if best == null or c.get_effective_value() > best.get_effective_value():
 			best = c
 	return best

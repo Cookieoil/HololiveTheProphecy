@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/GameState.gd` — `class_name GameState` extends `RefCounted`
 
-`481` lines · [back to the map](../../CODEBASE_MAP.md)
+`485` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that return result The presentation layer can react to.
 
@@ -53,24 +53,24 @@ Public API:
 - L265-280 `cross_merge(a: Card, b: Card) -> Card` — cross merge logic Two unmerged (a,b) → one merged (c). Returns the new card. The new card set as a merged card The two cards used for merging are removed from h…
 - L290-307 `double_merge(merged_card: Card, other_card: Card) -> Card` — double merge logic merged + same-value → double-merged (value + 1, free play). Returns the new card. The new card set as a merged card The two cards used for me…
 - L320-338 `try_merge(a: Card, b: Card) -> Card` — This function is the router for merging mechanics. It uses merge checker funcs to see: 1. what kind of merge player is trying to do. 2. if that merge is valid,…
-- L359-365 `get_highest_card_in_hand() -> Card` — Returns the card with the highest effective value in hand, or null.
-- L367-373 `get_lowest_card_in_hand() -> Card` — Returns the card with the lowest effective value in hand, or null.
-- L375-383 `get_top_n_cards(n: int) -> Array[Card]` — Returns the N highest-value cards in hand (sorted descending).
-- L409-411 `static scaled_value(value: int, divisor: int = 1) -> int` — Integer division, minimum 1
-- L413-419 `get_living_allies() -> Array[Unit]`
-- L420-426 `get_living_enemies() -> Array[Unit]`
-- L428-430 `get_dice_size(turn_index: int) -> int` — Returns the dice size for a given turn (0-based index).
-- L432-436 `all_enemies_dead() -> bool`
-- L438-443 `all_allies_dead() -> bool`
-- L445-479 `get_merge_error(a: Card, b: Card) -> String`
+- L361-369 `get_highest_card_in_hand(exclude: Card = null) -> Card` — Returns the card with the highest effective value in hand, or null. If `exclude` is provided, that card is skipped (used during hover previews where the card be…
+- L371-377 `get_lowest_card_in_hand() -> Card` — Returns the card with the lowest effective value in hand, or null.
+- L379-387 `get_top_n_cards(n: int) -> Array[Card]` — Returns the N highest-value cards in hand (sorted descending).
+- L413-415 `static scaled_value(value: int, divisor: int = 1) -> int` — Integer division, minimum 1
+- L417-423 `get_living_allies() -> Array[Unit]`
+- L424-430 `get_living_enemies() -> Array[Unit]`
+- L432-434 `get_dice_size(turn_index: int) -> int` — Returns the dice size for a given turn (0-based index).
+- L436-440 `all_enemies_dead() -> bool`
+- L442-447 `all_allies_dead() -> bool`
+- L449-483 `get_merge_error(a: Card, b: Card) -> String`
 
 Private:
 - L142-150 `_extract_base_cards`
 - L155-164 `_reset_and_discard`
 - L346-354 `_merge_slot`
-- L389-405 `_to_int`
+- L393-409 `_to_int`
 
 Uses: Card, Unit, UnitData
-Used by: Core/DataLoader.gd, Core/GameUI.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/GameStateMergeTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, Core/GameUI.gd, GDTest/AllyKitTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/GameStateMergeTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
 Loads: —
 
