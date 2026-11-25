@@ -59,6 +59,7 @@ const VALUE_SOURCE_MAP: Dictionary = {
 	"highest_card_in_hand": EffectBlock.ValueSource.HIGHEST_CARD_IN_HAND,
 	"lowest_card_in_hand": EffectBlock.ValueSource.LOWEST_CARD_IN_HAND,
 	"stored_value": EffectBlock.ValueSource.STORED_VALUE,
+	"caster_shield": EffectBlock.ValueSource.CASTER_SHIELD,
 }
 const MERGED_MODE_MAP: Dictionary = {
 	"and_merged_first": SkillData.MergedMode.AND_MERGED_FIRST,

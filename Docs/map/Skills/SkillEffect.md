@@ -10,6 +10,6 @@ Public API:
 - L18-19 `get_description() -> String` — Auto-description for inspectat	ion/debug
 
 Uses: SkillContext
-Used by: Managers/GameManager.gd, Skills/EffectBlock.gd, Skills/SkillData.gd, Skills/SkillPreviewFormatter.gd
+Used by: GDTest/AllyKitTest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd, Skills/SkillData.gd, Skills/SkillPreviewFormatter.gd
 Loads: —
 

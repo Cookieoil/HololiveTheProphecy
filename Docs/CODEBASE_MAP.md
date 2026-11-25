@@ -29,10 +29,10 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
 | [`Core/Card.gd`](map/Core/Card.md) | `Card` | 115 | This class contains the data for the card Card instance is created/destroyed during merging. Rule: Merge consumes two cards and produces one. Total count is shr… |
-| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 515 | Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single source of truth; the workbook (res://Data/xlsx/game_data.xlsx)… |
+| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 516 | Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single source of truth; the workbook (res://Data/xlsx/game_data.xlsx)… |
 | [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 23 | Static utility for dice rolls. Separated for easy mocking/seeding in tests. |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn loop, resolved at step 7. |
-| [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 481 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that return result The presentation layer can react to. |
+| [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 485 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that return result The presentation layer can react to. |
 | [`Core/GameUI.gd`](map/Core/GameUI.md) | `GameUI` | 100 | Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameManager only talks to this interface. Every input methods are asyn… |
 | [`Core/Unit.gd`](map/Core/Unit.md) | `Unit` | 373 | Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data |
 | [`Core/UnitData.gd`](map/Core/UnitData.md) | `UnitData` | 16 | Template definition for a unit type. |
@@ -57,11 +57,11 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Scenes/HUD/SkillTooltipPopup.gd`](map/Scenes/HUD/SkillTooltipPopup.md) | `SkillTooltipPopup` | 272 | extends Control, 8 function(s) |
 | [`Scenes/HUD/TooltipIconCatalog.gd`](map/Scenes/HUD/TooltipIconCatalog.md) | `TooltipIconCatalog` | 334 | Inline icon registry for tooltip descriptions (SkillTooltipPopup bodies). Two authoring styles are supported, mirroring Legend of Runeterra (icon + colored keyw… |
 | [`Scenes/HUD/TooltipIconEntry.gd`](map/Scenes/HUD/TooltipIconEntry.md) | `TooltipIconEntry` | 133 | One tooltip keyword/icon rule, consumed by TooltipIconCatalog. DisplayMode decides how the keyword is drawn inside a RichTextLabel: ICON_AND_KEYWORD -> [icon] K… |
-| [`Skills/EffectBlock.gd`](map/Skills/EffectBlock.md) | `EffectBlock` | 660 | The universal data skill effect component Use configureble resource for all effect scripts Execution pipeline: Phase 1: Resolve Targets Phase 2: Check Condition… |
+| [`Skills/EffectBlock.gd`](map/Skills/EffectBlock.md) | `EffectBlock` | 666 | The universal data skill effect component Use configureble resource for all effect scripts Execution pipeline: Phase 1: Resolve Targets Phase 2: Check Condition… |
 | [`Skills/SkillContext.gd`](map/Skills/SkillContext.md) | `SkillContext` | 48 | Runtime context passed to every EffectBlock.execute(). Three inter-block communication channels: card_value     – mutable skill value (bonus damage adds here) t… |
 | [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 51 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of effects for unmerged and merged resolution |
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager always calls: await effect.execute(ctx). Note: This base shouldn't… |
-| [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 330 | extends RefCounted, 8 function(s) |
+| [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 376 | extends RefCounted, 8 function(s) |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 746 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns plain Dictionaries: no file system access, no rendering, no CLI… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifacts against the sources with independent scans (coverage, ranges… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 79 | Headless compile gate: loads every project GDScript outside the excluded folders, so a type error, a stale `class_name` or a bad annotation fails CI instead of… |
@@ -72,10 +72,11 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single source of truth the game reads at runtime, while res://Data/xlsx/ga… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every cell is returned as a String; DataBuilder performs the typed conve… |
 
-## 2. Tests at a glance (13)
+## 2. Tests at a glance (14)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
+| [`GDTest/AllyKitTest.gd`](map/GDTest/AllyKitTest.md) | `AllyKitTest` | 250 | Tests for the MOBA-style pure-skill rework of all ally kits. Covers: shield-slam, hand-scaling, value-positive buff, self-shield cleave, and the corrected Skill… |
 | [`GDTest/CardDrawAnimationTest.gd`](map/GDTest/CardDrawAnimationTest.md) | `CardDrawAnimationTest` | 303 | Locks in the fake-3D card draw: - every CardUI owns its own warp material, so tilting one card can never tilt the rest of the hand - a dealt card leaves the dec… |
 | [`GDTest/CardFlashPolicyTest.gd`](map/GDTest/CardFlashPolicyTest.md) | `CardFlashPolicyTest` | 109 | Locks in *who caused it* when the game reveals hand cards it picked on its own: - an enemy acting on the player's hand flashes hostile (crimson) - the player's… |
 | [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 564 | Locks in the merge: the card the player was carrying is picked up from the exact point they released it, the two cards drift into each other and fold closed int… |
@@ -141,4 +142,4 @@ Top-level keys:
 
 ---
 
-Indexed 56 script(s) (43 game, 13 test), 4 scene(s), 5 data file(s).
+Indexed 57 script(s) (43 game, 14 test), 4 scene(s), 5 data file(s).

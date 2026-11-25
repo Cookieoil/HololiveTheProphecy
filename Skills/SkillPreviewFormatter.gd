@@ -43,14 +43,14 @@ static func build_card_on_ally_data(
 		subtitle = "%s  •  %d Value" % [merge_txt, skill_val]
 
 	var body_lines := _resolve_description_lines(
-		skill, ally, skill_val, is_merged, state, tooltip_catalog
+		skill, ally, skill_val, is_merged, state, tooltip_catalog, card
 	)
 
 	# Helpful memory aid: when dragging an unmerged card, dimly remind what Merged does
 	if not is_merged and skill.merged_description.strip_edges() != "":
 		var no_blocks: Array[SkillEffect] = []
 		var merged_preview := _substitute_tokens(
-			skill.merged_description, skill_val, state, no_blocks, null,
+			skill.merged_description, skill_val, state, no_blocks, ally,
 			tooltip_catalog, MUTED_ICON_SIZE
 		)
 		body_lines.append("\n[color=%s][font_size=12]%s[/font_size][/color]" % [COL_MUTED, merged_preview])
@@ -198,7 +198,8 @@ static func _resolve_description_lines(
 	initial_val: int,
 	is_merged: bool,
 	state: GameState,
-	tooltip_catalog: TooltipIconCatalog = null
+	tooltip_catalog: TooltipIconCatalog = null,
+	exclude_card: Card = null
 ) -> PackedStringArray:
 	var out: PackedStringArray = []
 	var base_val := initial_val
@@ -209,11 +210,11 @@ static func _resolve_description_lines(
 		base_val = _estimate_post_blocks_value(skill.merged_effects, initial_val, state)
 
 	var base_txt := _substitute_tokens(
-		skill.description.strip_edges(), base_val, state, skill.base_effects, caster, tooltip_catalog
+		skill.description.strip_edges(), base_val, state, skill.base_effects, caster, tooltip_catalog, 0, exclude_card
 	)
 	var merged_txt := _substitute_tokens(
 		skill.merged_description.strip_edges(), merged_val, state, skill.merged_effects, caster,
-		tooltip_catalog
+		tooltip_catalog, 0, exclude_card
 	)
 
 	if not is_merged:
@@ -261,7 +262,8 @@ static func _substitute_tokens(
 	blocks: Array[SkillEffect] = [],
 	caster: Unit = null,
 	tooltip_catalog: TooltipIconCatalog = null,
-	icon_size: int = 0
+	icon_size: int = 0,
+	exclude_card: Card = null
 ) -> String:
 	if text == "":
 		return ""
@@ -274,9 +276,53 @@ static func _substitute_tokens(
 		var first_eb := blocks[0] as EffectBlock
 		if first_eb != null and first_eb.has_method("compute_value_from_inputs"):
 			var sample_target := _pick_sample_target(caster, state)
-			primary_computed = first_eb.compute_value_from_inputs(val, 0, state, sample_target)
+			primary_computed = first_eb.compute_value_from_inputs(val, 0, state, sample_target, caster)
 
-	# 2. Replace bracket math expressions: [Value], [Value + 2], [Value - 1], [Value / 2], [Value * 2]
+	# 1b. Handle compound bracketed expressions before the generic single-operator pattern.
+	#     These use words ("Caster's Shield", "Highest Card in Hand") or chained operators.
+	if caster != null:
+		var shield_rx := RegEx.new()
+		shield_rx.compile("\\[Value\\s*\\+\\s*Caster's\\s*Shield\\]")
+		var shield_match := shield_rx.search(result)
+		if shield_match != null:
+			var shield_val: int = caster.shield
+			var total: int = val + shield_val
+			result = result.replace(shield_match.get_string(0), "[color=%s]%d[/color] [color=%s](%d+%d)[/color]" % [COL_NUM, total, COL_MUTED, val, shield_val])
+
+	var hand_rx := RegEx.new()
+	hand_rx.compile("\\[Value\\s*\\+\\s*Highest\\s+Card\\s+in\\s+Hand\\s*/\\s*(\\d+)\\]")
+	var hand_match := hand_rx.search(result)
+	if hand_match != null:
+		var divisor: int = int(hand_match.get_string(1))
+		var hand_val: int = 0
+		if state != null:
+			var hi_card: Card = state.get_highest_card_in_hand(exclude_card)
+			if hi_card != null:
+				hand_val = hi_card.get_effective_value()
+		var bonus: int = maxi(1, hand_val / maxi(1, divisor)) if hand_val > 0 else 0
+		var total: int = val + bonus
+		result = result.replace(hand_match.get_string(0), "[color=%s]%d[/color] [color=%s](%d+%d)[/color]" % [COL_NUM, total, COL_MUTED, val, bonus])
+
+	var div_add_rx := RegEx.new()
+	div_add_rx.compile("\\[Value\\s*/\\s*(\\d+)\\s*\\+\\s*(\\d+)\\]")
+	var div_add_match := div_add_rx.search(result)
+	if div_add_match != null:
+		var divisor: int = int(div_add_match.get_string(1))
+		var add: int = int(div_add_match.get_string(2))
+		var divided: int = maxi(1, val / maxi(1, divisor)) if val > 0 else 0
+		var total: int = divided + add
+		result = result.replace(div_add_match.get_string(0), "[color=%s]%d[/color] [color=%s](%d/%d+%d)[/color]" % [COL_NUM, total, COL_MUTED, val, divisor, add])
+
+	var times_rx := RegEx.new()
+	times_rx.compile("\\[Value\\s*x\\s*(\\d+)\\]")
+	var times_match := times_rx.search(result)
+	if times_match != null:
+		var mult: int = int(times_match.get_string(1))
+		var total: int = val * mult
+		result = result.replace(times_match.get_string(0), "[color=%s]%d[/color] [color=%s](%dx%d)[/color]" % [COL_NUM, total, COL_MUTED, val, mult])
+
+	# 2. Generic single-operator bracket expressions: [Value], [Value + N], [Value - N], [Value * N], [Value / N]
+	#    Note: the 'x' variant and compound expressions are handled above, so this only catches '*'.
 	var bracket_rx := RegEx.new()
 	bracket_rx.compile("\\[\\s*[Vv]alue\\s*(?:([+\\-*/])\\s*(\\d+))?\\s*\\]")
 	for m in bracket_rx.search_all(result):

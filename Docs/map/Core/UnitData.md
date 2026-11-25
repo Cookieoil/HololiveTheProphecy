@@ -16,6 +16,6 @@ Exports:
 - L15 `is_enemy: bool = false`
 
 Uses: SkillData
-Used by: Core/DataLoader.gd, Core/GameState.gd, Core/Unit.gd, Data/gameDatabase.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, Core/GameState.gd, Core/Unit.gd, Data/gameDatabase.gd, GDTest/AllyKitTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
 Loads: —
 
