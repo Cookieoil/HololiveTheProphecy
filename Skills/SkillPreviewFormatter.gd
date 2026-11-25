@@ -123,7 +123,7 @@ static func build_enemy_intent_data(
 		"header": header,
 		"subtitle": subtitle,
 		"categories": skill.get_active_categories(intent.condition_met),
-		"body": "[color=%s]des:[/color] %s" % [COL_MUTED, "\n".join(body_lines)],
+		"body": "%s" % "\n".join(body_lines),
 		"footer": footer,
 		"accent": Color(1.0, 0.36, 0.36) if intent.will_trigger_ultimate() else Color(0.95, 0.55, 0.45),
 	}
@@ -184,7 +184,7 @@ static func build_orb_ultimate_data(
 		"header": header,
 		"subtitle": subtitle,
 		"categories": ult.get_active_categories(false),
-		"body": "[color=%s]des:[/color] %s" % [COL_MUTED, "\n".join(body_lines)],
+		"body": "%s" % "\n".join(body_lines),
 		"footer": footer,
 		"accent": accent,
 	}
@@ -221,16 +221,13 @@ static func _resolve_description_lines(
 		if base_txt != "":
 			out.append(base_txt)
 	else:
+		# Merged tooltips always read top-to-bottom: the main effect first, then the
+		# merged add-on / replacement in gold. The "Merged:" / "Merged (Instead):"
+		# prefix carries the semantics, so the eye never has to reorder the lines.
 		match skill.merged_mode:
 			SkillData.MergedMode.OR:
 				out.append(merged_txt if merged_txt != "" else base_txt)
-			SkillData.MergedMode.AND_MERGED_FIRST:
-				if merged_txt != "":
-					out.append("[color=#FDE68A]%s[/color]" % merged_txt)
-				if base_txt != "":
-					var sep := "\n" if not out.is_empty() else ""
-					out.append(sep + base_txt)
-			SkillData.MergedMode.AND_BASE_FIRST:
+			SkillData.MergedMode.AND_MERGED_FIRST, SkillData.MergedMode.AND_BASE_FIRST:
 				if base_txt != "":
 					out.append(base_txt)
 				if merged_txt != "":
@@ -279,18 +276,21 @@ static func _substitute_tokens(
 			primary_computed = first_eb.compute_value_from_inputs(val, 0, state, sample_target, caster)
 
 	# 1b. Handle compound bracketed expressions before the generic single-operator pattern.
-	#     These use words ("Caster's Shield", "Highest Card in Hand") or chained operators.
+	#     These use words ("Shield", "Highest Card in Hand") or chained operators.
+	#     Only the resolved total is printed; the rule is shown as a plain hint so the
+	#     tooltip never reads like an algebra quiz.
 	if caster != null:
 		var shield_rx := RegEx.new()
-		shield_rx.compile("\\[Value\\s*\\+\\s*Caster's\\s*Shield\\]")
+		shield_rx.compile("\\[Value\\s*\\+\\s*(?:Caster's\\s+)?Shield\\]")
 		var shield_match := shield_rx.search(result)
 		if shield_match != null:
 			var shield_val: int = caster.shield
 			var total: int = val + shield_val
-			result = result.replace(shield_match.get_string(0), "[color=%s]%d[/color] [color=%s](%d+%d)[/color]" % [COL_NUM, total, COL_MUTED, val, shield_val])
+			var shield_hint: String = "(+%d from Shield)" % shield_val if shield_val > 0 else "(+1 per Shield)"
+			result = result.replace(shield_match.get_string(0), "%s [color=%s]%s[/color]" % [_num_bb(total), COL_MUTED, shield_hint])
 
 	var hand_rx := RegEx.new()
-	hand_rx.compile("\\[Value\\s*\\+\\s*Highest\\s+Card\\s+in\\s+Hand\\s*/\\s*(\\d+)\\]")
+	hand_rx.compile("\\[Value\\s*\\+\\s*Highest\\s+Card(?:\\s+in\\s+Hand)?\\s*/\\s*(\\d+)\\]")
 	var hand_match := hand_rx.search(result)
 	if hand_match != null:
 		var divisor: int = int(hand_match.get_string(1))
@@ -301,7 +301,9 @@ static func _substitute_tokens(
 				hand_val = hi_card.get_effective_value()
 		var bonus: int = maxi(1, hand_val / maxi(1, divisor)) if hand_val > 0 else 0
 		var total: int = val + bonus
-		result = result.replace(hand_match.get_string(0), "[color=%s]%d[/color] [color=%s](%d+%d)[/color]" % [COL_NUM, total, COL_MUTED, val, bonus])
+		var hand_hint: String = "(+%d from highest card)" % bonus if bonus > 0 \
+			else "(+1 per %d highest card Value)" % divisor
+		result = result.replace(hand_match.get_string(0), "%s [color=%s]%s[/color]" % [_num_bb(total), COL_MUTED, hand_hint])
 
 	var div_add_rx := RegEx.new()
 	div_add_rx.compile("\\[Value\\s*/\\s*(\\d+)\\s*\\+\\s*(\\d+)\\]")
@@ -311,15 +313,14 @@ static func _substitute_tokens(
 		var add: int = int(div_add_match.get_string(2))
 		var divided: int = maxi(1, val / maxi(1, divisor)) if val > 0 else 0
 		var total: int = divided + add
-		result = result.replace(div_add_match.get_string(0), "[color=%s]%d[/color] [color=%s](%d/%d+%d)[/color]" % [COL_NUM, total, COL_MUTED, val, divisor, add])
+		result = result.replace(div_add_match.get_string(0), _num_bb(total))
 
 	var times_rx := RegEx.new()
-	times_rx.compile("\\[Value\\s*x\\s*(\\d+)\\]")
+	times_rx.compile("\\[Value\\s*(?:x|\\*)\\s*(\\d+)\\]")
 	var times_match := times_rx.search(result)
 	if times_match != null:
 		var mult: int = int(times_match.get_string(1))
-		var total: int = val * mult
-		result = result.replace(times_match.get_string(0), "[color=%s]%d[/color] [color=%s](%dx%d)[/color]" % [COL_NUM, total, COL_MUTED, val, mult])
+		result = result.replace(times_match.get_string(0), _num_bb(val * mult))
 
 	# 2. Generic single-operator bracket expressions: [Value], [Value + N], [Value - N], [Value * N], [Value / N]
 	#    Note: the 'x' variant and compound expressions are handled above, so this only catches '*'.
@@ -338,17 +339,18 @@ static func _substitute_tokens(
 				n = maxi(1, val / maxi(1, rhs))
 		result = result.replace(m.get_string(0), _num_bb(n))
 
-	# 3. Replace Highest / Lowest card tokens (for Ultimates like Striker's "8 + Highest Card in Hand")
+	# 3. Replace Highest / Lowest card tokens (for Ultimates like Striker's "8 + Highest Card")
 	if state != null:
-		var hi_card := state.get_highest_card_in_hand()
+		var hi_card := state.get_highest_card_in_hand(exclude_card)
 		var hi_val := hi_card.get_effective_value() if hi_card != null else 0
 		var hi_math_rx := RegEx.new()
-		hi_math_rx.compile("(\\d+)\\s*\\+\\s*Highest Card in Hand")
+		hi_math_rx.compile("(\\d+)\\s*\\+\\s*Highest Card(?:\\s+in\\s+Hand)?")
 		var hm := hi_math_rx.search(result)
 		if hm != null:
 			var total := int(hm.get_string(1)) + hi_val
-			result = result.replace(hm.get_string(0), "%s [color=%s](%s+%d)[/color]" % [
-				_num_bb(total), COL_MUTED, hm.get_string(1), hi_val
+			var hi_hint: String = "(+%d from highest card)" % hi_val if hi_val > 0 else "(+highest card in hand)"
+			result = result.replace(hm.get_string(0), "%s [color=%s]%s[/color]" % [
+				_num_bb(total), COL_MUTED, hi_hint
 			])
 
 	# 4. Replace common prose placeholders ({value}, card value, rolled value, standalone V)

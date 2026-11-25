@@ -114,68 +114,82 @@ func test_highest_card_excludes_dragged_card() -> void:
 #endregion
 
 #region SkillPreviewFormatter: token substitution
-func test_formatter_replaces_caster_shield_token() -> void:
+func test_formatter_replaces_shield_token_with_clean_number() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
 	var state: GameState = GameState.new()
 	state.hand = [Card.new(3)]
 	var ally: Unit = _make_ally(null, null, null, 4)
-	var description: String = "Deal [Value + Caster's Shield] damage."
+	var description: String = "Deal [Value + Shield] damage to an enemy."
 	var blocks: Array[SkillEffect] = []
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 5, state, blocks, ally, catalog, 0)
-	assert_str(result).not_contains("[Value + Caster's Shield]")
-	assert_str(result).contains("(5+4)")  # 5 + 4 shield
+	assert_str(result).not_contains("[Value + Shield]")
+	assert_str(result).contains("[color=#FFD966]9[/color]")  # 5 + 4 shield
+	assert_str(result).contains("(+4 from Shield)")
 
-func test_formatter_replaces_highest_card_in_hand_token() -> void:
+func test_formatter_shield_token_teaches_the_rule_at_zero_shield() -> void:
+	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
+	var state: GameState = GameState.new()
+	state.hand = [Card.new(3)]
+	var ally: Unit = _make_ally(null, null, null, 0)
+	var description: String = "Deal [Value + Shield] damage to an enemy."
+	
+	var result: String = SkillPreviewFormatter._substitute_tokens(description, 5, state, [], ally, catalog, 0)
+	assert_str(result).contains("(+1 per Shield)")
+
+func test_formatter_replaces_highest_card_token_with_clean_number() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
 	var state: GameState = GameState.new()
 	state.hand = [Card.new(3), Card.new(7), Card.new(2)]
 	var ally: Unit = _make_ally(null, null, null, 0)
-	var description: String = "Deal [Value + Highest Card in Hand / 2] damage."
+	var description: String = "Deal [Value + Highest Card in Hand / 2] damage to an enemy."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0)
 	assert_str(result).not_contains("[Value + Highest Card in Hand / 2]")
-	assert_str(result).contains("(4+3)")  # 4 + (7/2=3)
+	assert_str(result).contains("[color=#FFD966]7[/color]")  # 4 + (7/2=3)
+	assert_str(result).contains("(+3 from highest card)")
 
-func test_formatter_replaces_highest_card_excludes_dragged_card() -> void:
+func test_formatter_highest_card_token_excludes_dragged_card() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
 	var state: GameState = GameState.new()
 	var dragged: Card = Card.new(10)
 	state.hand = [Card.new(3), dragged, Card.new(7)]
 	var ally: Unit = _make_ally(null, null, null, 0)
-	var description: String = "Deal [Value + Highest Card in Hand / 2] damage."
+	var description: String = "Deal [Value + Highest Card in Hand / 2] damage to an enemy."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0, dragged)
-	assert_str(result).contains("(4+3)")   # 4 + (7/2=3) = 7, not 4 + (10/2=5) = 9
-	assert_str(result).not_contains("(4+5)")
+	assert_str(result).contains("(+3 from highest card)")   # highest non-dragged card is 7
+	assert_str(result).not_contains("(+5 from highest card)")  # never counts the dragged 10
 
-func test_formatter_replaces_value_div_add_token() -> void:
+func test_formatter_replaces_div_add_token_with_clean_number() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
 	var state: GameState = GameState.new()
 	state.hand = [Card.new(5)]
-	var description: String = "Buff 1 card in hand by [Value / 2 + 1]"
+	var description: String = "Give a card in hand +[Value / 2 + 1] Value."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 6, state, [], null, catalog, 0)
 	assert_str(result).not_contains("[Value / 2 + 1]")
-	assert_str(result).contains("(6/2+1)")  # (6/2=3) + 1 = 4
+	assert_str(result).contains("[color=#FFD966]4[/color]")  # (6/2=3) + 1 = 4
+	assert_str(result).not_contains("(")  # no algebra clutter
 
-func test_formatter_replaces_value_x_n_token() -> void:
+func test_formatter_replaces_multiply_token_with_clean_number() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
 	var state: GameState = GameState.new()
 	state.hand = [Card.new(3)]
-	var description: String = "Break [Value x 2] of the target's shield."
+	var description: String = "Break [Value * 2] Shield on that enemy."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 5, state, [], null, catalog, 0)
-	assert_str(result).not_contains("[Value x 2]")
-	assert_str(result).contains("(5x2)")  # 5 * 2 = 10
+	assert_str(result).not_contains("[Value * 2]")
+	assert_str(result).contains("[color=#FFD966]10[/color]")  # 5 * 2 = 10
+	assert_str(result).not_contains("(")
 #endregion
 
 #region SkillPreviewFormatter: build_card_on_ally_data with new kits
 func test_build_healer_1_shows_shield_slam_preview() -> void:
 	var skill: SkillData = SkillData.new()
 	skill.skill_name = "healer_1"
-	skill.description = "Deal [Value + Caster's Shield] damage to 1 enemy."
-	skill.merged_description = "And if Merged: Reduce that enemy's next roll by [Value / 2] (max 5) before attacking."
+	skill.description = "Deal [Value + Shield] damage to an enemy."
+	skill.merged_description = "Merged: Reduce its next roll by [Value / 2] (max 5)."
 	skill.base_categories = ["damage"]
 	skill.merged_categories = ["damage", "debuff"]
 	skill.merged_mode = SkillData.MergedMode.AND_MERGED_FIRST
@@ -193,14 +207,14 @@ func test_build_healer_1_shows_shield_slam_preview() -> void:
 	var card: Card = Card.new(5)
 	
 	var data: Dictionary = SkillPreviewFormatter.build_card_on_ally_data(ally, card, state, null)
-	assert_str(data.get("body", "")).contains("(5+3)")  # 5 + 3 shield
-	assert_str(data.get("body", "")).contains("Reduce that enemy's next roll")
+	assert_str(data.get("body", "")).contains("(+3 from Shield)")  # 5 + 3 shield
+	assert_str(data.get("body", "")).contains("Reduce its next roll")
 
 func test_build_buff_2_shows_value_positive_preview() -> void:
 	var skill: SkillData = SkillData.new()
 	skill.skill_name = "buff_2"
-	skill.description = "Buff 1 card in hand by [Value / 2 + 1] and grant +2 Value to the next ally skill this turn."
-	skill.merged_description = "Or if Merged: Buff 2 cards in hand by [Value / 2 + 2] and grant [Value / 2 + 2] Value to the next ally skill."
+	skill.description = "Give a card in hand +[Value / 2 + 1] Value. Your next skill this turn gains +2 Value."
+	skill.merged_description = "Merged (Instead): Give 2 cards in hand +[Value / 2 + 2] Value. Your next skill this turn gains +[Value / 2 + 2] Value."
 	skill.base_categories = ["buff"]
 	skill.merged_categories = ["buff"]
 	skill.merged_mode = SkillData.MergedMode.OR
@@ -219,14 +233,14 @@ func test_build_buff_2_shows_value_positive_preview() -> void:
 	var card: Card = Card.new(4)
 	
 	var data: Dictionary = SkillPreviewFormatter.build_card_on_ally_data(ally, card, state, null)
-	assert_str(data.get("body", "")).contains("(4/2+1)")
-	assert_str(data.get("body", "")).contains("+2 Value")
+	assert_str(data.get("body", "")).contains("[color=#FFD966]3[/color]")  # (4/2)+1 = 3
+	assert_str(data.get("body", "")).contains("Your next skill this turn gains +2 Value.")
 
 func test_build_striker_2_shows_shield_category() -> void:
 	var skill: SkillData = SkillData.new()
 	skill.skill_name = "striker_2"
-	skill.description = "Deal [Value - 1] damage to 2 enemies and gain 2 Shield."
-	skill.merged_description = "Or if Merged: Instead, deal [Value - 2] damage to all 3 enemies and gain 4 Shield."
+	skill.description = "Deal [Value - 1] damage to 2 enemies. Gain 2 Shield."
+	skill.merged_description = "Merged (Instead): Deal [Value - 2] damage to all enemies. Gain 4 Shield."
 	skill.base_categories = ["damage", "shield"]
 	skill.merged_categories = ["damage", "shield"]
 	skill.merged_mode = SkillData.MergedMode.OR
