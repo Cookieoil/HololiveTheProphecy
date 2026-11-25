@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Skills/SkillPreviewFormatter.gd` — `class_name SkillPreviewFormatter` extends `RefCounted`
 
-`376` lines · [back to the map](../../CODEBASE_MAP.md)
+`378` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > extends RefCounted, 8 function(s)
 
@@ -19,11 +19,11 @@ Public API:
 - L133-190 `static build_orb_ultimate_data(unit: Unit, badge_code: String, state: GameState, intent: EnemyIntent = null, tooltip_catalog: TooltipIconCatalog = null) -> Dictionary` — Returns structured data when hovering an Ally or Enemy Moxie/Ultimate Orb (A1-A3 / E1-E3).
 
 Private:
-- L195-242 `_resolve_description_lines`
-- L245-255 `_estimate_post_blocks_value`
-- L258-364 `_substitute_tokens`
-- L367-371 `_pick_sample_target`
-- L374-375 `_num_bb`
+- L195-239 `_resolve_description_lines`
+- L242-252 `_estimate_post_blocks_value`
+- L255-366 `_substitute_tokens`
+- L369-373 `_pick_sample_target`
+- L376-377 `_num_bb`
 
 Uses: Card, EffectBlock, EnemyIntent, GameState, SkillData, SkillEffect, TooltipIconCatalog, Unit
 Used by: GDTest/AllyKitTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/BattleOverlayController.gd, Tools/check_navigation.gd

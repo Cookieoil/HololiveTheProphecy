@@ -2,9 +2,9 @@
 	"striker_1": {
 		"display_name": "Skill 1 (odd)",
 		"base_categories": ["damage"],
-		"description": "Deal {icon:damage} [Value] damage to 1 enemy and inflict 2 Gloom on it.",
+		"description": "Deal [Value] damage to an enemy and apply 2 Gloom.",
 		"merged_categories": ["draw", "buff", "damage"],
-		"merged_description": "And if Merged: Discard a card in hand to draw another card. Gain bonus damage equal to that discarded card's value.",
+		"merged_description": "Merged: Discard a card to draw 1 card and add its Value to this damage.",
 		"merged_mode": "and_merged_first",
 		"condition_threshold": 0,
 		"effects": [
@@ -114,9 +114,9 @@
 	"striker_2": {
 		"display_name": "Skill 2 (even)",
 		"base_categories": ["damage", "shield"],
-		"description": "Deal [Value - 1] damage to 2 enemies and gain 2 Shield.",
+		"description": "Deal [Value - 1] damage to 2 enemies. Gain 2 Shield.",
 		"merged_categories": ["damage", "shield"],
-		"merged_description": "Or if Merged: Instead, deal [Value - 2] damage to all 3 enemies and gain 4 Shield.",
+		"merged_description": "Merged (Instead): Deal [Value - 2] damage to all enemies. Gain 4 Shield.",
 		"merged_mode": "or",
 		"condition_threshold": 0,
 		"effects": [
@@ -205,7 +205,7 @@
 	"striker_ult": {
 		"display_name": "Ultimate",
 		"base_categories": ["damage", "draw"],
-		"description": "Draw 2 cards, then deal 8 + Highest Card in Hand True Damage to 1 enemy.",
+		"description": "Draw 2 cards. Deal [8 + Highest Card in Hand] True Damage to an enemy.",
 		"merged_categories": [],
 		"merged_description": "",
 		"merged_mode": "and_merged_first",
@@ -256,9 +256,9 @@
 	"healer_1": {
 		"display_name": "Skill 1 (odd)",
 		"base_categories": ["damage"],
-		"description": "Deal [Value + Caster's Shield] damage to 1 enemy.",
+		"description": "Deal [Value + Shield] damage to an enemy.",
 		"merged_categories": ["damage", "debuff"],
-		"merged_description": "And if Merged: Reduce that enemy's next roll by [Value / 2] (max 5) before attacking.",
+		"merged_description": "Merged: Reduce its next roll by [Value / 2] (max 5).",
 		"merged_mode": "and_merged_first",
 		"condition_threshold": 0,
 		"effects": [
@@ -327,9 +327,9 @@
 	"healer_2": {
 		"display_name": "Skill 2 (even)",
 		"base_categories": ["shield"],
-		"description": "Shield all allies for [Value]. Grant all allies 3 rounds of Regeneration.",
+		"description": "Give all allies [Value] Shield and 3 Regeneration.",
 		"merged_categories": ["heal"],
-		"merged_description": "And if Merged: Heal any ally for [Value].",
+		"merged_description": "Merged: Heal an ally for [Value] HP.",
 		"merged_mode": "and_base_first",
 		"condition_threshold": 0,
 		"effects": [
@@ -399,7 +399,7 @@
 	"healer_ult": {
 		"display_name": "Ultimate",
 		"base_categories": ["heal", "shield", "debuff"],
-		"description": "Heal all allies for 6 HP, grant all allies 6 Shield, and reduce all enemies' next roll by 3.",
+		"description": "Heal all allies for 6 HP. Give all allies 6 Shield. Reduce all enemies' next roll by 3.",
 		"merged_categories": [],
 		"merged_description": "",
 		"merged_mode": "and_merged_first",
@@ -470,9 +470,9 @@
 	"buff_1": {
 		"display_name": "Skill 1 (odd)",
 		"base_categories": ["damage"],
-		"description": "Deal [Value + Highest Card in Hand / 2] damage to 1 enemy.",
+		"description": "Deal [Value + Highest Card in Hand / 2] damage to an enemy.",
 		"merged_categories": ["damage", "debuff"],
-		"merged_description": "And if Merged: Break [Value x 2] of the target's shield before attacking.",
+		"merged_description": "Merged: Break [Value * 2] Shield on that enemy.",
 		"merged_mode": "and_merged_first",
 		"condition_threshold": 0,
 		"effects": [
@@ -541,9 +541,9 @@
 	"buff_2": {
 		"display_name": "Skill 2 (even)",
 		"base_categories": ["buff"],
-		"description": "Buff 1 card in hand by [Value / 2 + 1] and grant +2 Value to the next ally skill this turn.",
+		"description": "Give a card in hand +[Value / 2 + 1] Value. Your next skill this turn gains +2 Value.",
 		"merged_categories": ["buff"],
-		"merged_description": "Or if Merged: Buff 2 cards in hand by [Value / 2 + 2] and grant [Value / 2 + 2] Value to the next ally skill.",
+		"merged_description": "Merged (Instead): Give 2 cards in hand +[Value / 2 + 2] Value. Your next skill this turn gains +[Value / 2 + 2] Value.",
 		"merged_mode": "or",
 		"condition_threshold": 0,
 		"effects": [
@@ -632,7 +632,7 @@
 	"buff_ult": {
 		"display_name": "Ultimate",
 		"base_categories": ["draw", "buff"],
-		"description": "Draw 2 cards, boost the 3 highest cards in hand by +3 V, and grant +4 V to the next ally skill.",
+		"description": "Draw 2 cards. Give the 3 highest cards in hand +3 Value. Your next skill this turn gains +4 Value.",
 		"merged_categories": [],
 		"merged_description": "",
 		"merged_mode": "and_merged_first",
@@ -703,9 +703,9 @@
 	"normal_enemy_1": {
 		"display_name": "Skill 1 (odd)",
 		"base_categories": ["damage"],
-		"description": "Deal [Value] damage to 1 ally and inflict 1 Gloom.",
+		"description": "Deal [Value] damage to an ally and apply 1 Gloom.",
 		"merged_categories": ["damage", "buff"],
-		"merged_description": "And if [Value] ≥ 6: If the target doesn't have shield, attack gains bonus damage equal to target's Missing HP (max 5).",
+		"merged_description": "Roll ≥ 6: Deals +1 damage per the target's missing HP (max 5) if it has no Shield.",
 		"merged_mode": "and_merged_first",
 		"condition_threshold": 6,
 		"effects": [
@@ -775,9 +775,9 @@
 	"normal_enemy_2": {
 		"display_name": "Skill 2 (even)",
 		"base_categories": ["shield"],
-		"description": "Gain Shield equal to [Value].",
+		"description": "Gain [Value] Shield.",
 		"merged_categories": ["debuff"],
-		"merged_description": "And if [Value] ≥ 6: Reduce 1 value to two highest-value cards in the player's hand.",
+		"merged_description": "Roll ≥ 6: Give the 2 highest cards in hand -1 Value.",
 		"merged_mode": "and_base_first",
 		"condition_threshold": 6,
 		"effects": [
@@ -826,7 +826,7 @@
 	"normal_enemy_ult": {
 		"display_name": "Ultimate",
 		"base_categories": ["damage", "shield"],
-		"description": "Deal 5 damage to all allies and gain 5 Shield.",
+		"description": "Deal 5 damage to all allies. Gain 5 Shield.",
 		"merged_categories": [],
 		"merged_description": "",
 		"merged_mode": "and_merged_first",
@@ -877,9 +877,9 @@
 	"boss_enemy_1": {
 		"display_name": "Skill 1 (odd)",
 		"base_categories": ["damage", "buff"],
-		"description": "Boss loses 1 Health. Deal [Value + 1] damage to 1 ally.",
+		"description": "Lose 1 HP. Deal [Value + 1] damage to an ally.",
 		"merged_categories": ["damage", "buff"],
-		"merged_description": "And if [Value] ≥ 6: Attack gains bonus damage equal to the highest value card in the player's hand.",
+		"merged_description": "Roll ≥ 6: Gains bonus damage equal to the highest card in hand.",
 		"merged_mode": "and_merged_first",
 		"condition_threshold": 6,
 		"effects": [
@@ -948,9 +948,9 @@
 	"boss_enemy_2": {
 		"display_name": "Skill 2 (even)",
 		"base_categories": ["damage", "buff"],
-		"description": "Boss loses 2 Health. Deal [Value] damage to all allies.",
+		"description": "Lose 2 HP. Deal [Value] damage to all allies.",
 		"merged_categories": ["shield"],
-		"merged_description": "Shield all enemies for [Value].",
+		"merged_description": "Roll ≥ 6: Give all enemies [Value] Shield.",
 		"merged_mode": "and_base_first",
 		"condition_threshold": 6,
 		"effects": [
@@ -1019,7 +1019,7 @@
 	"boss_enemy_ult": {
 		"display_name": "Ultimate",
 		"base_categories": ["debuff", "damage"],
-		"description": "Remove 6 Shield from all allies, deal 7 damage to all allies, and reduce the 3 highest cards in hand by 2 V.",
+		"description": "Break 6 Shield on all allies. Deal 7 damage to all allies. Give the 3 highest cards in hand -2 Value.",
 		"merged_categories": [],
 		"merged_description": "",
 		"merged_mode": "and_merged_first",
