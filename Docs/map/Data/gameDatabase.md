@@ -18,6 +18,6 @@ Public API:
 - L22-26 `get_skill(id: String) -> SkillData` — Returns the skill definition for an id, or null when unknown.
 
 Uses: SkillData, UnitData
-Used by: Core/DataLoader.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, GDTest/EnemySkillBalanceTest.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
 Loads: —
 

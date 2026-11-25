@@ -26,6 +26,6 @@ Private:
 - L31-34 `_init`
 
 Uses: SkillEffect
-Used by: Core/DataLoader.gd, Core/EnemyIntent.gd, Core/UnitData.gd, Data/gameDatabase.gd, GDTest/AllyKitTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/GameManager.gd, Scenes/BattleUnit/UnitUI.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, Core/EnemyIntent.gd, Core/UnitData.gd, Data/gameDatabase.gd, GDTest/AllyKitTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/GameManager.gd, Scenes/BattleUnit/UnitUI.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
 Loads: —
 

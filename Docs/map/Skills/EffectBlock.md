@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Skills/EffectBlock.gd` — `class_name EffectBlock` extends `SkillEffect`
 
-`666` lines · [back to the map](../../CODEBASE_MAP.md)
+`671` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > The universal data skill effect component Use configureble resource for all effect scripts Execution pipeline: Phase 1: Resolve Targets Phase 2: Check Condition…
 
@@ -33,8 +33,8 @@ Exports:
 
 Public API:
 - L208-254 `compute_value_from_inputs(card_val: int, stored_val: int, state: GameState, sample_target: Unit = null, caster: Unit = null) -> int`
-- L262-314 `execute(ctx: SkillContext) -> void`
-- L603-644 `get_description() -> String`
+- L262-319 `execute(ctx: SkillContext) -> void`
+- L608-649 `get_description() -> String`
 
 Private:
 - L114-116 `_color_unit`
@@ -43,24 +43,24 @@ Private:
 - L126-184 `_resolve_targets`
 - L188-204 `_check_condition`
 - L256-258 `_resolve_value`
-- L315-339 `_deal_damage`
-- L341-360 `_gain_shield`
-- L362-380 `_reduce_shield`
-- L383-402 `_heal`
-- L405-426 `_deal_true_damage`
-- L429-435 `_add_bonus`
-- L438-448 `_apply_modifier`
-- L453-456 `_flash_auto_selected`
-- L459-489 `_modify_card`
-- L492-507 `_apply_card_mod`
-- L510-549 `_discard_card`
-- L552-560 `_draw_card`
-- L563-566 `_set_next_skill_bonus`
-- L571-587 `_apply_status`
-- L590-599 `_raise_max_hp`
-- L647-664 `_describe_value`
+- L320-344 `_deal_damage`
+- L346-365 `_gain_shield`
+- L367-385 `_reduce_shield`
+- L388-407 `_heal`
+- L410-431 `_deal_true_damage`
+- L434-440 `_add_bonus`
+- L443-453 `_apply_modifier`
+- L458-461 `_flash_auto_selected`
+- L464-494 `_modify_card`
+- L497-512 `_apply_card_mod`
+- L515-554 `_discard_card`
+- L557-565 `_draw_card`
+- L568-571 `_set_next_skill_bonus`
+- L576-592 `_apply_status`
+- L595-604 `_raise_max_hp`
+- L652-669 `_describe_value`
 
 Uses: Card, GameState, SkillContext, SkillEffect, Unit
-Used by: Core/DataLoader.gd, GDTest/AllyKitTest.gd, Skills/SkillPreviewFormatter.gd
+Used by: Core/DataLoader.gd, GDTest/AllyKitTest.gd, GDTest/EnemySkillBalanceTest.gd, Skills/SkillPreviewFormatter.gd
 Loads: —
 

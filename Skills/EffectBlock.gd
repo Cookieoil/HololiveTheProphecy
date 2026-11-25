@@ -260,6 +260,11 @@ func _resolve_value(ctx: SkillContext) -> int:
 
 #region Phase 4: Execute Action
 func execute(ctx: SkillContext) -> void:
+	# A prior block in this same skill may have killed the caster (self-damage), or
+	# the caster died before the skill resolved. Never keep firing effects from
+	# beyond the grave.
+	if ctx.caster != null and ctx.caster.is_dead:
+		return
 	var targets: Array[Unit] = await _resolve_targets(ctx)
 	if not _check_condition(ctx):
 		var caster_name: String = _color_unit(ctx.caster)

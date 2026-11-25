@@ -3,7 +3,7 @@
 	"actions_per_turn": 3,
 	"merges_per_turn": 2,
 	"decklist": [[2, 7], [3, 5], [5, 3]],
-	"dice_progression": [6, 10, 14, 18],
+	"dice_progression": [6, 8, 10, 12],
 	"allies": ["striker", "healer", "buff"],
 	"wave_transition_mode": "full_turn"
 }
