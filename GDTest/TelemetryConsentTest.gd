@@ -161,7 +161,7 @@ func test_popup_shows_the_required_wording_and_button_order() -> void:
 	assert_bool(popup.header_label != null).is_true()
 	assert_str(popup.header_label.text).is_equal("Data Consent")
 	assert_bool(popup.main_label != null).is_true()
-	assert_str(popup.main_label.text).is_equal("We need your consent to collect anonymous gameplay data.")
+	assert_str(popup.main_label.text).is_equal("I need your consent to collect anonymous gameplay data.")
 	assert_bool(popup.sub_label != null).is_true()
 	assert_str(popup.sub_label.text).is_equal(
 		"Your data will only be used to help improve the game design and balance. "
@@ -175,6 +175,43 @@ func test_popup_shows_the_required_wording_and_button_order() -> void:
 	assert_str(str(popup.buttons_row.get_child(1).name)).is_equal("DeclineButton")
 	# The header plate carries the thicker frame.
 	assert_bool(TelemetryConsentPopup.HEADER_BORDER > TelemetryConsentPopup.FRAME_BORDER).is_true()
+
+
+## BattleScene mounts the popup on a CanvasLayer. A top-level Control gets no parent
+## rect from a CanvasLayer, so a FULL_RECT preset used to collapse to zero and left
+## the window stuck at the top-left corner. This locks the window to the screen and
+## the frame to the middle of it.
+func test_popup_fills_and_centres_on_a_canvas_layer() -> void:
+	var layer: CanvasLayer = CanvasLayer.new()
+	layer.name = "TestConsentLayer"
+	layer.layer = 35
+	add_child(layer)
+	auto_free(layer)
+
+	var popup: TelemetryConsentPopup = TelemetryConsentPopup.new()
+	popup.name = "TestConsentPopup"
+	popup.consent = TelemetryConsent.new(_consent_path)
+	layer.add_child(popup)
+	auto_free(popup)
+	popup.open()
+	# Two frames: one for the containers to lay out, one for the frame to settle.
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var screen: Vector2 = popup.get_viewport_rect().size
+	# Guard against a vacuous pass: a 0-sized viewport would satisfy the comparisons
+	# below no matter how broken the layout is.
+	assert_bool(screen.x > 0.0 and screen.y > 0.0).is_true()
+	assert_bool(popup.position.is_equal_approx(Vector2.ZERO)).is_true()
+	assert_bool(popup.size.is_equal_approx(screen)).is_true()
+	assert_bool(popup.is_open()).is_true()
+
+	var frame: Control = popup.get_node_or_null("Center/Frame")
+	assert_bool(frame != null).is_true()
+	var frame_center: Vector2 = frame.position + frame.size * 0.5
+	var screen_center: Vector2 = screen * 0.5
+	assert_bool(absf(frame_center.x - screen_center.x) < 2.0).is_true()
+	assert_bool(absf(frame_center.y - screen_center.y) < 2.0).is_true()
 
 
 func test_popup_decline_writes_consent_and_emits_false() -> void:
