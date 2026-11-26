@@ -7,10 +7,13 @@ extends Control
 ## mounted on its own CanvasLayer (like DebugMenuPopup and SkillTooltipPopup) -
 ## no .tscn has to be hand-edited for it.
 ##
-## The look is intentionally plain: no OutlineGlow, no HDR/neon bloom (the
-## project runs `viewport/hdr_2d=true`, so any channel above 1.0 would glow) and
-## no outlines - one matte slate slab with the emblem and the title on it (the
-## title lapped slightly over the emblem) and a single "Play Again" button below.
+## The look is intentionally plain: no OutlineGlow, no HDR/neon bloom (the project
+## runs `viewport/hdr_2d=true`, so any channel above 1.0 would glow). Over the
+## matte backdrop sit the emblem and the title as one mark - the title lapped
+## slightly over the emblem - with a single "Play Again" button below. Neither the
+## title nor the emblem is boxed in: there is no slab around the title and no tile
+## around the icon, and the button draws no outline.
+##
 ## Both emblems are placeholder art until the hand-drawn icons land, so they are
 ## exported and can be swapped from the inspector.
 ##
@@ -27,20 +30,17 @@ signal restart_requested()
 const PLACEHOLDER_VICTORY_ICON: Texture2D = preload("res://Scenes/BattleScene/Assets/icon2.png")
 const PLACEHOLDER_DEFEAT_ICON: Texture2D = preload("res://Scenes/BattleScene/Assets/icon.svg")
 
-## Slab metrics. Square corners keep it on the same surface as the debug menu and
-## the hover tooltip slabs.
-const PANEL_WIDTH: float = 420.0
-const PADDING: int = 26
+## Square corners keep the button on the same surface as the debug menu and the
+## hover tooltip slabs.
 const CORNER_RADIUS: int = 0
 const ROW_SEPARATION: int = 12
 
-## Emblem (placeholder icon) size inside its framed socket.
+## Emblem (placeholder icon) size.
 const EMBLEM_SIZE: float = 72.0
-const EMBLEM_FRAME_PADDING: int = 10
 
 ## How far the title laps over the emblem's bottom edge. Negative, so the two read
 ## as one mark instead of a stacked list.
-const ICON_TITLE_OVERLAP: int = -34
+const ICON_TITLE_OVERLAP: int = -26
 
 const TITLE_FONT_SIZE: int = 42
 
@@ -49,12 +49,13 @@ const BUTTON_FONT_SIZE: int = 16
 
 ## Cutscene pacing. Short on purpose: it plays after the last hit, so it must not
 ## make a finished battle feel slow.
-const BANNER_IN_TIME: float = 0.32
+const BACKDROP_FADE_TIME: float = 0.25
+const CONTENT_IN_TIME: float = 0.32
 const BUTTON_IN_TIME: float = 0.18
-const BANNER_SCALE_FROM: float = 0.96
+const CONTENT_SCALE_FROM: float = 0.96
 
 ## SDR-only palette. Every channel stays at or below 1.0 so nothing blooms.
-const PANEL_BG: Color = Color(0.07, 0.08, 0.11, 0.97)
+const BACKDROP_COLOR: Color = Color(0.04, 0.05, 0.07, 0.80)
 
 const VICTORY_TITLE: Color = Color(0.92, 0.80, 0.48, 1.0)
 const VICTORY_EMBLEM_TINT: Color = Color(0.96, 0.88, 0.66, 1.0)
@@ -62,7 +63,6 @@ const VICTORY_EMBLEM_TINT: Color = Color(0.96, 0.88, 0.66, 1.0)
 const DEFEAT_TITLE: Color = Color(0.86, 0.44, 0.44, 1.0)
 const DEFEAT_EMBLEM_TINT: Color = Color(0.80, 0.62, 0.62, 1.0)
 
-const EMBLEM_FRAME_BG: Color = Color(0.10, 0.11, 0.15, 1.0)
 const TITLE_TEXT_VICTORY: String = "VICTORY"
 const TITLE_TEXT_DEFEAT: String = "DEFEAT"
 
@@ -81,13 +81,13 @@ const BUTTON_BG_PRESSED: Color = Color(0.11, 0.13, 0.17, 1.0)
 #endregion
 
 #region Private Variables
+var _backdrop: ColorRect
 var _center: CenterContainer
-var _banner: PanelContainer
-var _banner_style: StyleBoxFlat
+var _column: VBoxContainer
 var _mark: VBoxContainer
-var _emblem_frame: PanelContainer
 var _emblem: TextureRect
 var _title: Label
+var _button_row: CenterContainer
 var _restart_button: Button
 var _cutscene: Tween
 var _is_showing: bool = false
@@ -103,7 +103,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
-	_banner.resized.connect(_sync_banner_pivot)
+	_column.resized.connect(_sync_column_pivot)
 #endregion
 
 #region Public Methods
@@ -119,17 +119,19 @@ func play_cutscene(victory: bool) -> void:
 	_cutscene = create_tween()
 	_cutscene.set_parallel(true)
 
-	_banner.modulate.a = 0.0
-	_banner.scale = Vector2(BANNER_SCALE_FROM, BANNER_SCALE_FROM)
+	_backdrop.modulate.a = 0.0
+	_column.modulate.a = 0.0
+	_column.scale = Vector2(CONTENT_SCALE_FROM, CONTENT_SCALE_FROM)
 	_restart_button.modulate.a = 0.0
 
-	_cutscene.tween_property(_banner, "modulate:a", 1.0, BANNER_IN_TIME) \
+	_cutscene.tween_property(_backdrop, "modulate:a", 1.0, BACKDROP_FADE_TIME)
+	_cutscene.tween_property(_column, "modulate:a", 1.0, CONTENT_IN_TIME) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_cutscene.tween_property(_banner, "scale", Vector2.ONE, BANNER_IN_TIME) \
+	_cutscene.tween_property(_column, "scale", Vector2.ONE, CONTENT_IN_TIME) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 	_cutscene.set_parallel(false)
-	_cutscene.tween_interval(BANNER_IN_TIME * 0.5)
+	_cutscene.tween_interval(CONTENT_IN_TIME * 0.5)
 	_cutscene.tween_property(_restart_button, "modulate:a", 1.0, BUTTON_IN_TIME) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
@@ -144,43 +146,33 @@ func is_showing() -> bool:
 
 #region Private Methods
 func _build_ui() -> void:
+	_backdrop = ColorRect.new()
+	_backdrop.name = "Backdrop"
+	_backdrop.color = BACKDROP_COLOR
+	_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_backdrop)
+
 	_center = CenterContainer.new()
 	_center.name = "Center"
 	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_center)
 
-	_banner = PanelContainer.new()
-	_banner.name = "Banner"
-	_banner.custom_minimum_size = Vector2(PANEL_WIDTH, 0.0)
-	_banner.mouse_filter = Control.MOUSE_FILTER_STOP
-	_banner_style = StyleBoxFlat.new()
-	_banner_style.bg_color = PANEL_BG
-	_banner_style.corner_radius_top_left = CORNER_RADIUS
-	_banner_style.corner_radius_top_right = CORNER_RADIUS
-	_banner_style.corner_radius_bottom_left = CORNER_RADIUS
-	_banner_style.corner_radius_bottom_right = CORNER_RADIUS
-	_banner.add_theme_stylebox_override("panel", _banner_style)
-	_center.add_child(_banner)
+	# No slab around the title: the mark and the button sit straight on the
+	# backdrop, so nothing boxes the title in.
+	_column = VBoxContainer.new()
+	_column.name = "Column"
+	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_column.add_theme_constant_override("separation", ROW_SEPARATION)
+	_center.add_child(_column)
 
-	var margin := MarginContainer.new()
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_theme_constant_override("margin_left", PADDING)
-	margin.add_theme_constant_override("margin_top", PADDING)
-	margin.add_theme_constant_override("margin_right", PADDING)
-	margin.add_theme_constant_override("margin_bottom", PADDING)
-	_banner.add_child(margin)
+	_column.add_child(_build_mark())
 
-	var column := VBoxContainer.new()
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", ROW_SEPARATION)
-	margin.add_child(column)
-
-	column.add_child(_build_mark())
-
-	var button_row := CenterContainer.new()
-	button_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(button_row)
+	_button_row = CenterContainer.new()
+	_button_row.name = "ButtonRow"
+	_button_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_column.add_child(_button_row)
 
 	_restart_button = Button.new()
 	_restart_button.name = "PlayAgainButton"
@@ -192,18 +184,26 @@ func _build_ui() -> void:
 	_restart_button.add_theme_color_override("font_hover_color", Color.WHITE)
 	_restart_button.add_theme_color_override("font_pressed_color", BUTTON_FONT_COLOR)
 	_restart_button.pressed.connect(_on_restart_pressed)
-	button_row.add_child(_restart_button)
+	_button_row.add_child(_restart_button)
 
 
-## The emblem with the title lapped over its bottom edge, as one mark. The title is
-## added last, so it draws on top of the emblem.
+## The emblem with the title lapped over its bottom edge, as one mark. The emblem
+## gets no tile of its own and the title no slab, and the title is added last so it
+## draws on top of the emblem.
 func _build_mark() -> Control:
 	_mark = VBoxContainer.new()
 	_mark.name = "Mark"
 	_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_mark.add_theme_constant_override("separation", ICON_TITLE_OVERLAP)
 
-	_mark.add_child(_build_emblem())
+	_emblem = TextureRect.new()
+	_emblem.name = "Emblem"
+	_emblem.custom_minimum_size = Vector2(EMBLEM_SIZE, EMBLEM_SIZE)
+	_emblem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mark.add_child(_emblem)
 
 	_title = Label.new()
 	_title.name = "Title"
@@ -214,28 +214,6 @@ func _build_mark() -> Control:
 	_mark.add_child(_title)
 
 	return _mark
-
-
-## The framed socket that holds the placeholder emblem.
-func _build_emblem() -> Control:
-	var row := CenterContainer.new()
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	_emblem_frame = PanelContainer.new()
-	_emblem_frame.name = "EmblemFrame"
-	_emblem_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_emblem_frame.add_theme_stylebox_override("panel", _emblem_frame_style())
-	row.add_child(_emblem_frame)
-
-	_emblem = TextureRect.new()
-	_emblem.name = "Emblem"
-	_emblem.custom_minimum_size = Vector2(EMBLEM_SIZE, EMBLEM_SIZE)
-	_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_emblem_frame.add_child(_emblem)
-
-	return row
 
 
 ## Applies the Victory or Defeat look: the emblem and the title.
@@ -250,21 +228,6 @@ func _configure(victory: bool) -> void:
 	_title.text = TITLE_TEXT_VICTORY if victory else TITLE_TEXT_DEFEAT
 	_title.add_theme_color_override("font_color", title_color)
 	_apply_button_style()
-
-
-## The emblem socket: a plain matte tile, with no outline.
-func _emblem_frame_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = EMBLEM_FRAME_BG
-	style.corner_radius_top_left = CORNER_RADIUS
-	style.corner_radius_top_right = CORNER_RADIUS
-	style.corner_radius_bottom_left = CORNER_RADIUS
-	style.corner_radius_bottom_right = CORNER_RADIUS
-	style.content_margin_left = float(EMBLEM_FRAME_PADDING)
-	style.content_margin_top = float(EMBLEM_FRAME_PADDING)
-	style.content_margin_right = float(EMBLEM_FRAME_PADDING)
-	style.content_margin_bottom = float(EMBLEM_FRAME_PADDING)
-	return style
 
 
 ## Flat matte button states: a darker surface, with no outline, glow or gradient.
@@ -290,10 +253,10 @@ func _button_style(bg: Color) -> StyleBoxFlat:
 	return style
 
 
-## Keeps the settle-in scale centred on the slab.
-func _sync_banner_pivot() -> void:
-	if _banner != null:
-		_banner.pivot_offset = _banner.size * 0.5
+## Keeps the settle-in scale centred on the mark and the button.
+func _sync_column_pivot() -> void:
+	if _column != null:
+		_column.pivot_offset = _column.size * 0.5
 
 
 func _kill_cutscene() -> void:
@@ -310,4 +273,3 @@ func _on_restart_pressed() -> void:
 	_is_showing = false
 	restart_requested.emit()
 #endregion
-

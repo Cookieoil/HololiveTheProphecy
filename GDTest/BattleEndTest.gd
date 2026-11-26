@@ -475,6 +475,7 @@ func test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> v
 	assert_str(overlay._title.text).is_equal("VICTORY")
 	assert_bool(overlay.victory_icon == BattleResultOverlay.PLACEHOLDER_VICTORY_ICON).is_true()
 	assert_bool(overlay._emblem.texture == overlay.victory_icon).is_true()
+	assert_bool(_is_flat_sdr(overlay._backdrop.color)).is_true()
 	assert_bool(_is_flat_sdr(overlay._title.get_theme_color("font_color"))).is_true()
 	assert_bool(_is_flat_sdr(overlay._emblem.self_modulate)).is_true()
 
@@ -490,27 +491,28 @@ func test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void:
 	assert_bool(_is_flat_sdr(overlay._title.get_theme_color("font_color"))).is_true()
 
 
-## Removed on request: the full-screen backdrop rectangle, the subtitle and the
-## divider. Only the emblem, the title and the button are left.
-func test_the_cutscene_keeps_no_backdrop_subtitle_or_divider() -> void:
+## Removed on request: the small rectangle around the title (the slab) and the
+## rectangle around the icon (the emblem tile). The backdrop stays, and so do the
+## title, the emblem and the button - and no subtitle or divider between them.
+func test_the_cutscene_boxes_neither_the_title_nor_the_icon() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
 	await overlay.play_cutscene(true)
 
-	assert_object(overlay.find_child("Backdrop", true, false)).is_null()
+	assert_object(overlay.find_child("Backdrop", true, false)).is_not_null()
+	assert_object(overlay.find_child("Banner", true, false)).is_null()
+	assert_object(overlay.find_child("EmblemFrame", true, false)).is_null()
 	assert_object(overlay.find_child("Subtitle", true, false)).is_null()
 	assert_object(overlay.find_child("Divider", true, false)).is_null()
 
 
-## Removed on request: the outlines. The slab, the emblem socket and the button all
-## keep their own surface, but none of them draws a border.
-func test_no_piece_of_the_cutscene_draws_an_outline() -> void:
+## Removed on request: the outlines. The button keeps its own surface but draws no
+## border.
+func test_the_button_draws_no_outline() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
 	await overlay.play_cutscene(true)
 
-	assert_bool(_has_no_border(overlay._banner_style)).is_true()
-	assert_bool(_has_no_border(overlay._emblem_frame.get_theme_stylebox("panel"))).is_true()
 	assert_bool(_has_no_border(overlay._restart_button.get_theme_stylebox("normal"))).is_true()
 	assert_bool(_has_no_border(overlay._restart_button.get_theme_stylebox("hover"))).is_true()
 
@@ -533,9 +535,8 @@ func test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void:
 
 	await overlay.play_cutscene(true)
 
-	# With no backdrop drawn, the root and the slab have to swallow the clicks.
 	assert_int(overlay.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
-	assert_int(overlay._banner.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+	assert_int(overlay._backdrop.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
 	assert_bool(overlay._restart_button.disabled).is_false()
 
 
