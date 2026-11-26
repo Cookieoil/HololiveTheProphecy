@@ -17,30 +17,48 @@ signal decided(agreed: bool)
 #endregion
 
 #region Constants
-const TITLE_TEXT: String = "Help Improve Game Balance?"
-const CARD_WIDTH: float = 620.0
-const TITLE_FONT_SIZE: int = 30
-const BODY_FONT_SIZE: int = 17
-const BUTTON_FONT_SIZE: int = 20
+const HEADER_TEXT: String = "Data Consent"
+const MAIN_TEXT: String = "We need your consent to collect anonymous gameplay data."
+const SUB_TEXT: String = \
+	"Your data will only be used to help improve the game design and balance. " \
+	+ "None of your personal data will be recorded."
+const ALLOW_TEXT: String = "Allow"
+const DECLINE_TEXT: String = "Decline"
 
-## Warm parchment on near-black, matching the result-screen palette.
-const TITLE_COLOR: Color = Color(0.93, 0.83, 0.56, 1.0)
-const BODY_COLOR: Color = Color(0.86, 0.86, 0.90, 1.0)
-const HIGHLIGHT_COLOR: Color = Color(0.76, 0.64, 0.38, 1.0)
+## Panel geometry and type scale.
+const PANEL_WIDTH: float = 660.0
+const HEADER_FONT_SIZE: int = 30
+const MAIN_FONT_SIZE: int = 21
+const SUB_FONT_SIZE: int = 17
+const BUTTON_FONT_SIZE: int = 21
 
-const PRIVACY_BODY: String = """This game can collect anonymous gameplay data to help improve game design and balance.
+## The frame is thin; the header plate sits inside it with a deliberately thicker
+## blue border, which is what makes the top read as the heavier edge.
+const FRAME_BORDER: int = 2
+const HEADER_BORDER: int = 4
 
-[b]What is collected[/b]
-- Which cards you play, merge or convert
-- Which ally and skill you target
-- Which enemies you face, and how the battle ends
+## Near-black stage, so the window is the only thing lit on screen.
+const DIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.88)
+## Window: black plate with a blue frame, matching the disclosure mock-up.
+const FRAME_BG: Color = Color(0.06, 0.07, 0.10, 1.0)
+const FRAME_BORDER_COLOR: Color = Color(0.24, 0.48, 0.74, 1.0)
+const HEADER_BG: Color = Color(0.11, 0.19, 0.30, 1.0)
+const HEADER_BORDER_COLOR: Color = Color(0.34, 0.62, 0.89, 1.0)
 
-[b]What is never collected[/b]
-- Your name, email or account
-- Your IP address or device identifiers
-- Any personal or private information
+const HEADER_COLOR: Color = Color(0.96, 0.97, 1.0, 1.0)
+const MAIN_COLOR: Color = Color(0.93, 0.94, 0.97, 1.0)
+const SUB_COLOR: Color = Color(0.70, 0.74, 0.81, 1.0)
 
-You can decline and still play the full game."""
+## Buttons: a green "Allow" and a red "Decline", each with a darker outline and
+## near-black label ink, as in the mock-up.
+const ALLOW_BG: Color = Color(0.40, 0.72, 0.34, 1.0)
+const ALLOW_HOVER: Color = Color(0.47, 0.80, 0.40, 1.0)
+const ALLOW_BORDER: Color = Color(0.16, 0.38, 0.14, 1.0)
+const DECLINE_BG: Color = Color(0.85, 0.42, 0.45, 1.0)
+const DECLINE_HOVER: Color = Color(0.92, 0.50, 0.53, 1.0)
+const DECLINE_BORDER: Color = Color(0.52, 0.19, 0.23, 1.0)
+const BUTTON_INK: Color = Color(0.09, 0.11, 0.10, 1.0)
+const BUTTON_SIZE: Vector2 = Vector2(220.0, 58.0)
 #endregion
 
 #region Public Variables
@@ -50,10 +68,11 @@ var consent: TelemetryConsent = TelemetryConsent.load_from()
 ## Exposed for tests: pressing these is the same as the player clicking them.
 var agree_button: Button
 var decline_button: Button
-#endregion
-
-#region Private Variables
-var _body: RichTextLabel
+## Exposed for tests, so the required wording and button order can be locked.
+var header_label: Label
+var main_label: Label
+var sub_label: Label
+var buttons_row: HBoxContainer
 #endregion
 
 #region Lifecycle Methods
@@ -89,7 +108,7 @@ func decide(agreed: bool) -> void:
 func _build_ui() -> void:
 	var dim: ColorRect = ColorRect.new()
 	dim.name = "Dim"
-	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.color = DIM_COLOR
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
@@ -100,69 +119,133 @@ func _build_ui() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
-	var panel: PanelContainer = PanelContainer.new()
-	panel.name = "Panel"
-	panel.custom_minimum_size = Vector2(CARD_WIDTH, 0.0)
-	panel.add_theme_stylebox_override("panel", _make_panel_style())
-	center.add_child(panel)
+	var frame: PanelContainer = PanelContainer.new()
+	frame.name = "Frame"
+	frame.custom_minimum_size = Vector2(PANEL_WIDTH, 0.0)
+	frame.add_theme_stylebox_override("panel", _make_frame_style())
+	center.add_child(frame)
 
 	var column: VBoxContainer = VBoxContainer.new()
 	column.name = "Column"
-	column.add_theme_constant_override("separation", 14)
-	panel.add_child(column)
+	column.add_theme_constant_override("separation", 0)
+	frame.add_child(column)
 
-	var title: Label = Label.new()
-	title.name = "Title"
-	title.text = TITLE_TEXT
-	title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	title.add_theme_color_override("font_color", TITLE_COLOR)
-	column.add_child(title)
+	column.add_child(_build_header())
+	column.add_child(_build_body())
 
-	_body = RichTextLabel.new()
-	_body.name = "Body"
-	_body.bbcode_enabled = true
-	_body.fit_content = true
-	_body.custom_minimum_size = Vector2(CARD_WIDTH - 40.0, 0.0)
-	_body.add_theme_font_size_override("normal_font_size", BODY_FONT_SIZE)
-	_body.add_theme_color_override("default_color", BODY_COLOR)
-	_body.text = PRIVACY_BODY
-	column.add_child(_body)
 
-	var buttons: HBoxContainer = HBoxContainer.new()
-	buttons.name = "Buttons"
-	buttons.alignment = BoxContainer.ALIGNMENT_END
-	buttons.add_theme_constant_override("separation", 16)
-	column.add_child(buttons)
+## The top plate, whose blue border is the thicker one.
+func _build_header() -> PanelContainer:
+	var header: PanelContainer = PanelContainer.new()
+	header.name = "Header"
+	header.add_theme_stylebox_override("panel", _make_header_style())
 
-	decline_button = _make_button("Decline")
+	header_label = Label.new()
+	header_label.name = "HeaderLabel"
+	header_label.text = HEADER_TEXT
+	header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header_label.add_theme_font_size_override("font_size", HEADER_FONT_SIZE)
+	header_label.add_theme_color_override("font_color", HEADER_COLOR)
+	header.add_child(header_label)
+	return header
+
+
+func _build_body() -> MarginContainer:
+	var margin: MarginContainer = MarginContainer.new()
+	margin.name = "Body"
+	margin.add_theme_constant_override("margin_left", 34)
+	margin.add_theme_constant_override("margin_right", 34)
+	margin.add_theme_constant_override("margin_top", 30)
+	margin.add_theme_constant_override("margin_bottom", 28)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.name = "BodyColumn"
+	column.add_theme_constant_override("separation", 20)
+	margin.add_child(column)
+
+	main_label = _make_wrapped_label("MainText", MAIN_TEXT, MAIN_FONT_SIZE, MAIN_COLOR)
+	column.add_child(main_label)
+	sub_label = _make_wrapped_label("SubText", SUB_TEXT, SUB_FONT_SIZE, SUB_COLOR)
+	column.add_child(sub_label)
+	column.add_child(_build_buttons())
+	return margin
+
+
+## "Allow" on the left, "Decline" on the right.
+func _build_buttons() -> HBoxContainer:
+	buttons_row = HBoxContainer.new()
+	buttons_row.name = "Buttons"
+	buttons_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons_row.add_theme_constant_override("separation", 34)
+
+	agree_button = _make_button(ALLOW_TEXT, ALLOW_BG, ALLOW_HOVER, ALLOW_BORDER)
+	agree_button.name = "AllowButton"
+	agree_button.pressed.connect(_on_agree_pressed)
+	buttons_row.add_child(agree_button)
+
+	decline_button = _make_button(DECLINE_TEXT, DECLINE_BG, DECLINE_HOVER, DECLINE_BORDER)
 	decline_button.name = "DeclineButton"
 	decline_button.pressed.connect(_on_decline_pressed)
-	buttons.add_child(decline_button)
-
-	agree_button = _make_button("Agree")
-	agree_button.name = "AgreeButton"
-	agree_button.pressed.connect(_on_agree_pressed)
-	buttons.add_child(agree_button)
+	buttons_row.add_child(decline_button)
+	return buttons_row
 
 
-func _make_button(label: String) -> Button:
+func _make_wrapped_label(node_name: String, text: String, font_size: int, color: Color) -> Label:
+	var label: Label = Label.new()
+	label.name = node_name
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+func _make_button(label: String, base: Color, hover: Color, border: Color) -> Button:
 	var button: Button = Button.new()
 	button.text = label
-	button.custom_minimum_size = Vector2(150.0, 44.0)
+	button.custom_minimum_size = BUTTON_SIZE
 	button.add_theme_font_size_override("font_size", BUTTON_FONT_SIZE)
+	button.add_theme_color_override("font_color", BUTTON_INK)
+	button.add_theme_color_override("font_hover_color", BUTTON_INK)
+	button.add_theme_color_override("font_pressed_color", BUTTON_INK)
+	button.add_theme_color_override("font_focus_color", BUTTON_INK)
+	button.add_theme_stylebox_override("normal", _make_button_style(base, border))
+	button.add_theme_stylebox_override("hover", _make_button_style(hover, border))
+	button.add_theme_stylebox_override("pressed", _make_button_style(base, border))
+	button.add_theme_stylebox_override("focus", _make_button_style(hover, border))
 	return button
 
 
-func _make_panel_style() -> StyleBoxFlat:
+func _make_button_style(fill: Color, border: Color) -> StyleBoxFlat:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.07, 0.10, 0.98)
-	style.border_color = HIGHLIGHT_COLOR
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(4)
-	style.content_margin_left = 28.0
-	style.content_margin_right = 28.0
-	style.content_margin_top = 24.0
-	style.content_margin_bottom = 24.0
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(8)
+	return style
+
+
+func _make_frame_style() -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = FRAME_BG
+	style.border_color = FRAME_BORDER_COLOR
+	style.set_border_width_all(FRAME_BORDER)
+	style.set_corner_radius_all(12)
+	# No content margin: the header plate is meant to sit flush with the frame.
+	return style
+
+
+func _make_header_style() -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = HEADER_BG
+	style.border_color = HEADER_BORDER_COLOR
+	style.set_border_width_all(HEADER_BORDER)
+	style.set_corner_radius_all(10)
+	style.content_margin_left = 18.0
+	style.content_margin_right = 18.0
+	style.content_margin_top = 12.0
+	style.content_margin_bottom = 12.0
 	return style
 #endregion
 
