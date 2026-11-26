@@ -57,26 +57,32 @@ uniform float rule_alpha : hint_range(0.0, 1.0) = 0.20;
 uniform float rule_wipe : hint_range(0.0, 1.0) = 1.0;
 group_uniforms;
 
-// A real 5x5 Gaussian blur over the screen texture. The tap weights come from
-// exp(-d^2 / 2*sigma^2) on the tap grid, so the falloff is a proper gaussian
-// instead of the cross-shaped streaks a few axis taps would leave.
-const int BLUR_TAPS = 2;
-const float BLUR_SIGMA_INV = 0.35;
+// A Gaussian disc blur over the screen texture. The taps are spread on a
+// golden-angle spiral, so they land quasi-randomly across the disc instead of on a
+// grid - a sparse square grid of taps leaves visible 6px tiling on the blurred
+// units, which is exactly the artefact this avoids. The radius grows as sqrt(t) so
+// the samples stay evenly spread over the disc rather than clustering at the centre,
+// and the weights fall off like a gaussian with the radius.
+const int BLUR_TAPS = 24;
+const float GOLDEN_ANGLE = 2.39996323;
+const float BLUR_FALLOFF = 2.2;
 
 vec3 gaussian_blur(vec2 uv) {
 	if (blur_radius <= 0.01) {
 		return texture(screen_tex, uv).rgb;
 	}
-	vec2 texel = (blur_radius / float(BLUR_TAPS)) / max(screen_size, vec2(1.0));
-	vec3 sum = vec3(0.0);
-	float weight_sum = 0.0;
-	for (int y = -BLUR_TAPS; y <= BLUR_TAPS; y++) {
-		for (int x = -BLUR_TAPS; x <= BLUR_TAPS; x++) {
-			float dist2 = float(x * x + y * y);
-			float weight = exp(-dist2 * BLUR_SIGMA_INV);
-			sum += texture(screen_tex, uv + vec2(float(x), float(y)) * texel).rgb * weight;
-			weight_sum += weight;
-		}
+	vec2 pixels = max(screen_size, vec2(1.0));
+	vec3 sum = texture(screen_tex, uv).rgb;
+	float weight_sum = 1.0;
+	for (int i = 0; i < BLUR_TAPS; i++) {
+		float fi = float(i) + 1.0;
+		float t = fi / float(BLUR_TAPS);
+		float radius = sqrt(t) * blur_radius;
+		float angle = fi * GOLDEN_ANGLE;
+		vec2 offset = vec2(cos(angle), sin(angle)) * radius / pixels;
+		float weight = exp(-BLUR_FALLOFF * t);
+		sum += texture(screen_tex, uv + offset).rgb * weight;
+		weight_sum += weight;
 	}
 	return sum / weight_sum;
 }

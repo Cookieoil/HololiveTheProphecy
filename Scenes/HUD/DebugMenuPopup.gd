@@ -69,7 +69,7 @@ const GLOOM_STEP: int = 3
 
 ## Where the panel sits: bottom-left, directly above the button that opens it.
 const PANEL_WIDTH: float = 336.0
-const PANEL_HEIGHT: float = 464.0
+const PANEL_HEIGHT: float = 404.0
 const SEAT_LEFT: float = 18.0
 const SEAT_BOTTOM: float = 50.0
 const PADDING: int = 10
@@ -277,6 +277,7 @@ func _build_layout() -> void:
 	_build_cards_tab(tabs)
 	_build_resources_tab(tabs)
 	_build_units_tab(tabs)
+	_build_screen_tab(tabs)
 
 
 ## Overflow stress: spawning ignores `max_hand_size` on purpose, so a tester can see
@@ -422,8 +423,13 @@ func _build_units_tab(tabs: TabContainer) -> void:
 	battle_row.add_child(_make_button("Respawn wave", CMD_RESPAWN_WAVE))
 	battle_row.add_child(_make_button("Clear wave", CMD_CLEAR_WAVE))
 
-	# The result cutscene is otherwise only reachable by actually winning or
-	# losing, so it gets its own preview tools.
+
+## Screen-level tools: the result cutscene is otherwise only reachable by actually
+## winning or losing, so its previews live in their own tab instead of being buried
+## under the unit tools.
+func _build_screen_tab(tabs: TabContainer) -> void:
+	var page := _make_tab(tabs, "Screen")
+
 	page.add_child(_make_section("Result screen"))
 	var result_row := _make_row()
 	page.add_child(result_row)

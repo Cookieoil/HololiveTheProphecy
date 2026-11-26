@@ -37,8 +37,8 @@ Constants:
 - L77 `PROMPT_IN_TIME: float = 0.24`
 - L80 `VICTORY_TITLE: Color = Color(0.93, 0.83, 0.56, 1.0)` — SDR-only palette. Every channel stays at or below 1.0 so nothing blooms.
 - L81 `DEFEAT_TITLE: Color = Color(0.86, 0.42, 0.40, 1.0)`
-- L83 `VICTORY_SEAL: Color = Color(0.76, 0.64, 0.38, 1.0)` — The seal's ink: burnished antique gold for a win, weathered iron for a loss.
-- L84 `DEFEAT_SEAL: Color = Color(0.58, 0.27, 0.27, 1.0)`
+- L83 `VICTORY_SEAL: Color = Color(0.76, 0.64, 0.38, 1.0)` — The seal's ink: burnished antique gold for a win, a brighter red for a loss.
+- L84 `DEFEAT_SEAL: Color = Color(0.82, 0.34, 0.32, 1.0)`
 - L87 `VICTORY_GRADE: Color = Color(0.86, 0.80, 0.68, 1.0)` — What the drained battlefield leans towards: warm parchment for a win, a deep blood red for a loss.
 - L88 `DEFEAT_GRADE: Color = Color(0.80, 0.18, 0.16, 1.0)`
 - L90 `TITLE_TEXT_VICTORY: String = "VICTORY"`

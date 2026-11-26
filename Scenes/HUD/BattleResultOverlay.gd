@@ -79,9 +79,9 @@ const PROMPT_IN_TIME: float = 0.24
 ## SDR-only palette. Every channel stays at or below 1.0 so nothing blooms.
 const VICTORY_TITLE: Color = Color(0.93, 0.83, 0.56, 1.0)
 const DEFEAT_TITLE: Color = Color(0.86, 0.42, 0.40, 1.0)
-## The seal's ink: burnished antique gold for a win, weathered iron for a loss.
+## The seal's ink: burnished antique gold for a win, a brighter red for a loss.
 const VICTORY_SEAL: Color = Color(0.76, 0.64, 0.38, 1.0)
-const DEFEAT_SEAL: Color = Color(0.58, 0.27, 0.27, 1.0)
+const DEFEAT_SEAL: Color = Color(0.82, 0.34, 0.32, 1.0)
 ## What the drained battlefield leans towards: warm parchment for a win, a deep
 ## blood red for a loss.
 const VICTORY_GRADE: Color = Color(0.86, 0.80, 0.68, 1.0)
