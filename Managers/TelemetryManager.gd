@@ -19,11 +19,6 @@ extends RefCounted
 #region Constants
 const SCHEMA_VERSION: int = 1
 
-## Test seam mirroring GameManager.debug_build_override.
-const FORCE_ENGINE: int = -1
-const FORCE_OFF: int = 0
-const FORCE_ON: int = 1
-
 const DEFAULT_SPOOL_DIR: String = "user://telemetry/spool"
 const PLAYER_ID_PATH: String = "user://telemetry/player_id.txt"
 
@@ -44,16 +39,11 @@ const REASON_DEBUG_PREVIEW: String = "debug_preview"
 const REASON_UNKNOWN: String = "unknown"
 #endregion
 
-#region Test Seams
-## Engine decides (consent + not headless); FORCE_ON/OFF pin the answer so the
-## suite can exercise both paths. Never written by game code.
-static var enabled_override: int = FORCE_ENGINE
-## When set, the recorder writes into this sink instead of a spool file, so a
-## test can inspect events in memory. The test owns the sink's lifetime.
-static var sink_override: TelemetrySink = null
-#endregion
-
 #region Public Variables
+## When supplied (tests only), the recorder writes into this sink and ignores the
+## headless rule instead of opening a spool file. Deliberately per-instance: a
+## global override could leak out of a test suite into a real run.
+var sink_override: TelemetrySink = null
 var consent: TelemetryConsent
 var sink: TelemetrySink = null
 var enabled: bool = false
@@ -87,23 +77,27 @@ var _merge_result: Dictionary = {}
 #endregion
 
 #region Lifecycle Methods
-func _init(consent_path: String = TelemetryConsent.DEFAULT_PATH, spool_dir: String = DEFAULT_SPOOL_DIR, player_id_path: String = PLAYER_ID_PATH) -> void:
+func _init(
+	consent_path: String = TelemetryConsent.DEFAULT_PATH,
+	spool_dir: String = DEFAULT_SPOOL_DIR,
+	player_id_path: String = PLAYER_ID_PATH,
+	p_sink_override: TelemetrySink = null
+) -> void:
 	consent = TelemetryConsent.load_from(consent_path)
 	_spool_dir = spool_dir
 	_player_id_path = player_id_path
+	sink_override = p_sink_override
 	_turn_outcome = _new_outcome()
 	_decision_outcome = _new_outcome()
 #endregion
 
 #region Public Methods
-## True when this recorder may collect at all: a real (non-headless) session and
-## the test seam. Consent is checked on top of this in `start_run`.
-static func collection_allowed() -> bool:
-	if enabled_override >= 0:
-		return enabled_override == FORCE_ON
-	if DisplayServer.get_name() == "headless":
-		return false
-	return true
+## True when this recorder may collect at all: a real (non-headless) session, or
+## a test that supplied its own sink. Consent is checked on top in `start_run`.
+func may_collect() -> bool:
+	if sink_override != null:
+		return true
+	return DisplayServer.get_name() != "headless"
 
 
 ## Opens a run: creates the spool file, a player id and the `run_started` event.
@@ -118,7 +112,7 @@ func start_run(state: GameState, version: String = "") -> void:
 	_intents = []
 	_turn_outcome = _new_outcome()
 	_decision_outcome = _new_outcome()
-	enabled = collection_allowed() and consent.is_granted()
+	enabled = may_collect() and consent.is_granted()
 	if not enabled:
 		return
 	run_id = TelemetrySchema.new_id()

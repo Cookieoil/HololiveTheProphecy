@@ -121,11 +121,6 @@ func after() -> void:
 	_remove_tree(TEMP_ROOT)
 
 
-func after_test() -> void:
-	TelemetryManager.enabled_override = TelemetryManager.FORCE_ENGINE
-	TelemetryManager.sink_override = null
-
-
 ## Deletes a directory tree under user:// (tests only).
 func _remove_tree(path: String) -> void:
 	var dir: DirAccess = DirAccess.open(path)
@@ -198,13 +193,11 @@ func _prepare(sink: MemorySink, ui: ScriptedUI, run_id: String) -> GameManager:
 	var consent_path: String = "%s/consent_%s.json" % [_temp_dir, run_id]
 	var player_path: String = "%s/player_%s.txt" % [_temp_dir, run_id]
 	TelemetryConsent.new(consent_path).decide(true)
-	TelemetryManager.enabled_override = TelemetryManager.FORCE_ON
-	TelemetryManager.sink_override = sink
 
 	var manager: GameManager = GameManager.new()
 	add_child(manager)
 	auto_free(manager)
-	manager.telemetry = TelemetryManager.new(consent_path, _temp_dir, player_path)
+	manager.telemetry = TelemetryManager.new(consent_path, _temp_dir, player_path, sink)
 	add_child(ui)
 	auto_free(ui)
 	manager.ui = ui
