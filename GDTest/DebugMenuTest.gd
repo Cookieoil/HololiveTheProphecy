@@ -121,6 +121,18 @@ func _find_button(root: Node, label: String) -> Button:
 	return null
 
 
+## Finds the panel's tab container, so a test can tell which tab a tool lives in.
+func _find_tab_container(root: Node) -> TabContainer:
+	for child: Node in root.get_children():
+		var tabs: TabContainer = child as TabContainer
+		if tabs != null:
+			return tabs
+		var found: TabContainer = _find_tab_container(child)
+		if found != null:
+			return found
+	return null
+
+
 #region Panel (view-only) tests
 
 func test_menu_starts_closed_and_toggles() -> void:
@@ -269,6 +281,25 @@ func test_result_preview_tools_emit_their_commands() -> void:
 	assert_int(commands.size()).is_equal(2)
 	assert_str(commands[0]).is_equal(DebugMenuPopup.CMD_SHOW_VICTORY)
 	assert_str(commands[1]).is_equal(DebugMenuPopup.CMD_SHOW_DEFEAT)
+
+
+## The result previews have their own Screen tab, so they are not buried under the
+## unit tools.
+func test_result_previews_live_in_their_own_tab() -> void:
+	var popup: DebugMenuPopup = DebugMenuPopup.new()
+	add_child(popup)
+	popup.refresh(_snapshot(), _targets())
+
+	var tabs: TabContainer = _find_tab_container(popup)
+	assert_object(tabs).is_not_null()
+	assert_int(tabs.get_tab_count()).is_equal(4)
+	assert_str(tabs.get_tab_title(3)).is_equal("Screen")
+
+	var screen_page: Node = tabs.get_child(3)
+	assert_object(_find_button(screen_page, "Preview victory")).is_not_null()
+	assert_object(_find_button(screen_page, "Preview defeat")).is_not_null()
+	# And they are gone from the Units tab they used to share.
+	assert_object(_find_button(tabs.get_child(2), "Preview victory")).is_null()
 #endregion
 
 

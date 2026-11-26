@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/DebugMenuPopup.gd` — `class_name DebugMenuPopup` extends `PanelContainer`
 
-`573` lines · [back to the map](../../../CODEBASE_MAP.md)
+`579` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Tester-only tool palette for the battle scene. Every button here is a *request*: it emits `debug_command_requested` upward and the turn loop performs the mutati…
 
@@ -46,7 +46,7 @@ Constants:
 - L67 `REGEN_STEP: int = 2`
 - L68 `GLOOM_STEP: int = 3`
 - L71 `PANEL_WIDTH: float = 336.0` — Where the panel sits: bottom-left, directly above the button that opens it.
-- L72 `PANEL_HEIGHT: float = 464.0`
+- L72 `PANEL_HEIGHT: float = 404.0`
 - L73 `SEAT_LEFT: float = 18.0`
 - L74 `SEAT_BOTTOM: float = 50.0`
 - L75 `PADDING: int = 10`
@@ -92,25 +92,26 @@ Private:
 - L200-208 `_seat_above_bottom_left`
 - L214-224 `_move_by`
 - L229-239 `_apply_chrome`
-- L242-279 `_build_layout`
-- L284-331 `_build_cards_tab`
-- L334-369 `_build_resources_tab`
-- L372-431 `_build_units_tab`
-- L434-439 `_make_tab`
-- L442-448 `_make_label`
-- L451-452 `_make_section`
-- L455-460 `_make_row`
-- L464-472 `_make_gated_button`
-- L476-477 `_make_button`
-- L481-482 `_make_unit_button`
-- L486-490 `_current_target_args`
-- L495-509 `_rebuild_targets`
-- L514-529 `_snap_int`
-- L536-543 `_on_header_gui_input`
-- L546-547 `_on_close_pressed`
-- L550-551 `_on_action_pressed`
-- L556-562 `_on_unit_action_pressed`
-- L565-569 `_on_spawn_custom_pressed`
+- L242-280 `_build_layout`
+- L285-332 `_build_cards_tab`
+- L335-370 `_build_resources_tab`
+- L373-424 `_build_units_tab`
+- L430-437 `_build_screen_tab`
+- L440-445 `_make_tab`
+- L448-454 `_make_label`
+- L457-458 `_make_section`
+- L461-466 `_make_row`
+- L470-478 `_make_gated_button`
+- L482-483 `_make_button`
+- L487-488 `_make_unit_button`
+- L492-496 `_current_target_args`
+- L501-515 `_rebuild_targets`
+- L520-535 `_snap_int`
+- L542-549 `_on_header_gui_input`
+- L552-553 `_on_close_pressed`
+- L556-557 `_on_action_pressed`
+- L562-568 `_on_unit_action_pressed`
+- L571-575 `_on_spawn_custom_pressed`
 
 Uses: Card
 Used by: GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, Scenes/BattleScene/BattleScene.gd
