@@ -79,11 +79,15 @@ Connect Metabase / Grafana / Supabase Studio straight to the views above.
 
 ## Privacy
 
-- Collection is **opt-in only**. The first launch shows
-  `Scenes/HUD/TelemetryConsentPopup.gd`; nothing is recorded — no run id, no
-  player id, no file, no request — until the player presses **Agree**.
-- The answer lives in `user://telemetry_consent.json` and can be re-asked by
-  bumping `TelemetryConsent.CONSENT_VERSION`.
+- Collection is **opt-in only**. Every launch shows
+  `Scenes/HUD/TelemetryConsentPopup.gd` before the first battle; nothing is
+  recorded — no run id, no player id, no file, no request — until the player
+  presses **Allow**. "Play Again" (a scene reload in the same launch) is not asked
+  again.
+- The answer is recorded in `user://telemetry_consent.json` and re-read when a
+  battle starts, so the answer given this launch is the one that applies.
+  `TelemetryConsent.CONSENT_VERSION` marks which disclosure wording the stored
+  answer belongs to.
 - The only identifier is a random local UUID in `user://telemetry/player_id.txt`.
   No name, email, account, IP address or device identifier is ever collected.
 - Headless runs never collect, and any run touched by the tester debug tools is

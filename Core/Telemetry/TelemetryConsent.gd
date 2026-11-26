@@ -2,17 +2,18 @@ class_name TelemetryConsent
 extends RefCounted
 ## Explicit opt-in gate for gameplay telemetry.
 ##
-## The player is asked once, on the first launch, whether anonymous gameplay
-## decisions may be collected to help improve game design and balance. Nothing is
-## collected until they agree: no run id, no player id, no spool file and no
-## network request exist while the answer is UNDECIDED or DECLINED.
+## The player is asked on every launch, before the first battle starts: nothing is
+## collected until they press "Allow", and "Decline" leaves the recorder a complete
+## no-op. A scene reload ("Play Again") belongs to the same launch and is not asked
+## again - that is the popup's launch flag, not this record.
 ##
-## The answer is stored in a tiny JSON file under user:// (never in res://), so it
-## survives restarts and the "Play Again" scene reload. `CONSENT_VERSION` lets a
-## future disclosure change re-ask everyone without a data migration.
+## This class is the *record* of the answer. It is written to a tiny JSON file under
+## user:// (never in res://), so the last answer survives a restart and can be
+## re-read when a battle starts; `CONSENT_VERSION` marks which disclosure wording the
+## stored answer belongs to.
 ##
 ## @author TheGreatJellyfish
-## @version 11/26/2026
+## @version 11/27/2026
 
 #region Enums
 enum Status {
@@ -23,10 +24,11 @@ enum Status {
 #endregion
 
 #region Constants
-## Bump this when the disclosure text changes so every player is asked again.
-## v2: the window was restyled and the wording became "Data Consent / We need your
+## Bump this when the disclosure text changes so the stored answer is recognisably
+## older than the wording it was given for.
+## v2: the window was restyled and the wording became "Data Consent / I need your
 ## consent to collect anonymous gameplay data / ... None of your personal data will
-## be recorded", so an earlier "Allow" no longer reflects what is being agreed to.
+## be recorded".
 const CONSENT_VERSION: int = 2
 const SCHEMA_VERSION: int = 1
 const DEFAULT_PATH: String = "user://telemetry_consent.json"
@@ -44,6 +46,14 @@ var consent_version: int = 0
 var decided_at_unix: float = 0.0
 #endregion
 
+#region Private Variables
+## True once the player has answered in *this* launch. A stored "granted" from an
+## earlier session must never be enough on its own: the recorder waits for this
+## launch's answer, which is what guarantees nothing is collected before the player
+## has been asked.
+static var _answered_this_launch: bool = false
+#endregion
+
 #region Lifecycle Methods
 ## Loads the stored answer, or starts UNDECIDED when nothing was saved yet.
 func _init(path: String = DEFAULT_PATH) -> void:
@@ -52,6 +62,20 @@ func _init(path: String = DEFAULT_PATH) -> void:
 #endregion
 
 #region Public Methods
+## True when the player answered the disclosure during this launch.
+##
+## A stored "granted" from an earlier session is deliberately not enough: the
+## recorder requires this, so nothing can be collected before the player has been
+## asked in the session that is running.
+static func answered_this_launch() -> bool:
+	return _answered_this_launch
+
+
+## Test seam: forgets that this launch was answered.
+static func reset_launch_flag() -> void:
+	_answered_this_launch = false
+
+
 ## True once the player answered the current disclosure version.
 func is_decided() -> bool:
 	return status != Status.UNDECIDED and consent_version >= CONSENT_VERSION
@@ -72,6 +96,7 @@ func decide(agreed: bool) -> void:
 	status = Status.GRANTED if agreed else Status.DECLINED
 	consent_version = CONSENT_VERSION
 	decided_at_unix = Time.get_unix_time_from_system()
+	_answered_this_launch = true
 	save_to_path(storage_path)
 
 

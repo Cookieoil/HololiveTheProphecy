@@ -621,10 +621,14 @@ func _setup_telemetry_uploader() -> void:
 	add_child(telemetry_uploader)
 
 
+## The disclosure is shown once per *launch*, not once ever, so a returning player
+## still sees what they are allowing and can change their mind. A scene reload -
+## "Play Again" - belongs to the same launch and is skipped by the popup's own
+## launch flag. Headless runs never block on a modal.
 func _should_prompt_consent() -> bool:
 	if DisplayServer.get_name() == "headless":
 		return false
 	if consent_popup == null:
 		return false
-	return consent_popup.consent.needs_prompt()
+	return TelemetryConsentPopup.should_prompt_this_launch()
 #endregion

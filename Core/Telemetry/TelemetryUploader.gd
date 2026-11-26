@@ -54,8 +54,9 @@ func _ready() -> void:
 	_http.timeout = REQUEST_TIMEOUT
 	_http.request_completed.connect(_on_request_completed)
 	add_child(_http)
-	# Never block the first frame on network work.
-	drain.call_deferred()
+	# No drain here on purpose: BattleScene drives it once the disclosure has been
+	# answered this launch, so a queued run is never uploaded before the player has
+	# had the chance to see (or change) their answer.
 
 
 ## True when an endpoint is configured and the player agreed to telemetry.

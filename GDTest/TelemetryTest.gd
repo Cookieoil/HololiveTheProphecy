@@ -117,6 +117,9 @@ func before() -> void:
 
 
 func after() -> void:
+	# Launch flags are process-wide, so they are cleared between suites.
+	TelemetryConsent.reset_launch_flag()
+	TelemetryConsentPopup.reset_launch_flag()
 	_remove_tree(_temp_dir)
 	_remove_tree(TEMP_ROOT)
 
