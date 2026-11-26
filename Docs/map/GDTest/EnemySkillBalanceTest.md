@@ -18,7 +18,7 @@ Public API:
 - L159-175 `test_living_caster_still_fires_effects() -> void`
 - L182-222 `test_utility_block_preserves_cached_targets() -> void` — Reproduces the merged healer_1 / buff_1 order: pick an enemy, run a utility block (target_mode none), then deal cached damage. The utility block must not erase…
 - L225-247 `test_bonus_before_cached_damage_still_applies() -> void` — The add_bonus fix-up must still reach the damage block when it adds value.
-- L253-268 `test_no_stray_brackets_after_substitution() -> void` — After substitution every description must be plain prose once the BBCode is stripped: a leftover token like "[13 (+5 from highest card)]" fails here.
+- L253-268 `test_no_stray_brackets_after_substitution() -> void` — After substitution every description must be plain prose once the BBCode is stripped: a leftover token like "[13 (+5 from your highest card in hand)]" fails her…
 
 Private:
 - L15-16 `_db`

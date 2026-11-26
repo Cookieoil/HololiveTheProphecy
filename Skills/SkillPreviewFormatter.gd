@@ -299,8 +299,17 @@ static func _substitute_tokens(
 				hand_val = hi_card.get_effective_value()
 		var bonus: int = maxi(1, hand_val / maxi(1, divisor)) if hand_val > 0 else 0
 		var total: int = val + bonus
-		var hand_hint: String = "(+%d from highest card)" % bonus if bonus > 0 \
-			else "(+1 per %d highest card Value)" % divisor
+		# Name the source and the rate so "+N from highest card" is never a mystery:
+		# a divisor of 2 reads as "half your highest card in hand", anything else
+		# spells out the per-Value rate. At zero the rate is shown so the combo is
+		# still discoverable before the player ever holds a big card.
+		var hand_hint: String
+		if bonus > 0:
+			hand_hint = "(+%d from half your highest card in hand)" % bonus if divisor == 2 \
+				else "(+%d from your highest card in hand, 1 per %d Value)" % [bonus, divisor]
+		else:
+			hand_hint = "(+1 per 2 Value of your highest card in hand)" if divisor == 2 \
+				else "(+1 per %d Value of your highest card in hand)" % divisor
 		result = result.replace(hand_match.get_string(0), "%s [color=%s]%s[/color]" % [_num_bb(total), COL_MUTED, hand_hint])
 
 	var div_add_rx := RegEx.new()
@@ -344,7 +353,7 @@ static func _substitute_tokens(
 		hi_math_rx.compile("\\[?(\\d+)\\s*\\+\\s*Highest Card(?:\\s+in\\s+Hand)?\\]?")
 		for hm: RegExMatch in hi_math_rx.search_all(result):
 			var total := int(hm.get_string(1)) + hi_val
-			var hi_hint: String = "(+%d from highest card)" % hi_val if hi_val > 0 else "(+highest card in hand)"
+			var hi_hint: String = "(+%d from your highest card in hand)" % hi_val if hi_val > 0 else "(+your highest card in hand)"
 			result = result.replace(hm.get_string(0), "%s [color=%s]%s[/color]" % [
 				_num_bb(total), COL_MUTED, hi_hint
 			])

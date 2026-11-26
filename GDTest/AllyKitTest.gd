@@ -147,7 +147,17 @@ func test_formatter_replaces_highest_card_token_with_clean_number() -> void:
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0)
 	assert_str(result).not_contains("[Value + Highest Card in Hand / 2]")
 	assert_str(result).contains("[color=#FFD966]7[/color]")  # 4 + (7/2=3)
-	assert_str(result).contains("(+3 from highest card)")
+	assert_str(result).contains("(+3 from half your highest card in hand)")
+
+func test_formatter_highest_card_token_teaches_the_rate_at_zero() -> void:
+	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
+	var state: GameState = GameState.new()
+	state.hand = []
+	var ally: Unit = _make_ally(null, null, null, 0)
+	var description: String = "Deal [Value + Highest Card in Hand / 2] damage to an enemy."
+	
+	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0)
+	assert_str(result).contains("(+1 per 2 Value of your highest card in hand)")
 
 func test_formatter_highest_card_token_excludes_dragged_card() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
@@ -158,8 +168,8 @@ func test_formatter_highest_card_token_excludes_dragged_card() -> void:
 	var description: String = "Deal [Value + Highest Card in Hand / 2] damage to an enemy."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0, dragged)
-	assert_str(result).contains("(+3 from highest card)")   # highest non-dragged card is 7
-	assert_str(result).not_contains("(+5 from highest card)")  # never counts the dragged 10
+	assert_str(result).contains("(+3 from half your highest card in hand)")   # highest non-dragged card is 7
+	assert_str(result).not_contains("(+5 from half your highest card in hand)")  # never counts the dragged 10
 
 func test_formatter_replaces_div_add_token_with_clean_number() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()

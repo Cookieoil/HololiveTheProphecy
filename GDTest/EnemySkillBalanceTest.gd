@@ -249,7 +249,7 @@ func test_bonus_before_cached_damage_still_applies() -> void:
 
 #region No stray brackets
 ## After substitution every description must be plain prose once the BBCode is
-## stripped: a leftover token like "[13 (+5 from highest card)]" fails here.
+## stripped: a leftover token like "[13 (+5 from your highest card in hand)]" fails here.
 func test_no_stray_brackets_after_substitution() -> void:
 	var db: GameDatabase = _db()
 	var state: GameState = GameState.new()
