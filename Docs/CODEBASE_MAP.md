@@ -30,24 +30,24 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | --- | --- | --- | --- |
 | [`Core/Card.gd`](map/Core/Card.md) | `Card` | 115 | This class contains the data for the card Card instance is created/destroyed during merging. Rule: Merge consumes two cards and produces one. Total count is shr… |
 | [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 544 | Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single source of truth; the workbook (res://Data/xlsx/game_data.xlsx)… |
-| [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 23 | Static utility for dice rolls. Separated for easy mocking/seeding in tests. |
+| [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 28 | Static utility for dice rolls. Separated for easy mocking/seeding in tests. |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn loop, resolved at step 7. |
-| [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 485 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that return result The presentation layer can react to. |
+| [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 515 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that return result The presentation layer can react to. |
 | [`Core/GameUI.gd`](map/Core/GameUI.md) | `GameUI` | 106 | Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameManager only talks to this interface. Every input methods are asyn… |
-| [`Core/Telemetry/HttpBatchSink.gd`](map/Core/Telemetry/HttpBatchSink.md) | `HttpBatchSink` | 23 | Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but written into the upload outbox instead of the local spool, so Core/Telemet… |
+| [`Core/Telemetry/HttpBatchSink.gd`](map/Core/Telemetry/HttpBatchSink.md) | `HttpBatchSink` | 54 | Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but the finished file is promoted into the upload outbox so Core/Telemetry/Tel… |
 | [`Core/Telemetry/JsonlFileSink.gd`](map/Core/Telemetry/JsonlFileSink.md) | `JsonlFileSink` | 94 | Stage 1 telemetry sink: appends one JSON object per line to a per-run file under user://telemetry/spool/. Every line is flushed as it is written, so a crash or… |
 | [`Core/Telemetry/TelemetryConsent.gd`](map/Core/Telemetry/TelemetryConsent.md) | `TelemetryConsent` | 201 | Explicit opt-in gate for gameplay telemetry. The player is asked on every launch, before the first battle starts: nothing is collected until they press "Allow",… |
 | [`Core/Telemetry/TelemetrySchema.gd`](map/Core/Telemetry/TelemetrySchema.md) | `TelemetrySchema` | 282 | Pure serialisers that turn live game objects into the plain Dictionaries the telemetry spool stores. Every function is static and side-effect free, so the shape… |
 | [`Core/Telemetry/TelemetrySink.gd`](map/Core/Telemetry/TelemetrySink.md) | `TelemetrySink` | 33 | Abstract destination for telemetry events. The recorder never cares where an event goes: Stage 1 writes newline-delimited JSON to the local spool, Stage 2 adds… |
-| [`Core/Telemetry/TelemetryUploader.gd`](map/Core/Telemetry/TelemetryUploader.md) | `TelemetryUploader` | 218 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSONL files HttpBatchSink leaves in user://telemetry/outbox/, POSTs… |
+| [`Core/Telemetry/TelemetryUploader.gd`](map/Core/Telemetry/TelemetryUploader.md) | `TelemetryUploader` | 230 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSONL files HttpBatchSink leaves in user://telemetry/outbox/, POSTs… |
 | [`Core/Unit.gd`](map/Core/Unit.md) | `Unit` | 387 | Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data |
 | [`Core/UnitData.gd`](map/Core/UnitData.md) | `UnitData` | 20 | Template definition for a unit type. |
 | [`Data/gameDatabase.gd`](map/Data/gameDatabase.md) | `GameDatabase` | 31 | Skill definitions keyed by skill_id (effects embedded). |
 | [`Managers/ColorUtils.gd`](map/Managers/ColorUtils.md) | — | 17 | Color definitions for BBCode |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks, not game logic. depend on these signals — they are fire-and-forg… |
-| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1236 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
-| [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 913 | Records every decision a player makes, for game design and balancing. It is a passive observer: GameManager (or a test) calls the `begin_*` / `record_*` hooks a… |
-| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 635 | extends GameUI, 2 signal(s), 8 export(s), 45 function(s) |
+| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1256 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
+| [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 1031 | Records every decision a player makes, for game design and balancing. It is a passive observer: GameManager (or a test) calls the `begin_*` / `record_*` hooks a… |
+| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 645 | extends GameUI, 2 signal(s), 8 export(s), 46 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 632 | extends Control, 3 signal(s), 28 export(s), 36 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 331 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup and automatic inspection of Unit buff/debuff state. Two dictiona… |
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
@@ -103,7 +103,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 91 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatalog. |
 | [`GDTest/TelemetryConsentTest.gd`](map/GDTest/TelemetryConsentTest.md) | `TelemetryConsentTest` | 362 | Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Agree" grants and persists; "Decline" persists and never grants -… |
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its stable id from the JSON (unit_id / skill_id), wave overrides ne… |
-| [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 520 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wave / turn / decision / run-ended events, every decision must carr… |
+| [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 673 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wave / turn / decision / run-ended events, every decision must carr… |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIconEntry). Covers: left-of-keyword icons (LoR style), pure glyphs (Riftbound style), expl… |
 
 ## 3. Global signals (Managers/EventBus.gd)
@@ -112,7 +112,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | --- | --- | --- | --- |
 | `turn_started` | turn_number: int | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
 | `wave_started` | wave_index: int | Managers/GameManager.gd | Managers/TelemetryManager.gd, Scenes/HUD/BattleOverlayController.gd |
-| `game_over` | victory: bool | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
+| `game_over` | victory: bool | Managers/GameManager.gd | Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd |
 | `card_played` | card: Card, ally: Unit | Managers/GameManager.gd | Scenes/Cards/HandBar.gd |
 | `card_drawn` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |
 | `card_discarded` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |

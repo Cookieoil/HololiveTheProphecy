@@ -52,6 +52,36 @@ var next_skill_bonus: int = 0
 var current_wave: int = 0
 var turn_number: int = 0
 
+## Deterministic run seed and the generator every shuffle and roll goes through, so
+## a run can be replayed exactly from its seed (Array.shuffle() and the global RNG
+## cannot be reproduced after the fact).
+var run_seed: int = 0
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+
+## Seeds the run's generator. Call before the deck is built.
+func set_run_seed(value: int) -> void:
+	run_seed = value
+	rng.seed = value
+
+
+## Seeded Fisher-Yates so a shuffle is reproducible from `run_seed`.
+func shuffle_cards(cards: Array[Card]) -> void:
+	for index: int in range(cards.size() - 1, 0, -1):
+		var swap_index: int = rng.randi_range(0, index)
+		var held: Card = cards[index]
+		cards[index] = cards[swap_index]
+		cards[swap_index] = held
+
+
+## Seeded Fisher-Yates for units (enemy targeting), mirroring shuffle_cards.
+func shuffle_units(units: Array[Unit]) -> void:
+	for index: int in range(units.size() - 1, 0, -1):
+		var swap_index: int = rng.randi_range(0, index)
+		var held: Unit = units[index]
+		units[index] = units[swap_index]
+		units[swap_index] = held
+
 #region Initialisation
 ## Clear all allies from previous round, 
 ## then add the allies into the allies unit array
@@ -93,7 +123,7 @@ func build_deck(decklist: Array = CURRENT_DECKLIST) -> void:
 		var count: int = _to_int(pair[1], 0)
 		for i: int in count:
 			deck.append(Card.new(value))
-	deck.shuffle()
+	shuffle_cards(deck)
 	
 func set_dice_progression(prog: Array[int]) -> void:
 	if not prog.is_empty(): turn_dice_progression.assign(prog)
@@ -117,7 +147,7 @@ func draw_n_cards(count: int) -> Array[Card]:
 			# Copies the discard pile into the deck
 			deck = discard.duplicate()
 			discard.clear()
-			deck.shuffle()
+			shuffle_cards(deck)
 		# pop_back is faster than pop_front
 		# draw one card at the end of the array list
 		var c: Card = deck.pop_back()

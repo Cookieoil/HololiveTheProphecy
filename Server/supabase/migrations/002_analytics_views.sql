@@ -1,7 +1,12 @@
--- Analytical views: the three human-centric questions, answered in SQL.
+-- Analytical views: the human-centric questions, answered in SQL.
 --
 -- These mirror Tools/analyze_telemetry.py so the local report and the hosted
 -- dashboard agree. Connect Metabase / Grafana / Supabase Studio directly to them.
+--
+-- Every view is PRODUCTION ONLY: developer builds (`is_debug_build`) and runs a
+-- tester tool touched (`was_debug_tainted`) are excluded, so an editor playtest
+-- can never land in a player balance number. Inspect those locally with
+-- `python Tools/analyze_telemetry.py` instead, which keeps them visible.
 
 -- 1. TRUE pick rate: how often a skill was chosen out of the times it was actually
 --    legal to cast. `offered_skills` is the honest denominator (recorded before the
@@ -28,6 +33,7 @@ from telemetry_decisions d
 join telemetry_runs r on r.run_id = d.run_id
 cross join lateral unnest(d.offered_skills) as s(skill_id)
 where not r.was_debug_tainted
+  and not r.is_debug_build
 group by 1;
 
 -- 1b. Ultimate cast vs hold rate: a ready Ultimate that was not cast is a choice.
@@ -47,6 +53,7 @@ from telemetry_decisions d
 join telemetry_runs r on r.run_id = d.run_id
 cross join lateral unnest(d.ready_ultimate_skills) as u(ultimate_id)
 where not r.was_debug_tainted
+  and not r.is_debug_build
 group by 1;
 
 -- 1c. Card-level rate: a card that was in hand and was neither played nor merged
@@ -73,6 +80,7 @@ from telemetry_decisions d
 join telemetry_runs r on r.run_id = d.run_id
 cross join lateral unnest(d.offered_card_keys) as k(card_key)
 where not r.was_debug_tainted
+  and not r.is_debug_build
 group by 1;
 
 -- 2. What players chose instead: for every offer that was passed over, the action
@@ -96,6 +104,7 @@ from telemetry_decisions d
 join telemetry_runs r on r.run_id = d.run_id
 cross join lateral unnest(d.offered_skills) as s(skill_id)
 where not r.was_debug_tainted
+  and not r.is_debug_build
   and not (d.decision_type = 'play_card'
            and d.chosen_payload ->> 'skill_id' = s.skill_id
            and coalesce((d.chosen_payload ->> 'applied')::boolean, false))
@@ -124,6 +133,7 @@ with played as (
     from telemetry_decisions d
     join telemetry_runs r on r.run_id = d.run_id
     where not r.was_debug_tainted
+  and not r.is_debug_build
       and not r.abandoned
       and coalesce((d.chosen_payload ->> 'applied')::boolean, false)
 ),
@@ -167,6 +177,7 @@ select
     avg(r.final_wave) filter (where r.abandoned)                       as avg_abandon_wave
 from telemetry_runs r
 where not r.was_debug_tainted
+  and not r.is_debug_build
 group by 1, 2;
 
 
@@ -187,6 +198,7 @@ from telemetry_turns t
 join telemetry_runs r on r.run_id = t.run_id
 cross join lateral jsonb_array_elements(coalesce(t.enemy_damage_json, '[]'::jsonb)) as row
 where not r.was_debug_tainted
+  and not r.is_debug_build
 group by 1, 2, 3, 4;
 
 -- 4b. Strategy against a specific enemy: what players actually did while facing it,
@@ -205,6 +217,7 @@ select
 from telemetry_decisions d
 join telemetry_runs r on r.run_id = d.run_id
 where not r.was_debug_tainted
+  and not r.is_debug_build
 group by 1, 2;
 
 -- 4c. Focus fire: who the player picked when a skill asked for a target.
@@ -225,6 +238,117 @@ left join lateral (
     where p2 ->> 'unit_id' = p ->> 'unit_id'
 ) as picked on true
 where not r.was_debug_tainted
+  and not r.is_debug_build
   and prompt ->> 'prompt' = 'pick_target'
 group by 1;
+
+
+-- 5. Roster coverage: was each ally ever actually used? A run that never casts an
+--    ally's skills is the clearest sign a kit is unattractive or unreadable - and
+--    it is invisible in a win rate.
+create or replace view v_roster_coverage as
+with lineups as (
+    select
+        r.balance_hash,
+        r.run_id,
+        unnest(r.ally_lineup) as ally_id
+    from telemetry_runs r
+    where not r.was_debug_tainted
+      and not r.is_debug_build
+      and not r.abandoned
+)
+select
+    l.ally_id,
+    count(*)                                                          as runs_in_lineup,
+    count(*) filter (where used.was_used)                              as runs_used,
+    round(count(*) filter (where used.was_used)::numeric / nullif(count(*), 0), 4)
+                                                                      as coverage
+from lineups l
+left join lateral (
+    select exists (
+        select 1 from telemetry_decisions d
+        where d.run_id = l.run_id
+          and coalesce((d.chosen_payload ->> 'applied')::boolean, false)
+          and coalesce(d.chosen_payload ->> 'target_ally_id',
+                       d.chosen_payload ->> 'caster_id') = l.ally_id
+    ) as was_used
+) as used on true
+group by 1;
+
+-- 6. Wasted resources: turns ended with actions or merges unspent, and how many of
+--    those had skills sitting playable in hand.
+create or replace view v_wasted_resources as
+select
+    r.balance_hash,
+    count(*)                                                          as turns,
+    sum(coalesce(t.unused_actions, 0))                                 as unused_actions,
+    sum(coalesce(t.unused_merges, 0))                                  as unused_merges,
+    count(*) filter (where coalesce(t.unused_actions, 0) > 0)           as turns_with_unused_actions,
+    count(*) filter (
+        where coalesce(t.unused_actions, 0) > 0
+          and coalesce(cardinality(d.offered_skills), 0) > 0
+    )                                                                  as turns_with_playable_ignored
+from telemetry_turns t
+join telemetry_runs r on r.run_id = t.run_id
+left join telemetry_decisions d
+    on d.run_id = t.run_id
+   and d.turn_number = t.turn_number
+   and d.decision_type = 'end_turn'
+where not r.was_debug_tainted
+  and not r.is_debug_build
+group by 1;
+
+-- 7. Pick rate by player experience. A beginner and a veteran value a support kit
+--    completely differently, so pooling them hides "weak, or just undiscovered?".
+create or replace view v_cohort_pick_rates as
+select
+    case when coalesce(r.player_run_number, 0) <= 3 then 'new' else 'veteran' end as cohort,
+    s.skill_id,
+    count(*)                                                          as offered,
+    count(*) filter (
+        where d.decision_type = 'play_card'
+          and d.chosen_payload ->> 'skill_id' = s.skill_id
+          and coalesce((d.chosen_payload ->> 'applied')::boolean, false)
+    )                                                                 as picked,
+    round(count(*) filter (
+        where d.decision_type = 'play_card'
+          and d.chosen_payload ->> 'skill_id' = s.skill_id
+          and coalesce((d.chosen_payload ->> 'applied')::boolean, false)
+    )::numeric / nullif(count(*), 0), 4)                              as pick_rate
+from telemetry_decisions d
+join telemetry_runs r on r.run_id = d.run_id
+cross join lateral unnest(d.offered_skills) as s(skill_id)
+where not r.was_debug_tainted
+  and not r.is_debug_build
+  and not r.abandoned
+group by 1, 2;
+
+-- 8. What actually ends lost runs, so an overtuned enemy or status is obvious.
+create or replace view v_defeat_causes as
+select
+    r.balance_hash,
+    coalesce(r.killed_by, 'unknown')                                  as killed_by,
+    count(*)                                                          as losses
+from telemetry_runs r
+where not r.was_debug_tainted
+  and not r.is_debug_build
+  and not r.abandoned
+  and not r.victory
+group by 1, 2;
+
+-- 9. Replayable seeds: pick any row and reload the battle from its seed.
+create or replace view v_replayable_runs as
+select
+    r.run_id,
+    r.run_seed,
+    r.player_run_number,
+    r.victory,
+    r.end_reason,
+    r.total_turns,
+    r.ally_lineup,
+    r.killed_by
+from telemetry_runs r
+where not r.was_debug_tainted
+  and r.run_seed is not null
+order by r.started_at desc;
 

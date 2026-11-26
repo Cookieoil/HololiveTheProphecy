@@ -13,12 +13,17 @@ metric server exists for:
                                  selection-bias trap)
   4. Enemy strategy             - what players do against a specific enemy, and
                                  how much HP that enemy takes off them
+  5. Roster coverage            - whether each ally was ever used at all
+  6. Wasted resources           - turns ended with actions still playable
+  7. Experience cohorts         - the same pick rates for new vs veteran players
+  8. Defeat causes              - which enemy or status actually killed the run
 
 No third-party dependencies: standard library only.
 
 Usage:
     python Tools/analyze_telemetry.py                     # auto-detect the spool
     python Tools/analyze_telemetry.py path/to/spool ...
+    python Tools/analyze_telemetry.py --production-only   # real players only
     python Tools/analyze_telemetry.py --include-debug --json out.json
 """
 
@@ -93,31 +98,69 @@ def stratum_of(metrics: dict) -> str:
 
 
 def index_runs(events: list[dict]) -> dict[str, dict]:
+    """One entry per run, merged from its run_started and run_ended events.
+
+    `run_started` carries the seed, the run number and the line-up; `run_ended`
+    carries the result. Defaults are filled in so a run that never finished (a
+    crash) still appears instead of being silently dropped.
+    """
     runs: dict[str, dict] = {}
     for event in events:
-        if event.get("type") != "run_ended":
-            continue
         run_id = str(event.get("run_id", ""))
         if not run_id:
             continue
-        runs[run_id] = {
-            "victory": bool(event.get("victory", False)),
-            "abandoned": bool(event.get("abandoned", False)),
-            "end_reason": str(event.get("end_reason", "")),
-            "tainted": bool(event.get("was_debug_tainted", False)),
-            "balance_hash": str(event.get("balance_hash", "")),
-            "final_wave": int(event.get("final_wave", 0) or 0),
-            "total_turns": int(event.get("total_turns", 0) or 0),
-        }
+        entry = runs.setdefault(run_id, {})
+        kind = str(event.get("type", ""))
+        if kind == "run_started":
+            entry["run_seed"] = event.get("run_seed")
+            entry["player_run_number"] = int(event.get("player_run_number", 0) or 0)
+            entry["ally_lineup"] = [str(ally) for ally in (event.get("ally_lineup") or [])]
+            entry["dev_build"] = bool(event.get("is_debug_build", False))
+        elif kind == "run_ended":
+            entry.update({
+                "victory": bool(event.get("victory", False)),
+                "abandoned": bool(event.get("abandoned", False)),
+                "end_reason": str(event.get("end_reason", "")),
+                "tainted": bool(event.get("was_debug_tainted", False)),
+                "balance_hash": str(event.get("balance_hash", "")),
+                "final_wave": int(event.get("final_wave", 0) or 0),
+                "total_turns": int(event.get("total_turns", 0) or 0),
+                "killed_by": event.get("killed_by") or {},
+                "ally_deaths": event.get("ally_deaths") or [],
+            })
+    for entry in runs.values():
+        entry.setdefault("victory", False)
+        entry.setdefault("abandoned", False)
+        entry.setdefault("end_reason", "")
+        entry.setdefault("tainted", False)
+        entry.setdefault("balance_hash", "")
+        entry.setdefault("final_wave", 0)
+        entry.setdefault("total_turns", 0)
+        entry.setdefault("run_seed", None)
+        entry.setdefault("player_run_number", 0)
+        entry.setdefault("ally_lineup", [])
+        entry.setdefault("dev_build", False)
+        entry.setdefault("killed_by", {})
+        entry.setdefault("ally_deaths", [])
     return runs
 
 
-def keep_clean(events: list[dict], runs: dict[str, dict], include_debug: bool) -> list[dict]:
-    """Drops every run a tester tool touched, so dev experiments never mix in."""
-    if include_debug:
-        return events
-    tainted = {rid for rid, run in runs.items() if run["tainted"]}
-    return [e for e in events if str(e.get("run_id", "")) not in tainted]
+def keep_clean(
+    events: list[dict],
+    runs: dict[str, dict],
+    include_debug: bool,
+    production_only: bool = False,
+) -> list[dict]:
+    """Drops tester-tainted runs (debug menu) and, in production mode, developer
+    builds - so a playtest in the editor never lands in a player balance view."""
+    drop: set[str] = set()
+    for run_id, run in runs.items():
+        if not include_debug and run["tainted"]:
+            drop.add(run_id)
+        elif production_only and run["dev_build"]:
+            drop.add(run_id)
+    return [e for e in events if str(e.get("run_id", "")) not in drop]
+
 
 
 #region Pick rates: how often a choice was taken when it was on the table
@@ -453,6 +496,178 @@ def situational_damage(events: list[dict]) -> dict:
             entry["hits"] += 1
             entry["hp_lost"] += hp_lost
     return {"by_enemy_skill": by_enemy_skill, "by_strategy": by_strategy}
+
+
+def roster_coverage(decisions: list[dict], runs: dict[str, dict]) -> dict:
+    """Which allies were actually used, per run and in total.
+
+    A run that never casts a given ally's skills is the strongest single signal
+    that a kit is unattractive, unreadable or simply not worth a slot - and it is
+    invisible in a win rate.
+    """
+    casts: Counter = Counter()
+    runs_used: dict[str, set] = defaultdict(set)
+    for decision in decisions:
+        chosen = decision.get("chosen") or {}
+        if not bool(chosen.get("applied", False)):
+            continue
+        ally = str(chosen.get("target_ally_id") or chosen.get("caster_id") or "")
+        if not ally:
+            continue
+        casts[ally] += 1
+        runs_used[ally].add(str(decision.get("run_id", "")))
+
+    offered_runs: Counter = Counter()
+    used_runs: Counter = Counter()
+    idle_runs: list[str] = []
+    counted = 0
+    for run_id, run in runs.items():
+        # Abandoned runs contain no real play, so they would only add noise.
+        if run["abandoned"]:
+            continue
+        counted += 1
+        used_here: set = set()
+        for ally in run.get("ally_lineup") or []:
+            offered_runs[ally] += 1
+            if run_id in runs_used.get(ally, set()):
+                used_runs[ally] += 1
+                used_here.add(ally)
+        if not used_here:
+            idle_runs.append(run_id)
+
+    rows: dict[str, dict] = {}
+    for ally, offered in offered_runs.items():
+        used = used_runs[ally]
+        rows[ally] = {
+            "runs_in_lineup": offered,
+            "runs_used": used,
+            "casts": casts.get(ally, 0),
+            "coverage": (used / offered) if offered else 0.0,
+        }
+    return {
+        "allies": rows,
+        "runs_counted": counted,
+        "runs_with_no_ally_used": len(idle_runs),
+    }
+
+
+def wasted_resources(decisions: list[dict], events: list[dict]) -> dict:
+    """Turns that ended with actions or merges unused, and whether skills were
+    still playable at that moment.
+
+    Ending a turn with actions unspent while a skill was available is either a
+    player who disengaged or an affordance the UI failed to make legible. Both are
+    worth knowing, and neither shows up in a win rate.
+    """
+    end_turns: dict[tuple, dict] = {}
+    for decision in decisions:
+        if decision.get("decision_type") == "end_turn":
+            key = (str(decision.get("run_id", "")), int(decision.get("turn_number", -1)))
+            end_turns[key] = decision
+
+    summary = {
+        "turns": 0,
+        "unused_actions": 0,
+        "unused_merges": 0,
+        "turns_with_unused": 0,
+        "turns_with_playable_ignored": 0,
+        "converts": 0,
+    }
+    for event in events:
+        if event.get("type") != "turn_ended":
+            continue
+        summary["turns"] += 1
+        unused_actions = int(event.get("unused_actions", 0) or 0)
+        unused_merges = int(event.get("unused_merges", 0) or 0)
+        summary["unused_actions"] += unused_actions
+        summary["unused_merges"] += unused_merges
+        if unused_actions > 0 or unused_merges > 0:
+            summary["turns_with_unused"] += 1
+        key = (str(event.get("run_id", "")), int(event.get("turn_number", -1)))
+        decision = end_turns.get(key)
+        if decision is None or unused_actions <= 0:
+            continue
+        playable = (decision.get("offered") or {}).get("playable_skill_ids") or []
+        if playable:
+            summary["turns_with_playable_ignored"] += 1
+    summary["converts"] = sum(
+        1 for decision in decisions if decision.get("decision_type") == "convert_action"
+    )
+    return summary
+
+
+def cohort_pick_rates(
+    decisions: list[dict],
+    runs: dict[str, dict],
+    new_play_threshold: int = 3,
+) -> dict[str, dict]:
+    """Pick rates split by player experience.
+
+    A beginner and a veteran value a setup/support kit completely differently, so
+    pooling them hides the answer to "is this kit weak, or merely undiscovered?".
+    Runs of unknown number are treated as new, which cannot flatter a kit.
+    """
+    buckets: dict[str, dict[str, Counter]] = {
+        "new": {"offered": Counter(), "picked": Counter()},
+        "veteran": {"offered": Counter(), "picked": Counter()},
+    }
+    for decision in decisions:
+        run = runs.get(str(decision.get("run_id", "")))
+        if run is None or run["abandoned"]:
+            continue
+        number = int(run.get("player_run_number", 0) or 0)
+        bucket = "veteran" if number > new_play_threshold else "new"
+        offer = decision.get("offered") or {}
+        chosen = decision.get("chosen") or {}
+        applied = bool(chosen.get("applied", False))
+        for skill_id in offer.get("playable_skill_ids") or []:
+            buckets[bucket]["offered"][str(skill_id)] += 1
+        if applied and decision.get("decision_type") == "play_card":
+            skill_id = str(chosen.get("skill_id", ""))
+            if skill_id:
+                buckets[bucket]["picked"][skill_id] += 1
+        elif applied and decision.get("decision_type") == "cast_ultimate":
+            ult_id = str(chosen.get("ultimate_skill_id", ""))
+            if ult_id:
+                buckets[bucket]["picked"][ult_id] += 1
+
+    rows: dict[str, dict] = {}
+    for bucket, counters in buckets.items():
+        for skill_id, offered in counters["offered"].items():
+            picked = counters["picked"].get(skill_id, 0)
+            rows["%s:%s" % (bucket, skill_id)] = {
+                "offered": offered,
+                "picked": picked,
+                "pick_rate": (picked / offered) if offered else 0.0,
+            }
+    return rows
+
+
+def defeat_causes(runs: dict[str, dict]) -> dict:
+    """What ended the lost runs, plus every ally death with its cause."""
+    def label(cause: dict) -> str:
+        kind = str(cause.get("kind", "unknown"))
+        if kind == "enemy_skill":
+            return "%s / %s" % (
+                cause.get("source_unit_id", "") or "?",
+                cause.get("source_skill_id", "") or "?",
+            )
+        if kind == "status":
+            return "status: %s" % (cause.get("status_id", "") or "?")
+        return "unknown"
+
+    killed_by: Counter = Counter()
+    ally_deaths: Counter = Counter()
+    for run in runs.values():
+        if run["abandoned"]:
+            continue
+        cause = run.get("killed_by") or {}
+        if not run["victory"] and cause:
+            killed_by[label(cause)] += 1
+        for death in run.get("ally_deaths") or []:
+            ally_deaths[label(death)] += 1
+    return {"killed_by": killed_by, "ally_deaths": ally_deaths}
+
 #endregion
 
 
@@ -468,13 +683,15 @@ def _bar(value: int, scale: int) -> str:
     return "#" * max(0, min(28, int(round(value / scale * 28))))
 
 
-def report(events, runs, picks, instead, presence, strategy, damage, paths) -> str:
+def report(events, runs, picks, instead, presence, strategy, damage, paths,
+           coverage=None, waste=None, cohorts=None, deaths=None) -> str:
     lines: list[str] = []
     add = lines.append
     finished = {rid: run for rid, run in runs.items() if not run["abandoned"]}
     abandoned = [run for run in runs.values() if run["abandoned"]]
     victories = sum(1 for run in finished.values() if run["victory"])
     tainted = sum(1 for run in runs.values() if run["tainted"])
+    dev_builds = sum(1 for run in runs.values() if run["dev_build"])
     decisions = [e for e in events if e.get("type") == "decision"]
 
     add("=== TELEMETRY BALANCE REPORT ===")
@@ -484,6 +701,9 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths) -> s
         % (len(finished), victories,
            _pct(victories / len(finished)) if finished else "  0.0%", len(abandoned)))
     add("decisions:  %d   debug-tainted runs: %d" % (len(decisions), tainted))
+    if dev_builds:
+        add("            developer-build runs: %d  (excluded with --production-only)"
+            % dev_builds)
 
     add("")
     add("-- Run outcomes --")
@@ -597,6 +817,63 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths) -> s
         add("  %-22s %-22s %5d %9d %8.1f" % (
             strategy_name, enemy, row["hits"], row["hp_lost"], avg))
 
+    add("")
+    add("-- 6. Roster coverage (was each ally ever used?) --")
+    if coverage and coverage["allies"]:
+        add("  %-14s %12s %9s %7s %9s" % ("ally", "runs in kit", "runs used", "casts", "coverage"))
+        for ally, row in sorted(coverage["allies"].items(),
+                                key=lambda kv: kv[1]["coverage"]):
+            add("  %-14s %12d %9d %7d %9s" % (
+                ally, row["runs_in_lineup"], row["runs_used"], row["casts"],
+                _pct(row["coverage"])))
+        add("  %d finished runs counted; %d of them used no ally at all"
+            % (coverage["runs_counted"], coverage["runs_with_no_ally_used"]))
+    else:
+        add("  (no finished runs to measure)")
+
+    add("")
+    add("-- 7. Wasted resources --")
+    if waste and waste["turns"]:
+        add("  turns recorded:              %d" % waste["turns"])
+        add("  actions left unspent:        %d" % waste["unused_actions"])
+        add("  merges left unspent:         %d" % waste["unused_merges"])
+        add("  turns ending with leftovers: %d" % waste["turns_with_unused"])
+        add("  ...of those, skills were still playable: %d"
+            % waste["turns_with_playable_ignored"])
+        add("  convert actions taken:       %d" % waste["converts"])
+    else:
+        add("  (no turns recorded)")
+
+    add("")
+    add("-- 8. Pick rate by player experience --")
+    if cohorts:
+        add("  %-26s %8s %7s %10s" % ("cohort:skill", "offered", "picked", "pick rate"))
+        for key, row in sorted(cohorts.items(), key=lambda kv: (-kv[1]["offered"], kv[0])):
+            if row["offered"] <= 0:
+                continue
+            add("  %-26s %8d %7d %10s" % (
+                key, row["offered"], row["picked"], _pct(row["pick_rate"])))
+        add("  ('new' = first 3 runs by that player; 'veteran' = run 4 onward)")
+    else:
+        add("  (no run numbers recorded)")
+
+    add("")
+    add("-- 9. What ended the lost runs / killed allies --")
+    if deaths and (deaths["killed_by"] or deaths["ally_deaths"]):
+        for cause, count in deaths["killed_by"].most_common():
+            add("  killed the run:  %-30s %d" % (cause, count))
+        for cause, count in deaths["ally_deaths"].most_common():
+            add("  killed an ally:  %-30s %d" % (cause, count))
+    else:
+        add("  (no defeats and no ally deaths recorded)")
+
+    seeds = [run.get("run_seed") for run in runs.values()
+             if run.get("run_seed") is not None and not run["abandoned"]]
+    if seeds:
+        add("")
+        add("-- 10. Replayable seeds (load one to reproduce a battle exactly) --")
+        add("  " + ", ".join(str(seed) for seed in seeds))
+
     return "\n".join(lines)
 #endregion
 
@@ -606,6 +883,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("paths", nargs="*", help="spool directories or .jsonl files")
     parser.add_argument("--include-debug", action="store_true",
                         help="include runs touched by the tester debug tools")
+    parser.add_argument("--production-only", action="store_true",
+                        help="exclude developer-build runs (editor playtests)")
     parser.add_argument("--json", dest="json_out", default="",
                         help="also write the report data as JSON to this path")
     args = parser.parse_args(argv)
@@ -620,15 +899,20 @@ def main(argv: list[str]) -> int:
         return 1
 
     runs = index_runs(events)
-    clean = keep_clean(events, runs, args.include_debug)
+    clean = keep_clean(events, runs, args.include_debug, args.production_only)
     decisions = [e for e in clean if e.get("type") == "decision"]
     picks = offer_and_pick(decisions)
     instead = substitution(decisions)
     presence = match_presence(decisions, runs)
     strategy = enemy_strategy(decisions)
     damage = situational_damage(clean)
+    coverage = roster_coverage(decisions, runs)
+    waste = wasted_resources(decisions, clean)
+    cohorts = cohort_pick_rates(decisions, runs)
+    deaths = defeat_causes(runs)
 
-    print(report(clean, runs, picks, instead, presence, strategy, damage, paths))
+    print(report(clean, runs, picks, instead, presence, strategy, damage, paths,
+                 coverage, waste, cohorts, deaths))
 
     if args.json_out:
         payload = {
@@ -638,6 +922,13 @@ def main(argv: list[str]) -> int:
             "win_loss": presence["rows"],
             "stratum_baselines": presence["baselines"],
             "enemy_strategy": strategy,
+            "roster_coverage": coverage,
+            "wasted_resources": waste,
+            "cohort_pick_rates": cohorts,
+            "defeat_causes": {
+                "killed_by": dict(deaths["killed_by"]),
+                "ally_deaths": dict(deaths["ally_deaths"]),
+            },
             "situational_damage": {
                 "by_enemy_skill": {"%s|%s" % k: v for k, v in damage["by_enemy_skill"].items()},
                 "by_strategy": {"%s|%s" % k: v for k, v in damage["by_strategy"].items()},

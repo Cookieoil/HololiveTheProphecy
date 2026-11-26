@@ -619,6 +619,16 @@ func _setup_telemetry_uploader() -> void:
 	telemetry_uploader = TelemetryUploader.new()
 	telemetry_uploader.name = "TelemetryUploader"
 	add_child(telemetry_uploader)
+	# A finished battle is the natural moment to push the outbox: the run file has
+	# just been sealed and promoted, and the player is looking at the result screen.
+	EventBus.game_over.connect(_on_game_over_drain)
+
+
+## Drains the outbox as soon as a battle ends. `game_over` fires after
+## `TelemetryManager.end_run`, so the finished run is already sealed by now.
+func _on_game_over_drain(_victory: bool) -> void:
+	if telemetry_uploader != null:
+		telemetry_uploader.drain()
 
 
 ## The disclosure is shown once per *launch*, not once ever, so a returning player

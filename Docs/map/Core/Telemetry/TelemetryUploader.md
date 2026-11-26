@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/Telemetry/TelemetryUploader.gd` — `class_name TelemetryUploader` extends `Node`
 
-`218` lines · [back to the map](../../../CODEBASE_MAP.md)
+`230` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSONL files HttpBatchSink leaves in user://telemetry/outbox/, POSTs…
 
@@ -33,22 +33,22 @@ State:
 - L47 `_failed: int = 0`
 
 Public API:
-- L63-68 `is_enabled() -> bool` — True when an endpoint is configured and the player agreed to telemetry.
-- L71-74 `endpoint() -> String`
-- L77-78 `anon_key() -> String`
-- L84-91 `drain() -> void` — Starts one drain pass. Safe to call often: a second call while a pass is in flight is ignored, and a disabled uploader does nothing.
-- L190-194 `retry_later() -> void` — Waits, then tries the whole outbox again (a dropped connection is temporary).
+- L64-71 `is_enabled() -> bool` — True when an endpoint is configured and the player agreed to telemetry during this launch (a stored answer from an earlier session is not enough).
+- L74-77 `endpoint() -> String`
+- L80-81 `anon_key() -> String`
+- L87-94 `drain() -> void` — Starts one drain pass. Safe to call often: a second call while a pass is in flight is ignored, and a disabled uploader does nothing.
+- L200-204 `retry_later() -> void` — Waits, then tries the whole outbox again (a dropped connection is temporary).
 
 Private:
 - L51-59 `_ready`
-- L96-104 `_list_outbox`
-- L108-121 `_next_file`
-- L124-149 `_read_batches`
-- L152-164 `_post_current`
-- L167-171 `_archive`
-- L175-179 `_fail_current`
-- L182-186 `_finish`
-- L199-215 `_on_request_completed`
+- L99-107 `_list_outbox`
+- L111-126 `_next_file`
+- L129-154 `_read_batches`
+- L157-169 `_post_current`
+- L174-181 `_archive`
+- L185-189 `_fail_current`
+- L192-196 `_finish`
+- L209-227 `_on_request_completed`
 
 Uses: JsonlFileSink, TelemetryConsent
 Used by: GDTest/TelemetryTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd

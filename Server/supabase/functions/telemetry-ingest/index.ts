@@ -39,6 +39,19 @@ const obj = (value: unknown): Record<string, unknown> =>
     ? value as Record<string, unknown>
     : {};
 
+/** "enemy / skill" (or "status: id") for what ended a defeat; null otherwise. */
+const killedByLabel = (cause: unknown): string | null => {
+  const row = obj(cause);
+  const kind = str(row.kind);
+  if (kind === "enemy_skill") {
+    return `${str(row.source_unit_id) || "?"} / ${str(row.source_skill_id) || "?"}`;
+  }
+  if (kind === "status") {
+    return `status: ${str(row.status_id) || "?"}`;
+  }
+  return null;
+};
+
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json({ error: "POST only" }, 405);
 
@@ -132,6 +145,9 @@ Deno.serve(async (request: Request) => {
       final_wave: ended.final_wave ?? null,
       total_turns: ended.total_turns ?? null,
       total_decisions: ended.total_decisions ?? null,
+      run_seed: started.run_seed ?? null,
+      player_run_number: started.player_run_number ?? null,
+      killed_by: killedByLabel(ended.killed_by),
       started_at: started.t ?? null,
       ended_at: ended.t ?? null,
     };

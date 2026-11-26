@@ -69,6 +69,10 @@ func setup_game(
 	ui = p_ui
 	_apply_config(config)
 
+	# Seed the run before anything shuffles or rolls, so the whole battle can be
+	# replayed from this one number and telemetry can name it.
+	state.set_run_seed(_config_seed(config))
+
 	state.wave_definitions = wave_defs
 	# Initialize allies
 	state.initialize_allies(ally_data)
@@ -107,6 +111,16 @@ func _apply_config(config: Dictionary) -> void:
 ## is coerced instead of assigned straight into a typed int field.
 func _config_int(config: Dictionary, key: String, fallback: int) -> int:
 	return _coerce_int(config.get(key, fallback), fallback)
+
+
+## The run seed: an explicit `seed` in the config (so a specific battle can be
+## replayed), otherwise a fresh random value.
+func _config_seed(config: Dictionary) -> int:
+	if config.has("seed"):
+		return _coerce_int(config.get("seed"), 0)
+	var generator: RandomNumberGenerator = RandomNumberGenerator.new()
+	generator.randomize()
+	return generator.randi()
 
 
 ## Coerces any JSON scalar (float, int, bool, String) into an int.
@@ -939,7 +953,8 @@ func _build_enemy_context(enemy: Unit, intent: EnemyIntent) -> SkillContext:
 	# Enemy targeting is random — inject auto-target callables
 	ctx.pick_n_target = func(_count: int, _filter: Callable) -> Array[Unit]:
 		var target: Array[Unit] = state.get_living_allies()
-		target.shuffle()
+		# Seeded, so the same run seed always targets the same ally.
+		state.shuffle_units(target)
 		var result: Array[Unit] = []
 		
 		for i: int in mini(_count, target.size()):
@@ -1007,7 +1022,7 @@ func _roll_enemy_intents() -> void:
 	for enemy: Unit in state.enemies:
 		if enemy.is_dead:
 			continue
-		var roll: int = DiceRoller.roll(dice_sides)
+		var roll: int = DiceRoller.roll(dice_sides, state.rng)
 		var intent: EnemyIntent = EnemyIntent.new(enemy, roll)
 		current_intents.append(intent)
 
@@ -1220,12 +1235,17 @@ func _log_status_event(unit: Unit, event: Dictionary) -> void:
 			ui.show_message("  %s: %s loses %s HP (HP: %s, %d stack(s))" % [
 				label, unit_name, lost_str, hurt_hp_str, count
 			])
+			# Tell telemetry which status is dealing the hit, so a death by a
+			# damage-over-time tick is attributed to that status rather than
+			# being recorded as a mysterious unknown.
+			telemetry.begin_status_tick(status_id)
 			EventBus.damage_dealt.emit(unit, unit, count, amount)
 			if unit.is_dead:
 				ui.show_message(ColorUtils.colorize("  %s is defeated by %s!" % [
 					unit.data.display_name, status_id.capitalize()
 				], ColorUtils.COLOR_DEAD))
 				EventBus.unit_died.emit(unit)
+			telemetry.end_status_tick()
 		"expired":
 			ui.show_message("  %s: %s expired on %s." % [
 				label, status_id.capitalize(), unit_name
