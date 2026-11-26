@@ -59,11 +59,14 @@ func _ready() -> void:
 	# had the chance to see (or change) their answer.
 
 
-## True when an endpoint is configured and the player agreed to telemetry.
+## True when an endpoint is configured and the player agreed to telemetry during
+## this launch (a stored answer from an earlier session is not enough).
 func is_enabled() -> bool:
 	if DisplayServer.get_name() == "headless":
 		return false
 	if endpoint().is_empty():
+		return false
+	if not TelemetryConsent.answered_this_launch():
 		return false
 	return TelemetryConsent.load_from().is_granted()
 
@@ -113,7 +116,9 @@ func _next_file() -> void:
 		_current_batches = _read_batches(OUTBOX_DIR + "/" + file_name)
 		_current_index = 0
 		if _current_batches.is_empty():
-			_archive(file_name)
+			if not _archive(file_name):
+				_fail_current()
+				return
 			_sent += 1
 			continue
 		_post_current()
@@ -164,11 +169,16 @@ func _post_current() -> void:
 		_fail_current()
 
 
-func _archive(file_name: String) -> void:
+## Moves an uploaded run out of the outbox. Returns false when it could not be
+## moved, so the caller keeps it queued instead of pretending it was delivered.
+func _archive(file_name: String) -> bool:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ARCHIVE_DIR))
 	var from: String = OUTBOX_DIR + "/" + file_name
 	var to: String = ARCHIVE_DIR + "/" + file_name
-	DirAccess.rename_absolute(ProjectSettings.globalize_path(from), ProjectSettings.globalize_path(to))
+	return DirAccess.rename_absolute(
+		ProjectSettings.globalize_path(from),
+		ProjectSettings.globalize_path(to)
+	) == OK
 
 
 ## A failed request keeps the file in the outbox so the next pass retries it.
@@ -208,7 +218,9 @@ func _on_request_completed(
 	# This batch is safely stored; move on to the next one, or archive the file.
 	_current_index += 1
 	if _current_index >= _current_batches.size():
-		_archive(_current_file)
+		if not _archive(_current_file):
+			_fail_current()
+			return
 		_sent += 1
 		_next_file()
 		return

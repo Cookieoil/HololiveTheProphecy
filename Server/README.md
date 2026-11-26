@@ -44,8 +44,29 @@ python Tools/analyze_telemetry.py --include-debug   # include tainted runs
 
 The report prints run outcomes (including abandoned runs), true pick rates for
 skills / Ultimates / cards, the prompt pick rates, the "chose instead" table, the
-win/loss presence + de-biased lift table, the enemy strategy breakdown and the
-situational damage matrix. Standard library only.
+win/loss presence + de-biased lift table, the enemy strategy breakdown, the
+situational damage matrix, plus:
+
+- **Roster coverage** — was each ally ever used at all? (healer and buff sat at
+  **0%** in the first real session while striker was used in every run)
+- **Wasted resources** — turns ended with actions unspent while skills were still
+  playable, and how often `convert` was used at all
+- **Experience cohorts** — the same pick rates for a player's first 3 runs vs run 4
+  onward, which separates "this kit is weak" from "nobody has found it yet"
+- **Defeat causes** — which enemy skill or status actually killed an ally / ended
+  the run
+- **Replayable seeds** — every run records its `run_seed`, so a flagged outlier
+  can be reloaded and reproduced exactly
+
+Standard library only.
+
+```powershell
+python Tools/analyze_telemetry.py --production-only   # real players only
+```
+
+`--production-only` drops developer-build runs (`is_debug_build`), which is the
+default the hosted views use: an editor playtest must never land in a player
+balance number.
 
 ### Stage 2 — hosted ingest (Supabase / PostgreSQL)
 
@@ -56,9 +77,14 @@ Server/supabase/
                                          # v_card_rates, v_chose_instead,
                                          # v_win_loss_presence, v_enemy_strategy,
                                          # v_situational_matchup, v_target_priority,
-                                         # v_run_overview
+                                         # v_roster_coverage, v_wasted_resources,
+                                         # v_cohort_pick_rates, v_defeat_causes,
+                                         # v_replayable_runs, v_run_overview
   functions/telemetry-ingest/index.ts    # validated, idempotent batch ingest
 ```
+
+Every view is **production only**: runs from a developer build or touched by a
+tester tool are excluded.
 
 Deploy:
 
@@ -103,14 +129,16 @@ Every event carries: `type`, `schema_version`, `event_id`, `run_id`,
 
 | type           | carries                                                                    |
 | -------------- | -------------------------------------------------------------------------- |
-| `run_started`  | game/balance version, ally lineup, decklist, config                        |
+| `run_started`  | game/balance version, **run seed**, player run number, ally lineup, decklist, config |
 | `wave_started` | wave index, enemy and ally snapshots                                       |
 | `turn_started` | dice, intents, hand, board, battlefield metrics, **active enemy ids**       |
 | `decision`     | decision type, thinking time, before-context, **offered** (playable skills,
 |                | in-hand card keys, ready Ultimates, legal merges, active enemies), **chosen**, outcome |
 | `turn_ended`   | unused actions/merges, board, the turn's strategy (skills / Ultimates used,
-|                | merges, converts) and **enemy damage rows tagged with the enemy + skill**   |
-| `run_ended`    | victory, `abandoned`, end reason, final wave, survivors, `was_debug_tainted` |
+|                | merges, converts) and **enemy damage rows tagged with the enemy + skill**, plus
+|                | directional totals (`ally_hp_lost` / `enemy_hp_lost`)                       |
+| `run_ended`    | victory, `abandoned`, end reason, final wave, survivors, `was_debug_tainted`,
+|                | **`killed_by`** and every ally death with its cause                         |
 
 Ids are always stable (`unit_id` / `skill_id`), never display names, so renaming
 or localising content cannot break a historical metric. `balance_hash` is a

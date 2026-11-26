@@ -9,6 +9,8 @@ extends GdUnitTestSuite
 ## @version 11/26/2026
 
 const TEMP_ROOT: String = "user://telemetry_test"
+## Fixed run seed for the scripted battles, so every assertion is reproducible.
+const SEED: int = 12345
 var _temp_dir: String = ""
 
 
@@ -36,6 +38,9 @@ class ScriptedUI extends GameUI:
 	## When >= 0, turn `send_debug_on_turn` issues one tester command instead of
 	## its scripted action, so the taint path is exercised through the real loop.
 	var send_debug_on_turn: int = -1
+	## When true the player never acts, so the enemies win: used to exercise the
+	## defeat path and its `killed_by` attribution.
+	var passive: bool = false
 
 	func show_message(_msg: String) -> void:
 		pass
@@ -59,6 +64,8 @@ class ScriptedUI extends GameUI:
 		pass
 
 	func get_player_action(state: GameState) -> Dictionary:
+		if passive:
+			return {"type": "end_turn"}
 		var turn: int = state.turn_number
 		var index: int = _seen.get(turn, 0)
 		_seen[turn] = index + 1
@@ -232,6 +239,9 @@ func _config() -> Dictionary:
 		"decklist": [[3, 8], [5, 7]],
 		"dice_progression": [6, 8, 10, 12],
 		"wave_transition_mode": "full_turn",
+		# A fixed seed keeps every telemetry assertion reproducible, and doubles as
+		# the seed-replay check (the seed is recorded and can be re-loaded).
+		"seed": SEED,
 	}
 #endregion
 
@@ -453,6 +463,8 @@ func test_an_abandoned_run_is_flagged_and_closed_once() -> void:
 	recorder.abandon_run(state)
 	var ended: Array = _events_of(sink, "run_ended")
 	assert_int(ended.size()).is_equal(1)
+	# The partial turn is closed too, so the turns written match the run's turn count.
+	assert_int(_events_of(sink, "turn_ended").size()).is_equal(1)
 	var end_event: Dictionary = ended[0]
 	var abandoned: bool = end_event.get("abandoned", false)
 	var victory: bool = end_event.get("victory", true)
@@ -489,19 +501,30 @@ func test_leaving_the_tree_mid_battle_abandons_the_run() -> void:
 
 
 #region Stage 2 upload plumbing
-## The Stage 2 sink must spool into the upload outbox (never the local-only spool),
-## so TelemetryUploader can find it.
-func test_http_batch_sink_spools_into_the_outbox() -> void:
+## A finished run is promoted from the local spool into the upload outbox only when
+## it is closed, so the uploader can never list a half-written battle, never upload
+## one without its run_ended, and never rename a file that is still open.
+func test_http_batch_sink_promotes_only_after_close() -> void:
 	var sink: HttpBatchSink = HttpBatchSink.new("test-run-%s" % TelemetrySchema.new_id())
-	assert_bool(sink.file_path.begins_with(HttpBatchSink.OUTBOX_DIR)).is_true()
-	sink.write_event({"type": "run_started", "schema_version": 1})
+	assert_bool(sink.file_path.begins_with(JsonlFileSink.DEFAULT_DIR)).is_true()
+	var spool_path: String = sink.file_path
+	sink.write_event({"type": "run_ended", "schema_version": 1})
 	assert_int(sink.event_count).is_equal(1)
+	# Still open, and therefore not yet up for upload.
+	assert_bool(sink.is_open()).is_true()
+	assert_bool(FileAccess.file_exists(spool_path)).is_true()
+
+	sink.close()
+
+	assert_bool(sink.last_promotion_ok).is_true()
+	assert_bool(sink.file_path.begins_with(HttpBatchSink.OUTBOX_DIR)).is_true()
+	assert_bool(FileAccess.file_exists(sink.file_path)).is_true()
+	assert_bool(FileAccess.file_exists(spool_path)).is_false()
 	var events: Array = sink.read_all()
 	assert_int(events.size()).is_equal(1)
-	sink.close()
-	if FileAccess.file_exists(sink.file_path):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(sink.file_path))
-	# Removes the directories only when they are empty, so a real outbox is safe.
+
+	# Leave nothing behind: this test uses the real user:// spool on purpose.
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(sink.file_path))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(HttpBatchSink.OUTBOX_DIR))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://telemetry"))
 
@@ -515,5 +538,135 @@ func test_uploader_is_inert_without_an_endpoint() -> void:
 	auto_free(uploader)
 	assert_bool(uploader.endpoint().is_empty()).is_true()
 	assert_bool(uploader.is_enabled()).is_false()
+#endregion
+
+
+
+#region Seeds, run numbers, direction, defeat cause
+## A run must be reproducible from its seed: the same seed has to give the same deck
+## order and the same rolls, which is what makes a telemetry outlier replayable.
+func test_the_run_seed_reproduces_shuffle_and_rolls() -> void:
+	var first: GameState = GameState.new()
+	first.set_run_seed(4242)
+	first.build_deck()
+	var second: GameState = GameState.new()
+	second.set_run_seed(4242)
+	second.build_deck()
+
+	var first_order: Array[int] = []
+	for card: Card in first.deck:
+		first_order.append(card.base_value)
+	var second_order: Array[int] = []
+	for card: Card in second.deck:
+		second_order.append(card.base_value)
+	assert_array(first_order).is_equal(second_order)
+
+	var first_roll: int = DiceRoller.roll(20, first.rng)
+	var second_roll: int = DiceRoller.roll(20, second.rng)
+	assert_int(first_roll).is_equal(second_roll)
+	assert_int(first.run_seed).is_equal(4242)
+
+
+## The seed is recorded on the run, so a designer can reload any flagged battle.
+func test_the_seed_is_recorded_on_the_run() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var ui: ScriptedUI = ScriptedUI.new()
+	var manager: GameManager = _prepare(sink, ui, "seed")
+	var allies: Array[UnitData] = [_ally_data()]
+
+	await manager.setup_game(allies, _waves(), ui, _config())
+
+	var started: Dictionary = _events_of(sink, "run_started")[0]
+	var seed: int = started.get("run_seed", -1)
+	assert_int(seed).is_equal(SEED)
+	var ended: Dictionary = _events_of(sink, "run_ended")[0]
+	assert_int(ended.get("run_seed", -1)).is_equal(SEED)
+
+
+## How many battles this player has started, so reports can slice new from veteran.
+func test_the_run_number_increments_per_battle() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var consent_path: String = "%s/consent_runs.json" % _temp_dir
+	var player_path: String = "%s/player_runs.txt" % _temp_dir
+	TelemetryConsent.new(consent_path).decide(true)
+	var recorder: TelemetryManager = TelemetryManager.new(consent_path, _temp_dir, player_path, sink)
+	assert_int(recorder.player_run_number).is_equal(0)
+
+	recorder.start_run(GameState.new())
+	# The counter is per player directory, so earlier battles in this suite have
+	# already advanced it: assert the contract (it advances by one), not a constant.
+	var first_number: int = recorder.player_run_number
+	assert_int(first_number).is_greater(0)
+	recorder.start_run(GameState.new())
+	assert_int(recorder.player_run_number).is_equal(first_number + 1)
+	recorder.shutdown()
+
+
+## Turn totals must split by direction, so a report never has to guess which side a
+## "hp_lost" belongs to.
+func test_turn_totals_split_damage_by_direction() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var ui: ScriptedUI = ScriptedUI.new()
+	var manager: GameManager = _prepare(sink, ui, "direction")
+	var allies: Array[UnitData] = [_ally_data()]
+
+	await manager.setup_game(allies, _waves(), ui, _config())
+
+	# Turn 0 ended with the player's own lethal play, before any enemy acted.
+	var player_turn: Dictionary = _turn_ended(sink, 0).get("outcome", {})
+	var dealt: int = player_turn.get("enemy_hp_lost", -1)
+	var taken: int = player_turn.get("ally_hp_lost", -1)
+	assert_int(dealt).is_greater(0)
+	assert_int(taken).is_equal(0)
+
+	# Turn 1 was a merge turn: no player damage, but the enemy hit back.
+	var enemy_turn: Dictionary = _turn_ended(sink, 1).get("outcome", {})
+	var dealt_1: int = enemy_turn.get("enemy_hp_lost", -1)
+	var taken_1: int = enemy_turn.get("ally_hp_lost", -1)
+	assert_int(dealt_1).is_equal(0)
+	assert_int(taken_1).is_greater(0)
+
+
+## A defeat must name the enemy and skill that killed the last ally: the single most
+## useful stat for finding an overtuned encounter.
+func test_a_defeat_records_what_killed_the_run() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var ui: ScriptedUI = ScriptedUI.new()
+	ui.passive = true
+	var manager: GameManager = _prepare(sink, ui, "defeat")
+	var fragile: UnitData = _ally_data()
+	fragile.max_hp = 6
+	var allies: Array[UnitData] = [fragile]
+
+	await manager.setup_game(allies, _waves(), ui, _config())
+
+	var ended: Array = _events_of(sink, "run_ended")
+	assert_int(ended.size()).is_equal(1)
+	var end_event: Dictionary = ended[0]
+	var victory: bool = end_event.get("victory", true)
+	assert_bool(victory).is_false()
+
+	var killed_by: Dictionary = end_event.get("killed_by", {})
+	assert_bool(killed_by.is_empty()).is_false()
+	assert_str(str(killed_by.get("kind", ""))).is_equal("enemy_skill")
+	assert_str(str(killed_by.get("unit_id", ""))).is_equal("striker")
+	assert_bool(str(killed_by.get("source_skill_id", "")).begins_with("normal_enemy_")).is_true()
+	var deaths: Array = end_event.get("ally_deaths", [])
+	assert_int(deaths.size()).is_greater(0)
+
+
+## A victory has nothing that killed the run, so killed_by stays empty.
+func test_a_victory_has_no_killed_by() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var ui: ScriptedUI = ScriptedUI.new()
+	var manager: GameManager = _prepare(sink, ui, "victed")
+	var allies: Array[UnitData] = [_ally_data()]
+
+	await manager.setup_game(allies, _waves(), ui, _config())
+
+	var end_event: Dictionary = _events_of(sink, "run_ended")[0]
+	assert_bool(end_event.get("victory", false)).is_true()
+	var killed_by: Dictionary = end_event.get("killed_by", {})
+	assert_bool(killed_by.is_empty()).is_true()
 #endregion
 

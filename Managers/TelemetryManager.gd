@@ -21,6 +21,9 @@ const SCHEMA_VERSION: int = 1
 
 const DEFAULT_SPOOL_DIR: String = "user://telemetry/spool"
 const PLAYER_ID_PATH: String = "user://telemetry/player_id.txt"
+## Counts the battles this player has started, kept beside the player id, so the
+## reports can slice "still learning" runs from veteran runs without any identity.
+const RUN_COUNT_FILE: String = "run_count.txt"
 
 ## Decision types. Deliberately readable strings, never numeric ordinals.
 const DECISION_PLAY: String = "play_card"
@@ -57,6 +60,8 @@ var game_version: String = ""
 var was_debug_tainted: bool = false
 var total_turns: int = 0
 var total_decisions: int = 0
+## How many battles this player has started, including this one.
+var player_run_number: int = 0
 var start_ms: int = 0
 #endregion
 
@@ -84,6 +89,11 @@ var _merge_result: Dictionary = {}
 ## attributed to the enemy *and* the skill that caused it. Empty when no enemy is
 ## acting (every player-phase damage row is player-caused).
 var _active_enemy: Dictionary = {}
+## The status currently ticking (a damage-over-time round tick), so a death it
+## causes is attributed to that status instead of an unknown source.
+var _active_status: String = ""
+## Every ally death this run with its cause. The last one is what ended a defeat.
+var _ally_deaths: Array = []
 ## Last turn number already closed, so `record_turn_ended` may be called on every
 ## exit path of the loop while still writing exactly one turn_ended per turn.
 var _last_closed_turn: int = -1
@@ -125,6 +135,8 @@ func start_run(state: GameState, version: String = "") -> void:
 	_decision_counter = 0
 	_intents = []
 	_active_enemy = {}
+	_active_status = ""
+	_ally_deaths = []
 	_last_closed_turn = -1
 	_turn_outcome = _new_outcome()
 	_decision_outcome = _new_outcome()
@@ -139,6 +151,7 @@ func start_run(state: GameState, version: String = "") -> void:
 		return
 	run_id = TelemetrySchema.new_id()
 	player_anon_id = _load_or_create_player_id()
+	player_run_number = _load_and_bump_run_number()
 	game_version = version if not version.is_empty() else _project_version()
 	balance_hash = _current_balance_hash()
 	start_ms = Time.get_ticks_msec()
@@ -162,6 +175,8 @@ func start_run(state: GameState, version: String = "") -> void:
 		"game_version": game_version,
 		"balance_hash": balance_hash,
 		"is_debug_build": OS.is_debug_build(),
+		"run_seed": state.run_seed,
+		"player_run_number": player_run_number,
 		"config": {
 			"hand_size": state.max_hand_size,
 			"actions_per_turn": state.actions_per_turn,
@@ -194,9 +209,21 @@ func end_run(victory: bool, reason: String, state: GameState, abandoned: bool = 
 		"total_decisions": total_decisions,
 		"survivors": survivors,
 		"was_debug_tainted": was_debug_tainted,
+		"run_seed": state.run_seed,
+		"killed_by": _killed_by(victory),
+		"ally_deaths": _ally_deaths,
 		"duration_ms": maxi(0, Time.get_ticks_msec() - start_ms),
 	})
 	shutdown()
+
+
+## What ended a defeat: the cause of the last ally death. Empty on a victory,
+## because then nothing killed the run.
+func _killed_by(victory: bool) -> Dictionary:
+	if victory or _ally_deaths.is_empty():
+		return {}
+	var last: Dictionary = _ally_deaths[_ally_deaths.size() - 1]
+	return last
 
 
 ## Closes an unfinished run when the battle scene goes away (a restart or a quit).
@@ -204,6 +231,9 @@ func end_run(victory: bool, reason: String, state: GameState, abandoned: bool = 
 func abandon_run(state: GameState) -> void:
 	if not enabled or state == null:
 		return
+	# Close the partial turn first, so the turns written match the run's turn count
+	# even though the battle never reached the end of the round.
+	record_turn_ended(state)
 	end_run(false, REASON_ABANDONED, state, true)
 
 
@@ -437,6 +467,18 @@ func end_enemy_action() -> void:
 	_active_enemy = {}
 
 
+## Opens the window in which one status ticks, so a death it causes is attributed
+## to that status instead of being recorded as an unknown source.
+func begin_status_tick(status_id: String) -> void:
+	if not enabled:
+		return
+	_active_status = status_id
+
+
+func end_status_tick() -> void:
+	_active_status = ""
+
+
 ## Records an explicit reward / draft choice (card reward, ally recruit, skill
 ## upgrade). Documents the offer so pick rate works for future progression, even
 ## though the current build uses a fixed deck.
@@ -501,6 +543,14 @@ func _new_outcome() -> Dictionary:
 		"shield_gained": 0,
 		"shield_reduced": 0,
 		"healed": 0,
+		# Directional splits of the same events, so a report never has to guess
+		# which side a total belongs to (the keys above stay as combined totals).
+		"ally_hp_lost": 0,
+		"enemy_hp_lost": 0,
+		"ally_shield_gained": 0,
+		"enemy_shield_gained": 0,
+		"ally_shield_lost": 0,
+		"enemy_shield_lost": 0,
 		"cards_drawn": 0,
 		"cards_discarded": 0,
 		"kills": [],
@@ -815,6 +865,34 @@ func _project_version() -> String:
 	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
 
 
+## How many battles this player has started, including this one. Kept beside the
+## player id, so the reports can slice "still learning" runs from veteran runs
+## without collecting anything that identifies the player.
+func _load_and_bump_run_number() -> int:
+	var path: String = _run_count_path()
+	var count: int = 0
+	if FileAccess.file_exists(path):
+		var reader: FileAccess = FileAccess.open(path, FileAccess.READ)
+		if reader != null:
+			var stored: String = reader.get_as_text().strip_edges()
+			reader.close()
+			if stored.is_valid_int():
+				count = stored.to_int()
+	count += 1
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
+	var writer: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if writer != null:
+		writer.store_string(str(count))
+		writer.close()
+	return count
+
+
+## The run counter lives beside the player id, so a test that points the id at a
+## throwaway directory keeps its counter there too.
+func _run_count_path() -> String:
+	return _player_id_path.get_base_dir() + "/" + RUN_COUNT_FILE
+
+
 ## Non-empty when a metric server is configured (see project.godot / TelemetryUploader),
 ## which switches the spool from the local-only directory to the upload outbox.
 func _upload_endpoint() -> String:
@@ -836,6 +914,12 @@ func _int(value: Variant, fallback: int = 0) -> int:
 func _on_damage_dealt(source: Unit, target: Unit, amount: int, hp_lost: int) -> void:
 	_accumulate("damage_dealt", amount)
 	_accumulate("hp_lost", hp_lost)
+	# The direction, so reports can tell "damage the player took" from "damage the
+	# player dealt" without re-deriving it from the per-row detail.
+	if target != null and target.is_ally:
+		_accumulate("ally_hp_lost", hp_lost)
+	elif target != null:
+		_accumulate("enemy_hp_lost", hp_lost)
 	var row: Dictionary = {
 		"source_id": TelemetrySchema.unit_id_of(source),
 		"source_is_ally": source.is_ally if source != null else false,
@@ -860,12 +944,20 @@ func _on_damage_dealt(source: Unit, target: Unit, amount: int, hp_lost: int) -> 
 			enemy_rows.append(enemy_row)
 
 
-func _on_shield_gained(_target: Unit, amount: int) -> void:
+func _on_shield_gained(target: Unit, amount: int) -> void:
 	_accumulate("shield_gained", amount)
+	if target != null and target.is_ally:
+		_accumulate("ally_shield_gained", amount)
+	elif target != null:
+		_accumulate("enemy_shield_gained", amount)
 
 
-func _on_shield_reduced(_target: Unit, amount: int) -> void:
+func _on_shield_reduced(target: Unit, amount: int) -> void:
 	_accumulate("shield_reduced", amount)
+	if target != null and target.is_ally:
+		_accumulate("ally_shield_lost", amount)
+	elif target != null:
+		_accumulate("enemy_shield_lost", amount)
 
 
 func _on_unit_healed(_target: Unit, amount: int) -> void:
@@ -878,6 +970,32 @@ func _on_unit_died(target: Unit) -> void:
 	turn_kills.append(unit_id)
 	var decision_kills: Array = _decision_outcome["kills"]
 	decision_kills.append(unit_id)
+	if target == null or not target.is_ally:
+		return
+	_ally_deaths.append(_death_cause(unit_id))
+
+
+## Why an ally died: the enemy skill that was mid-resolution, the status that was
+## ticking, or unknown. "Which enemy kills players" is the single most useful stat
+## for tuning an overtuned encounter, so it is recorded per death.
+func _death_cause(unit_id: String) -> Dictionary:
+	var cause: Dictionary = {
+		"unit_id": unit_id,
+		"turn_number": _state.turn_number if _state != null else -1,
+	}
+	if not _active_enemy.is_empty():
+		cause["kind"] = "enemy_skill"
+		cause["source_unit_id"] = str(_active_enemy.get("unit_id", ""))
+		cause["source_skill_id"] = str(_active_enemy.get("skill_id", ""))
+		cause["roll"] = _int(_active_enemy.get("effective_value", 0))
+		var condition_met: bool = _active_enemy.get("condition_met", false)
+		cause["condition_met"] = condition_met
+	elif not _active_status.is_empty():
+		cause["kind"] = "status"
+		cause["status_id"] = _active_status
+	else:
+		cause["kind"] = "unknown"
+	return cause
 
 
 func _on_card_drawn(_card: Card) -> void:

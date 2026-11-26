@@ -41,6 +41,13 @@ create table if not exists telemetry_runs (
     final_wave        int,
     total_turns       int,
     total_decisions   int,
+    -- Deterministic seed the battle was generated from, so any run can be replayed.
+    run_seed          bigint,
+    -- Which battle this player was on, so reports can slice new from veteran
+    -- players without collecting anything that identifies them.
+    player_run_number int,
+    -- What ended a defeat, as "enemy / skill" (or "status: id"); null on a win.
+    killed_by         text,
     started_at        timestamptz,
     ended_at          timestamptz
 );
