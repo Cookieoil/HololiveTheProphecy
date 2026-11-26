@@ -457,6 +457,15 @@ func _is_flat_sdr(color: Color) -> bool:
 	return color.r <= 1.0 and color.g <= 1.0 and color.b <= 1.0 and color.a <= 1.0
 
 
+## True when a stylebox draws no border on any edge.
+func _has_no_border(style: StyleBox) -> bool:
+	var flat: StyleBoxFlat = style as StyleBoxFlat
+	if flat == null:
+		return false
+	return flat.border_width_left == 0 and flat.border_width_top == 0 \
+		and flat.border_width_right == 0 and flat.border_width_bottom == 0
+
+
 func test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
@@ -481,21 +490,33 @@ func test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void:
 	assert_bool(_is_flat_sdr(overlay._title.get_theme_color("font_color"))).is_true()
 
 
-## The cutscene keeps no chrome at all: no backdrop rectangle, no panel slab, no
-## subtitle and no divider - only the emblem/title mark and the button.
-func test_the_cutscene_keeps_no_backdrop_panel_subtitle_or_divider() -> void:
+## Removed on request: the full-screen backdrop rectangle, the subtitle and the
+## divider. Only the emblem, the title and the button are left.
+func test_the_cutscene_keeps_no_backdrop_subtitle_or_divider() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
 	await overlay.play_cutscene(true)
 
 	assert_object(overlay.find_child("Backdrop", true, false)).is_null()
-	assert_object(overlay.find_child("Banner", true, false)).is_null()
 	assert_object(overlay.find_child("Subtitle", true, false)).is_null()
 	assert_object(overlay.find_child("Divider", true, false)).is_null()
 
 
-## The requested look: the title laps slightly over the emblem's bottom edge, and
-## the title is the mark's last child so it draws on top of it.
+## Removed on request: the outlines. The slab, the emblem socket and the button all
+## keep their own surface, but none of them draws a border.
+func test_no_piece_of_the_cutscene_draws_an_outline() -> void:
+	var overlay: BattleResultOverlay = _make_overlay()
+
+	await overlay.play_cutscene(true)
+
+	assert_bool(_has_no_border(overlay._banner_style)).is_true()
+	assert_bool(_has_no_border(overlay._emblem_frame.get_theme_stylebox("panel"))).is_true()
+	assert_bool(_has_no_border(overlay._restart_button.get_theme_stylebox("normal"))).is_true()
+	assert_bool(_has_no_border(overlay._restart_button.get_theme_stylebox("hover"))).is_true()
+
+
+## The requested look: the title laps slightly over the emblem, and the title is
+## the mark's last child, so it draws on top of it.
 func test_the_title_laps_over_the_emblem() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
@@ -507,19 +528,15 @@ func test_the_title_laps_over_the_emblem() -> void:
 	assert_bool(last_child == overlay._title).is_true()
 
 
-func test_the_result_screen_blocks_clicks_and_keeps_a_borderless_button() -> void:
+func test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
 	await overlay.play_cutscene(true)
 
-	# No backdrop is drawn, so the root itself has to swallow the clicks.
+	# With no backdrop drawn, the root and the slab have to swallow the clicks.
 	assert_int(overlay.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+	assert_int(overlay._banner.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
 	assert_bool(overlay._restart_button.disabled).is_false()
-	var style: StyleBox = overlay._restart_button.get_theme_stylebox("normal")
-	var flat: StyleBoxFlat = style as StyleBoxFlat
-	assert_object(flat).is_not_null()
-	assert_int(flat.border_width_left).is_equal(0)
-	assert_int(flat.border_width_top).is_equal(0)
 
 
 func test_play_again_asks_the_owner_to_restart() -> void:
