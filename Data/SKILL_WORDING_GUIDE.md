@@ -26,9 +26,11 @@ belongs to `Tools/gen_code_index.gd` alone), so keep authoring notes here.
    **not** `3 (4/2+1)`. `SkillPreviewFormatter` substitutes the final gold number at hover time.
    Scaling rules are explained in plain words, not formulas.
 
-4. **Teach the scaling even when it is zero.**
-   A Shield-slam reads `Deal 9 damage to an enemy (+4 from Shield)` while shielded, and
-   `Deal 5 damage to an enemy (+1 per Shield)` at 0 Shield — so the combo is always discoverable.
+4. **Teach the scaling even when it is zero — at the end of the sentence.**
+   Keep the resolved number glued to the word it modifies and tuck the short rule at the
+   end of the sentence (Style A, Slay the Spire):
+   `Deal 9 damage to an enemy (+4 from Shield)`, and `Deal 5 damage to an enemy (+Shield)`
+   at 0 Shield. Never split the sentence: not `Deal 9 (+4 from Shield) damage ...`.
 
 5. **Clean merge / roll prefixes.**
    `Merged:` for an added effect, `Merged (Instead):` for a replacement, `Roll ≥ X:` for an
@@ -81,13 +83,15 @@ Write the **base formula** in the JSON; the formatter fills in the live number o
 | `[Value + N]` / `[Value - N]` | gold number | fixed offset |
 | `[Value * N]` / `[Value / N]` | gold number | multiplier / divisor |
 | `[Value / N + M]` | gold number | scaled then offset (e.g. `[Value / 2 + 1]`) |
-| `[Value + Shield]` | number `(+X from Shield)` / `(+1 per Shield)` | shield-slam scaling |
-| `[Value + Highest Card / N]` | number `(+X from half your highest card in hand)` | hand-scaling |
-| `[N + Highest Card]` | number `(+X from your highest card in hand)` | fixed + hand scaling |
+| `[Value + Shield]` | number, rule at sentence end: `Deal 9 damage to an enemy (+4 from Shield)` / `(+Shield)` | shield-slam scaling |
+| `[Value + Highest Card / N]` | number, rule at sentence end: `Deal 7 damage to an enemy (+half of highest card in hand)` | hand-scaling |
+| `[N + Highest Card]` | number, rule at sentence end: `Deal 13 damage to an enemy (+highest card in hand)` | fixed + hand scaling |
 
 Rules:
 - Never hand-write a resolved number into the JSON — always use a token so the tooltip stays live.
 - Never write raw algebra (`(4/2+1)`, `(5x2)`) into the JSON; the formatter prints only the total.
+- Scaling hints are placed by `_place_clause_hint` at the **end of the sentence**, so the
+  number never splits from the word it modifies (`Deal 7 damage`, never `Deal 7 (+rule) damage`).
 - During a drag hover the card being dragged is excluded from hand-based tokens, so the preview
   always matches the number the player will actually get.
 
