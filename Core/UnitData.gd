@@ -5,6 +5,10 @@ extends Resource
 ## @author TheGreatJellyfish
 ## @version 5/11/2026
 
+## Stable id from allies.json / enemies.json (e.g. "striker", "boss_enemy").
+## Unlike display_name it is never localised or overridden by a wave, so
+## telemetry and save data can key on it across renames.
+@export var unit_id: String = ""
 @export var display_name: String = ""
 @export var max_hp: int = 10
 @export var portrait: Texture2D = null

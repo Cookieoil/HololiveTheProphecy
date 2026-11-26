@@ -24,23 +24,28 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (45)
+## 1. Game scripts at a glance (51)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
 | [`Core/Card.gd`](map/Core/Card.md) | `Card` | 115 | This class contains the data for the card Card instance is created/destroyed during merging. Rule: Merge consumes two cards and produces one. Total count is shr… |
-| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 516 | Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single source of truth; the workbook (res://Data/xlsx/game_data.xlsx)… |
+| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 544 | Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single source of truth; the workbook (res://Data/xlsx/game_data.xlsx)… |
 | [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 23 | Static utility for dice rolls. Separated for easy mocking/seeding in tests. |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn loop, resolved at step 7. |
 | [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 485 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that return result The presentation layer can react to. |
 | [`Core/GameUI.gd`](map/Core/GameUI.md) | `GameUI` | 106 | Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameManager only talks to this interface. Every input methods are asyn… |
+| [`Core/Telemetry/JsonlFileSink.gd`](map/Core/Telemetry/JsonlFileSink.md) | `JsonlFileSink` | 94 | Stage 1 telemetry sink: appends one JSON object per line to a per-run file under user://telemetry/spool/. Every line is flushed as it is written, so a crash or… |
+| [`Core/Telemetry/TelemetryConsent.gd`](map/Core/Telemetry/TelemetryConsent.md) | `TelemetryConsent` | 173 | Explicit opt-in gate for gameplay telemetry. The player is asked once, on the first launch, whether anonymous gameplay decisions may be collected to help improv… |
+| [`Core/Telemetry/TelemetrySchema.gd`](map/Core/Telemetry/TelemetrySchema.md) | `TelemetrySchema` | 266 | Pure serialisers that turn live game objects into the plain Dictionaries the telemetry spool stores. Every function is static and side-effect free, so the shape… |
+| [`Core/Telemetry/TelemetrySink.gd`](map/Core/Telemetry/TelemetrySink.md) | `TelemetrySink` | 33 | Abstract destination for telemetry events. The recorder never cares where an event goes: Stage 1 writes newline-delimited JSON to the local spool, Stage 2 adds… |
 | [`Core/Unit.gd`](map/Core/Unit.md) | `Unit` | 387 | Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data |
-| [`Core/UnitData.gd`](map/Core/UnitData.md) | `UnitData` | 16 | Template definition for a unit type. |
-| [`Data/gameDatabase.gd`](map/Data/gameDatabase.md) | `GameDatabase` | 27 | Skill definitions keyed by skill_id (effects embedded). |
+| [`Core/UnitData.gd`](map/Core/UnitData.md) | `UnitData` | 20 | Template definition for a unit type. |
+| [`Data/gameDatabase.gd`](map/Data/gameDatabase.md) | `GameDatabase` | 31 | Skill definitions keyed by skill_id (effects embedded). |
 | [`Managers/ColorUtils.gd`](map/Managers/ColorUtils.md) | — | 17 | Color definitions for BBCode |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks, not game logic. depend on these signals — they are fire-and-forg… |
-| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1177 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
-| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 574 | extends GameUI, 2 signal(s), 8 export(s), 41 function(s) |
+| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1211 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
+| [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 669 | Records every decision a player makes, for game design and balancing. It is a passive observer: GameManager (or a test) calls the `begin_*` / `record_*` hooks a… |
+| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 615 | extends GameUI, 2 signal(s), 8 export(s), 44 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 632 | extends Control, 3 signal(s), 28 export(s), 36 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 331 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup and automatic inspection of Unit buff/debuff state. Two dictiona… |
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
@@ -57,11 +62,12 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Scenes/HUD/MoxieOrbUI.gd`](map/Scenes/HUD/MoxieOrbUI.md) | `MoxieOrbUI` | 605 | extends Control, 3 signal(s), 1 export(s), 22 function(s) |
 | [`Scenes/HUD/OutlineGlow.gd`](map/Scenes/HUD/OutlineGlow.md) | `OutlineGlow` | 233 | outer light border with scrolling sub-surface energy texture. |
 | [`Scenes/HUD/SkillTooltipPopup.gd`](map/Scenes/HUD/SkillTooltipPopup.md) | `SkillTooltipPopup` | 272 | extends Control, 8 function(s) |
+| [`Scenes/HUD/TelemetryConsentPopup.gd`](map/Scenes/HUD/TelemetryConsentPopup.md) | `TelemetryConsentPopup` | 177 | First-launch disclosure for gameplay telemetry: a full-screen modal that asks the player whether their decisions may be collected to improve game design. Built… |
 | [`Scenes/HUD/TooltipIconCatalog.gd`](map/Scenes/HUD/TooltipIconCatalog.md) | `TooltipIconCatalog` | 334 | Inline icon registry for tooltip descriptions (SkillTooltipPopup bodies). Two authoring styles are supported, mirroring Legend of Runeterra (icon + colored keyw… |
 | [`Scenes/HUD/TooltipIconEntry.gd`](map/Scenes/HUD/TooltipIconEntry.md) | `TooltipIconEntry` | 133 | One tooltip keyword/icon rule, consumed by TooltipIconCatalog. DisplayMode decides how the keyword is drawn inside a RichTextLabel: ICON_AND_KEYWORD -> [icon] K… |
 | [`Skills/EffectBlock.gd`](map/Skills/EffectBlock.md) | `EffectBlock` | 675 | The universal data skill effect component Use configureble resource for all effect scripts Execution pipeline: Phase 1: Resolve Targets Phase 2: Check Condition… |
 | [`Skills/SkillContext.gd`](map/Skills/SkillContext.md) | `SkillContext` | 48 | Runtime context passed to every EffectBlock.execute(). Three inter-block communication channels: card_value     – mutable skill value (bonus damage adds here) t… |
-| [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 51 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of effects for unmerged and merged resolution |
+| [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 54 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of effects for unmerged and merged resolution |
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager always calls: await effect.execute(ctx). Note: This base shouldn't… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 400 | extends RefCounted, 9 function(s) |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 746 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns plain Dictionaries: no file system access, no rendering, no CLI… |
@@ -74,7 +80,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single source of truth the game reads at runtime, while res://Data/xlsx/ga… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every cell is returned as a String; DataBuilder performs the typed conve… |
 
-## 2. Tests at a glance (16)
+## 2. Tests at a glance (19)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -93,6 +99,9 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the card the player merged *into*, so a merge never teleports the result to the far right. |
 | [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 286 | Locks the top-bar hover tooltips (HudTooltip) and the slab they are drawn on (the tooltip theme in HudTooltipTheme.tres). Every icon in the bar is the same plac… |
 | [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 91 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatalog. |
+| [`GDTest/TelemetryConsentTest.gd`](map/GDTest/TelemetryConsentTest.md) | `TelemetryConsentTest` | 219 | Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Agree" grants and persists; "Decline" persists and never grants -… |
+| [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its stable id from the JSON (unit_id / skill_id), wave overrides ne… |
+| [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 366 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wave / turn / decision / run-ended events, every decision must carr… |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIconEntry). Covers: left-of-keyword icons (LoR style), pure glyphs (Riftbound style), expl… |
 
 ## 3. Global signals (Managers/EventBus.gd)
@@ -100,17 +109,17 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | signal | args | emitted by | listened by |
 | --- | --- | --- | --- |
 | `turn_started` | turn_number: int | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
-| `wave_started` | wave_index: int | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
+| `wave_started` | wave_index: int | Managers/GameManager.gd | Managers/TelemetryManager.gd, Scenes/HUD/BattleOverlayController.gd |
 | `game_over` | victory: bool | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
 | `card_played` | card: Card, ally: Unit | Managers/GameManager.gd | Scenes/Cards/HandBar.gd |
-| `card_drawn` | card: Card | Skills/EffectBlock.gd | Scenes/Cards/HandBar.gd |
-| `card_discarded` | card: Card | Skills/EffectBlock.gd | Scenes/Cards/HandBar.gd |
-| `card_value_changed` | card: Card, old_value: int, new_value: int | GDTest/CardUITest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | GDTest/DebugMenuTest.gd, Scenes/Cards/CardUI.gd |
-| `damage_dealt` | source: Unit, target: Unit, amount: int, hp_lost: int | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
-| `shield_gained` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
-| `shield_reduced` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
-| `unit_healed` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
-| `unit_died` | target: Unit | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
+| `card_drawn` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |
+| `card_discarded` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |
+| `card_value_changed` | card: Card, old_value: int, new_value: int | GDTest/CardUITest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | GDTest/DebugMenuTest.gd, Managers/TelemetryManager.gd, Scenes/Cards/CardUI.gd |
+| `damage_dealt` | source: Unit, target: Unit, amount: int, hp_lost: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `shield_gained` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `shield_reduced` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `unit_healed` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `unit_died` | target: Unit | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
 | `skill_resolved` | caster: Unit, skill_name: String | Managers/GameManager.gd | — |
 | `moxie_changed` | unit: Unit, current: int, maximum: int | Managers/GameManager.gd | — |
 | `ultimate_cast` | caster: Unit, skill_name: String | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
@@ -146,4 +155,4 @@ Top-level keys:
 
 ---
 
-Indexed 61 script(s) (45 game, 16 test), 4 scene(s), 5 data file(s).
+Indexed 70 script(s) (51 game, 19 test), 4 scene(s), 5 data file(s).

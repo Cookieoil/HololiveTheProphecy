@@ -11,6 +11,10 @@ extends Resource
 @export var units: Dictionary = {}
 @export var waves: Array = []
 @export var config: Dictionary = {}
+## Deterministic SHA-256 of the five JSON data files, computed when the database
+## is loaded. Two builds with different balance numbers get different hashes, so
+## telemetry can partition by balance patch without a manual version bump.
+@export var balance_hash: String = ""
 ## Returns the unit template for an id, or null when unknown.
 func get_unit(id: String) -> UnitData:
 	if not units.has(id):

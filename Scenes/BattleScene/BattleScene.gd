@@ -44,6 +44,10 @@ var result_layer: CanvasLayer
 ## shader can grade what is behind it (a CanvasItem screen texture needs a
 ## BackBufferCopy drawn in front of the reader).
 var result_back_buffer: BackBufferCopy
+## First-launch telemetry disclosure, built in code and mounted on its own top
+## layer so it owns the screen until the player answers.
+var consent_popup: TelemetryConsentPopup
+var consent_layer: CanvasLayer
 ## True only while GameManager awaits a player action: the one window in which a
 ## debug tool may be applied, because the turn loop is sitting on the action queue.
 var _awaiting_player_action: bool = false
@@ -72,6 +76,7 @@ func _ready() -> void:
 	hand_bar.merge_requested.connect(_on_merge_requested)
 	_setup_debug_menu()
 	_setup_result_overlay()
+	_setup_consent_gate()
 
 	game_manager = GameManager.new()
 	add_child(game_manager)
@@ -93,6 +98,9 @@ func _ready() -> void:
 	if not turn_dice_progression.is_empty():
 		config["dice_progression"] = turn_dice_progression
 
+	# Ask for telemetry consent before the run starts, so a first-session "Agree"
+	# captures turn 1 and a "Decline" never buffers a single decision.
+	await _run_consent_gate()
 	await game_manager.setup_game(ally_data, db.waves, self, config)
 
 
@@ -570,4 +578,37 @@ func _debug_target_entry(code: String, unit: Unit, slot: int, is_ally: bool) -> 
 		"scope": DebugMenuPopup.Scope.ALLIES if is_ally else DebugMenuPopup.Scope.ENEMIES,
 		"slot": slot,
 	}
+#endregion
+
+
+#region Telemetry Consent
+## Builds the disclosure in code and mounts it on its own top layer (35), above
+## the HUD, the tooltip layer and the debug palette, so nothing can draw over it.
+func _setup_consent_gate() -> void:
+	consent_layer = CanvasLayer.new()
+	consent_layer.name = "ConsentLayer"
+	consent_layer.layer = 35
+	add_child(consent_layer)
+
+	consent_popup = TelemetryConsentPopup.new()
+	consent_popup.name = "ConsentPopup"
+	consent_layer.add_child(consent_popup)
+
+
+## Shows the disclosure only when it still has to be answered and the run is not
+## headless (so automated gates never block on a modal). Callers `await` this to
+## hold the battle until the player decides.
+func _run_consent_gate() -> void:
+	if not _should_prompt_consent():
+		return
+	consent_popup.open()
+	await consent_popup.decided
+
+
+func _should_prompt_consent() -> bool:
+	if DisplayServer.get_name() == "headless":
+		return false
+	if consent_popup == null:
+		return false
+	return consent_popup.consent.needs_prompt()
 #endregion

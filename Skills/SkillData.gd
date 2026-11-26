@@ -12,6 +12,9 @@ enum MergedMode {
 	OR,					# Only merged effect
 }
 
+## Stable id from skills.json (e.g. "striker_1", "buff_ult"). Unlike skill_name
+## it never changes when a skill is renamed, so telemetry can key on it.
+@export var skill_id: String = ""
 @export var skill_name: String = ""
 @export var description: String = ""
 @export var merged_description: String = ""
