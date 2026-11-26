@@ -48,6 +48,9 @@ var result_back_buffer: BackBufferCopy
 ## layer so it owns the screen until the player answers.
 var consent_popup: TelemetryConsentPopup
 var consent_layer: CanvasLayer
+## Background uploader for the telemetry outbox (Stage 2). Does nothing until
+## `telemetry/endpoint` is configured in project settings.
+var telemetry_uploader: TelemetryUploader
 ## True only while GameManager awaits a player action: the one window in which a
 ## debug tool may be applied, because the turn loop is sitting on the action queue.
 var _awaiting_player_action: bool = false
@@ -77,6 +80,7 @@ func _ready() -> void:
 	_setup_debug_menu()
 	_setup_result_overlay()
 	_setup_consent_gate()
+	_setup_telemetry_uploader()
 
 	game_manager = GameManager.new()
 	add_child(game_manager)
@@ -600,9 +604,21 @@ func _setup_consent_gate() -> void:
 ## hold the battle until the player decides.
 func _run_consent_gate() -> void:
 	if not _should_prompt_consent():
+		telemetry_uploader.drain()
 		return
 	consent_popup.open()
-	await consent_popup.decided
+	var agreed: bool = await consent_popup.decided
+	# Only after an explicit "Agree" may the outbox be drained.
+	if agreed:
+		telemetry_uploader.drain()
+
+
+## Builds the background outbox uploader. It is inert (no request at all) until a
+## `telemetry/endpoint` is set, so a local-only build never talks to a network.
+func _setup_telemetry_uploader() -> void:
+	telemetry_uploader = TelemetryUploader.new()
+	telemetry_uploader.name = "TelemetryUploader"
+	add_child(telemetry_uploader)
 
 
 func _should_prompt_consent() -> bool:

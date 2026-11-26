@@ -226,6 +226,7 @@ func _run_game_loop() -> void:
 		# battle right here: the player's own action just won it, so there is no
 		# enemy turn left to resolve and no next turn to start.
 		if state.all_enemies_dead():
+			_close_turn_record()
 			if _try_advance_wave():
 				state.turn_number += 1
 				continue # loop to next turn (enemies skip this turn)
@@ -242,17 +243,19 @@ func _run_game_loop() -> void:
 		
 		# Post-turn checks
 		if state.all_allies_dead():
+			_close_turn_record()
 			await _finish_battle(false, TelemetryManager.REASON_ALL_ALLIES_DEAD)
 			break
 		
 		if state.all_enemies_dead():
 			if not _try_advance_wave():
+				_close_turn_record()
 				await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
 				break
 				
 		# ── Step 8: Clean up (statuses tick once per round) ──
 		_end_of_turn_cleanup()
-		telemetry.record_turn_ended(state)
+		_close_turn_record()
 
 		# A status tick can finish off the last unit, so re-check the outcome.
 		if state.all_allies_dead():
@@ -267,6 +270,21 @@ func _run_game_loop() -> void:
 			break
 
 		state.turn_number += 1
+
+
+## Closes the recorded turn on every way out of the loop, so a lethal last turn
+## (which never reaches Step 8) is still captured. The recorder only writes one
+## turn_ended per turn number, so calling it on each exit path is safe.
+func _close_turn_record() -> void:
+	telemetry.record_turn_ended(state)
+
+
+## A scene reload ("Play Again") or a quit mid-battle never reaches _finish_battle,
+## so close the open run as abandoned rather than losing the whole run - which
+## enemy and wave players quit on is itself a balance signal.
+func _exit_tree() -> void:
+	if game_running and state != null:
+		telemetry.abandon_run(state)
 		
 func _show_instructions() -> void:
 	var msg: String = """
@@ -1017,6 +1035,9 @@ func _resolve_enemy_turns() -> void:
 			ui.show_message(ColorUtils.colorize("> " + intent.skill.merged_description, ColorUtils.COLOR_DEAD))
 			
 		var ctx: SkillContext = _build_enemy_context(intent.enemy, intent)
+		# Open the enemy action window so the damage it deals is attributed to this
+		# enemy and this skill (the situational matchup table).
+		telemetry.begin_enemy_action(intent.enemy, intent.skill, intent)
 		await _resolve_skill(intent.skill, ctx)
 	
 		# Use effective_value, matching EnemyIntent's odd/even skill selection.
@@ -1029,6 +1050,8 @@ func _resolve_enemy_turns() -> void:
 	
 		# Clear value modifiers after this enemy's action resolves
 		intent.enemy.clear_value_modifier()
+		# This enemy's own skill is done: close its damage-attribution window.
+		telemetry.end_enemy_action()
 		if state.all_allies_dead():
 			break
 			
@@ -1038,13 +1061,14 @@ func _resolve_enemy_turns() -> void:
 				EventBus.moxie_changed.emit(intent.enemy, intent.enemy.moxie, intent.enemy.max_moxie)
 			if intent.enemy.can_cast_ultimate:
 				await _execute_enemy_ultimate(intent.enemy)
+				telemetry.end_enemy_action()
 				if state.all_allies_dead():
 					break
 					
 		# Check ally deaths
 		if state.all_allies_dead():
 			break
-			
+
 func _execute_enemy_ultimate(enemy: Unit) -> void:
 	var ult: SkillData = enemy.data.ultimate
 	enemy.consume_moxie()
@@ -1061,7 +1085,8 @@ func _execute_enemy_ultimate(enemy: Unit) -> void:
 	var ctx: SkillContext = _build_enemy_context(enemy, dummy_intent)
 	ctx.card_value = 0
 	ctx.is_merged = false
-	
+
+	telemetry.begin_enemy_action(enemy, ult, null)
 	await _resolve_skill(ult, ctx)
 	await ui.play_unit_ultimate(enemy)
 #endregion

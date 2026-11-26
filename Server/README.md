@@ -5,20 +5,26 @@ Mega Crit's Slay the Spire metric server: collect what **real players** decide,
 not what a bot would, so balancing reflects human behaviour while still being
 immune to selection bias (the "Madness" trap below).
 
-## The three questions this answers
+## The four questions this answers
 
 1. **Pick rate** — when a player is offered a choice (a hand, a merge, a ready
    Ultimate), what do they actually pick? Every decision event carries the full
-   *offered* set, so the denominator is real.
-2. **Win-rate correlation, de-biased** — raw win rate is reported next to an
+   *offered* set — the skills that were legally castable, the cards in hand, the
+   ready Ultimates — so the denominator is real: `picked / offered`.
+2. **What players chose instead** — the opportunity cost. For every offer that was
+   passed over, what did they do: attack with another skill, merge, convert an
+   action, hold the Ultimate, or end the turn with actions left?
+3. **Winning vs losing matches, de-biased** — how often each skill / Ultimate /
+   card tier appeared in a *win* and in a *loss*, next to an
    **advantage-adjusted lift**. Each decision is bucketed by the board state
    *before* it happened (`winning` / `even` / `desperate`), and the lift subtracts
    that bucket's baseline win rate. A play that only ever shows up in
    already-winning games scores near zero instead of looking overpowered — the
    exact trap that made *Madness* look broken in Slay the Spire.
-3. **Situational performance** — how much HP the player loses against a *specific
-   enemy* while a *specific skill* is resolving, unnested from the damage rows
-   each decision records.
+4. **Strategy against specific enemies** — what players do while facing a given
+   enemy and under a threatening intent (action mix, preferred skills, focus
+   fire), and how much HP that enemy's skill actually takes off them, joined with
+   the strategy used that turn.
 
 ## Two stages
 
@@ -36,16 +42,21 @@ python Tools/analyze_telemetry.py path\to\spool --json report.json
 python Tools/analyze_telemetry.py --include-debug   # include tainted runs
 ```
 
-The report prints run outcomes, applied pick rates, offered-alternative counts,
-the de-biased win table and the situational damage matrix. Standard library only.
+The report prints run outcomes (including abandoned runs), true pick rates for
+skills / Ultimates / cards, the prompt pick rates, the "chose instead" table, the
+win/loss presence + de-biased lift table, the enemy strategy breakdown and the
+situational damage matrix. Standard library only.
 
 ### Stage 2 — hosted ingest (Supabase / PostgreSQL)
 
 ```
 Server/supabase/
   migrations/001_telemetry_tables.sql    # tables + indexes + RLS
-  migrations/002_analytics_views.sql     # v_skill_pick_rates, v_debiased_win_correlation,
-                                         # v_situational_matchup, v_run_overview
+  migrations/002_analytics_views.sql     # v_skill_pick_rates, v_ultimate_rates,
+                                         # v_card_rates, v_chose_instead,
+                                         # v_win_loss_presence, v_enemy_strategy,
+                                         # v_situational_matchup, v_target_priority,
+                                         # v_run_overview
   functions/telemetry-ingest/index.ts    # validated, idempotent batch ingest
 ```
 
@@ -59,10 +70,12 @@ supabase functions deploy telemetry-ingest
 supabase functions deploy telemetry-ingest --no-verify-jwt   # if you gate client-side
 ```
 
-Point the client at it (Stage 2 `HttpBatchSink`, config keys
-`telemetry_endpoint` / `telemetry_anon_key`) and it will drain the local
-`outbox/` in batches. Connect Metabase / Grafana / Supabase Studio straight to the
-views above.
+Point the client at it by setting the project settings `telemetry/endpoint` and
+`telemetry/anon_key` (the `[telemetry]` section of `project.godot`). With an
+endpoint set, runs spool into `user://telemetry/outbox/` via
+`Core/Telemetry/HttpBatchSink.gd` and `Core/Telemetry/TelemetryUploader.gd` drains
+them in background batches; with no endpoint the game stays entirely local.
+Connect Metabase / Grafana / Supabase Studio straight to the views above.
 
 ## Privacy
 
@@ -75,6 +88,8 @@ views above.
   No name, email, account, IP address or device identifier is ever collected.
 - Headless runs never collect, and any run touched by the tester debug tools is
   flagged `was_debug_tainted` and excluded from every balance view by default.
+- A run the player restarts or quits mid-battle is closed as `abandoned` and
+  reported separately, so quitting does not look like a loss.
 
 ## Event schema (v1)
 
@@ -86,12 +101,15 @@ Every event carries: `type`, `schema_version`, `event_id`, `run_id`,
 | -------------- | -------------------------------------------------------------------------- |
 | `run_started`  | game/balance version, ally lineup, decklist, config                        |
 | `wave_started` | wave index, enemy and ally snapshots                                       |
-| `turn_started` | dice, intents, hand, board, battlefield metrics                            |
-| `decision`     | decision type, thinking time, before-context, **offered**, **chosen**, outcome |
-| `turn_ended`   | unused actions/merges, board, turn outcome totals                          |
-| `run_ended`    | victory, end reason, final wave, survivors, `was_debug_tainted`             |
+| `turn_started` | dice, intents, hand, board, battlefield metrics, **active enemy ids**       |
+| `decision`     | decision type, thinking time, before-context, **offered** (playable skills,
+|                | in-hand card keys, ready Ultimates, legal merges, active enemies), **chosen**, outcome |
+| `turn_ended`   | unused actions/merges, board, the turn's strategy (skills / Ultimates used,
+|                | merges, converts) and **enemy damage rows tagged with the enemy + skill**   |
+| `run_ended`    | victory, `abandoned`, end reason, final wave, survivors, `was_debug_tainted` |
 
 Ids are always stable (`unit_id` / `skill_id`), never display names, so renaming
 or localising content cannot break a historical metric. `balance_hash` is a
 SHA-256 of the five JSON data files, so metrics split per balance patch with no
 manual version bump.
+

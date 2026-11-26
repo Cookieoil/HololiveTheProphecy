@@ -9,6 +9,10 @@
 -- insert is `ON CONFLICT DO NOTHING`, so a retried batch can never double count.
 --
 -- Apply with: supabase db push   (or psql -f 001_telemetry_tables.sql)
+--
+-- NOTE: these migrations are the schema's single source of truth. If you pushed an
+-- earlier revision, drop the telemetry* tables (or the whole schema) before pushing
+-- again, because the columns below were added rather than altered in place.
 
 create extension if not exists "pgcrypto";
 
@@ -28,6 +32,7 @@ create table if not exists telemetry_runs (
     game_version      text,
     is_debug_build    boolean not null default false,
     was_debug_tainted boolean not null default false,
+    abandoned         boolean not null default false,
     ally_lineup       text[] not null default '{}',
     starting_deck     jsonb,
     config_snapshot   jsonb,
@@ -42,14 +47,16 @@ create table if not exists telemetry_runs (
 
 create index if not exists telemetry_runs_balance_idx on telemetry_runs (balance_hash);
 create index if not exists telemetry_runs_player_idx  on telemetry_runs (player_anon_id);
-create index if not exists telemetry_runs_clean_idx   on telemetry_runs (was_debug_tainted, victory);
+create index if not exists telemetry_runs_clean_idx   on telemetry_runs (was_debug_tainted, abandoned, victory);
 
--- One row per turn.
+-- One row per turn. `turn_started` fills the start columns, `turn_ended` the
+-- strategy + enemy-damage columns; the ingest merges both by (run_id, turn_number).
 create table if not exists telemetry_turns (
     run_id                  uuid not null references telemetry_runs (run_id) on delete cascade,
     turn_number             int  not null,
     wave_index              int,
     dice_sides              int,
+    active_enemy_ids        text[] not null default '{}',
     ally_hp_pct_start       real,
     enemy_hp_pct_start      real,
     incoming_intent_damage  int,
@@ -59,39 +66,66 @@ create table if not exists telemetry_turns (
     damage_dealt            int,
     hp_lost                 int,
     shield_blocked          int,
+    merges_made             int,
+    converts_made           int,
+    player_skills_used      text[] not null default '{}',
+    player_ultimates_cast   text[] not null default '{}',
     intents_json            jsonb,
     hand_start_json         jsonb,
+    enemy_damage_json       jsonb,
     primary key (run_id, turn_number)
 );
 
+create index if not exists telemetry_turns_enemy_idx
+    on telemetry_turns using gin (active_enemy_ids);
+
+
 -- The core human-decision table: one row per player choice, with the board state
 -- *before* it (so a metric can be stratified by who was already winning).
+--
+-- `offered_skills` / `offered_card_keys` / `ready_ultimate_skills` are the honest
+-- pick-rate denominators: the choices that were actually legal at that moment.
+-- `active_enemy_ids` is who the player was facing, so strategy can be sliced by
+-- enemy without joining the board snapshot.
 create table if not exists telemetry_decisions (
-    event_id            uuid primary key,
-    run_id              uuid not null references telemetry_runs (run_id) on delete cascade,
-    turn_number         int,
-    wave_index          int,
-    decision_index      int,
-    decision_type       text not null,
-    thinking_time_ms    int,
-    actor_unit_id       text,
-    skill_id            text,
+    event_id             uuid primary key,
+    run_id               uuid not null references telemetry_runs (run_id) on delete cascade,
+    turn_number          int,
+    wave_index           int,
+    decision_index       int,
+    decision_type        text not null,
+    thinking_time_ms     int,
+    actor_unit_id        text,
+    skill_id             text,
+    card_key             text,
     card_effective_value int,
-    card_is_odd         boolean,
-    card_merge_rank     smallint,
-    ally_hp_pct_before  real,
-    enemy_hp_pct_before real,
-    threat_ratio_before real,
-    offered_options     jsonb,   -- the full hand, legal merges, ready ultimates
-    chosen_payload      jsonb,   -- what was picked and the skill it unlocked
-    immediate_outcome   jsonb,   -- damage / heal / shield / kills / card changes
-    recorded_at         timestamptz not null default now()
+    card_is_odd          boolean,
+    card_merge_rank      smallint,
+    offered_skills       text[] not null default '{}',
+    offered_card_keys    text[] not null default '{}',
+    ready_ultimate_skills text[] not null default '{}',
+    active_enemy_ids     text[] not null default '{}',
+    intent_max_roll      int,
+    intent_condition_met boolean,
+    intent_ult_imminent  boolean,
+    ally_hp_pct_before   real,
+    enemy_hp_pct_before  real,
+    threat_ratio_before  real,
+    offered_options      jsonb,   -- the full hand, legal merges, ready Ultimates
+    chosen_payload       jsonb,   -- what was picked and the skill it unlocked
+    immediate_outcome    jsonb,   -- damage / heal / shield / kills / card changes
+    recorded_at          timestamptz not null default now()
 );
 
 create index if not exists telemetry_decisions_run_idx    on telemetry_decisions (run_id, turn_number, decision_index);
 create index if not exists telemetry_decisions_skill_idx  on telemetry_decisions (skill_id);
+create index if not exists telemetry_decisions_key_idx    on telemetry_decisions (card_key);
 create index if not exists telemetry_decisions_type_idx   on telemetry_decisions (decision_type);
 create index if not exists telemetry_decisions_actor_idx  on telemetry_decisions (actor_unit_id);
+create index if not exists telemetry_decisions_offer_idx
+    on telemetry_decisions using gin (offered_skills);
+create index if not exists telemetry_decisions_enemy_idx
+    on telemetry_decisions using gin (active_enemy_ids);
 
 -- Locked down: the ingest function writes with the service role, players never
 -- read each other's data.

@@ -29,6 +29,7 @@ const DECISION_CONVERT: String = "convert_action"
 const DECISION_ULTIMATE: String = "cast_ultimate"
 const DECISION_END_TURN: String = "end_turn"
 const DECISION_DEBUG: String = "debug_command"
+const DECISION_DRAFT: String = "draft_pick"
 const DECISION_UNKNOWN: String = "unknown"
 
 ## Where a decision ended a battle (mirrors GameManager's call sites).
@@ -36,6 +37,8 @@ const REASON_FINAL_WAVE: String = "final_wave_cleared"
 const REASON_ALL_ALLIES_DEAD: String = "all_allies_dead"
 const REASON_STATUS_TICK: String = "status_tick_defeat"
 const REASON_DEBUG_PREVIEW: String = "debug_preview"
+## The battle never finished: the player restarted or quit mid-run.
+const REASON_ABANDONED: String = "abandoned"
 const REASON_UNKNOWN: String = "unknown"
 #endregion
 
@@ -74,6 +77,13 @@ var _decision_start_ms: int = 0
 var _action_received_ms: int = 0
 var _decision_counter: int = 0
 var _merge_result: Dictionary = {}
+## The enemy currently resolving its skill, so the damage it deals can be
+## attributed to the enemy *and* the skill that caused it. Empty when no enemy is
+## acting (every player-phase damage row is player-caused).
+var _active_enemy: Dictionary = {}
+## Last turn number already closed, so `record_turn_ended` may be called on every
+## exit path of the loop while still writing exactly one turn_ended per turn.
+var _last_closed_turn: int = -1
 #endregion
 
 #region Lifecycle Methods
@@ -110,6 +120,8 @@ func start_run(state: GameState, version: String = "") -> void:
 	total_decisions = 0
 	_decision_counter = 0
 	_intents = []
+	_active_enemy = {}
+	_last_closed_turn = -1
 	_turn_outcome = _new_outcome()
 	_decision_outcome = _new_outcome()
 	enabled = may_collect() and consent.is_granted()
@@ -126,8 +138,14 @@ func start_run(state: GameState, version: String = "") -> void:
 		if not sink.is_open():
 			sink.open(run_id)
 	else:
-		var file_sink: JsonlFileSink = JsonlFileSink.new(_spool_dir, run_id)
-		sink = file_sink
+		# With a metric server configured, spool into the upload outbox so
+		# TelemetryUploader can drain it; otherwise stay fully local.
+		if _upload_endpoint().is_empty():
+			var file_sink: JsonlFileSink = JsonlFileSink.new(_spool_dir, run_id)
+			sink = file_sink
+		else:
+			var batch_sink: HttpBatchSink = HttpBatchSink.new(run_id)
+			sink = batch_sink
 		_owns_sink = true
 	_connect_bus()
 	_emit("run_started", {
@@ -147,8 +165,10 @@ func start_run(state: GameState, version: String = "") -> void:
 	})
 
 
-## Closes a run with its result. Safe to call twice.
-func end_run(victory: bool, reason: String, state: GameState) -> void:
+## Closes a run with its result. Safe to call twice. `abandoned` marks a run the
+## player never finished (restart / quit), so it is reported separately instead of
+## being counted as a loss.
+func end_run(victory: bool, reason: String, state: GameState, abandoned: bool = false) -> void:
 	if not enabled:
 		return
 	var survivors: Array = []
@@ -157,6 +177,7 @@ func end_run(victory: bool, reason: String, state: GameState) -> void:
 			survivors.append(TelemetrySchema.unit_snapshot(unit))
 	_emit("run_ended", {
 		"victory": victory,
+		"abandoned": abandoned,
 		"end_reason": reason if not reason.is_empty() else REASON_UNKNOWN,
 		"final_wave": state.current_wave,
 		"total_turns": maxi(total_turns, state.turn_number + 1),
@@ -166,6 +187,14 @@ func end_run(victory: bool, reason: String, state: GameState) -> void:
 		"duration_ms": maxi(0, Time.get_ticks_msec() - start_ms),
 	})
 	shutdown()
+
+
+## Closes an unfinished run when the battle scene goes away (a restart or a quit).
+## Idempotent: a buttoned-up run has already stopped recording, so this is a no-op.
+func abandon_run(state: GameState) -> void:
+	if not enabled or state == null:
+		return
+	end_run(false, REASON_ABANDONED, state, true)
 
 
 ## Disconnects the bus and closes an owned sink. Always safe to call.
@@ -222,15 +251,23 @@ func record_turn_started(state: GameState, intents: Array[EnemyIntent], dice_sid
 		"discard_count": state.discard.size(),
 		"hand": TelemetrySchema.cards_snapshot(state.hand),
 		"intents": TelemetrySchema.intents_snapshot(intents),
+		"active_enemy_ids": _living_enemy_ids(state),
 		"board": TelemetrySchema.board_snapshot(state),
 		"metrics": TelemetrySchema.battlefield_metrics(state, intents),
 	})
 
 
 ## Records the end of a turn, including everything that happened in it.
+##
+## Idempotent per turn: GameManager closes the turn on every way out of the loop
+## (including a lethal final turn that never reaches Step 8), and only one
+## turn_ended may be written per turn number.
 func record_turn_ended(state: GameState) -> void:
 	if not enabled:
 		return
+	if state.turn_number == _last_closed_turn:
+		return
+	_last_closed_turn = state.turn_number
 	_emit("turn_ended", {
 		"turn_number": state.turn_number,
 		"wave_index": state.current_wave,
@@ -252,6 +289,7 @@ func begin_decision(state: GameState, intents: Array[EnemyIntent]) -> void:
 	_decision_outcome = _new_outcome()
 	_merge_result = {}
 	_decision_sub = []
+	_active_enemy = {} # the player phase never has an enemy mid-skill
 	_decision_start_ms = Time.get_ticks_msec()
 	_action_received_ms = _decision_start_ms
 	_decision_ctx = {
@@ -295,6 +333,7 @@ func end_decision(action: Dictionary, state: GameState) -> void:
 	# as a choice or dilute a pick-rate denominator.
 	if mapped == DECISION_UNKNOWN:
 		return
+	var chosen: Dictionary = _chosen(action_type, action, state)
 	_emit("decision", {
 		"decision_type": mapped,
 		"decision_index": _decision_counter,
@@ -303,15 +342,42 @@ func end_decision(action: Dictionary, state: GameState) -> void:
 		"thinking_time_ms": maxi(0, _action_received_ms - _decision_start_ms),
 		"context": _decision_ctx,
 		"offered": _decision_offered,
-		"chosen": _chosen(action_type, action, state),
+		"chosen": chosen,
 		"sub_prompts": _decision_sub,
 		"outcome": _decision_outcome,
 	})
+	_note_turn_action(mapped, chosen)
 	_decision_counter += 1
 	total_decisions += 1
 	_decision_sub = []
 	_merge_result = {}
 	_decision_outcome = _new_outcome()
+
+
+## Mirrors what the player did into the turn buffer, so `turn_ended` can describe
+## the turn's strategy (which skills / Ultimates were used, merges, converts)
+## without a consumer having to replay every decision event.
+func _note_turn_action(decision_type: String, chosen: Dictionary) -> void:
+	var applied: bool = chosen.get("applied", false)
+	if not applied:
+		return
+	match decision_type:
+		DECISION_PLAY:
+			var skill_id: String = str(chosen.get("skill_id", ""))
+			if not skill_id.is_empty():
+				var skills: Array = _turn_outcome["player_skills_used"]
+				skills.append(skill_id)
+		DECISION_ULTIMATE:
+			var ult_id: String = str(chosen.get("ultimate_skill_id", ""))
+			if not ult_id.is_empty():
+				var ults: Array = _turn_outcome["player_ultimates_cast"]
+				ults.append(ult_id)
+		DECISION_MERGE:
+			_turn_outcome["merges_made"] = _int(_turn_outcome.get("merges_made", 0)) + 1
+		DECISION_CONVERT:
+			_turn_outcome["converts_made"] = _int(_turn_outcome.get("converts_made", 0)) + 1
+		_:
+			pass
 
 
 ## Records a target prompt inside a skill: every candidate and what was picked.
@@ -340,6 +406,63 @@ func note_pick_card(candidates: Array[Card], count: int, picked: Array[Card], th
 		"skipped": picked.size() < count,
 		"thinking_time_ms": maxi(0, thinking_ms),
 	})
+
+
+## Opens the window in which one enemy resolves its skill, so the damage it deals
+## can be attributed to that enemy and that skill (see `_on_damage_dealt`).
+func begin_enemy_action(enemy: Unit, skill: SkillData, intent: EnemyIntent) -> void:
+	if not enabled:
+		return
+	_active_enemy = {
+		"unit_id": TelemetrySchema.unit_id_of(enemy),
+		"slot": enemy.slot_index if enemy != null else -1,
+		"skill_id": TelemetrySchema.skill_id_of(skill),
+		"raw_roll": intent.raw_dice_value if intent != null else 0,
+		"effective_value": intent.effective_value if intent != null else 0,
+		"condition_met": intent.condition_met if intent != null else false,
+	}
+
+
+func end_enemy_action() -> void:
+	_active_enemy = {}
+
+
+## Records an explicit reward / draft choice (card reward, ally recruit, skill
+## upgrade). Documents the offer so pick rate works for future progression, even
+## though the current build uses a fixed deck.
+func record_draft_decision(
+	category: String,
+	offered_ids: Array[String],
+	picked_id: String,
+	state: GameState
+) -> void:
+	if not enabled:
+		return
+	_decision_ctx = {
+		"turn_number": state.turn_number,
+		"wave_index": state.current_wave,
+		"hand": TelemetrySchema.cards_snapshot(state.hand),
+		"board": TelemetrySchema.board_snapshot(state),
+		"metrics": TelemetrySchema.battlefield_metrics(state, _intents),
+	}
+	_decision_offered = {"category": category, "offered_ids": offered_ids}
+	_merge_result = {}
+	_decision_sub = []
+	_active_enemy = {}
+	_emit("decision", {
+		"decision_type": DECISION_DRAFT,
+		"decision_index": _decision_counter,
+		"turn_number": state.turn_number,
+		"wave_index": state.current_wave,
+		"thinking_time_ms": 0,
+		"context": _decision_ctx,
+		"offered": _decision_offered,
+		"chosen": {"applied": not picked_id.is_empty(), "picked_id": picked_id, "category": category},
+		"sub_prompts": [],
+		"outcome": _new_outcome(),
+	})
+	_decision_counter += 1
+	total_decisions += 1
 #endregion
 
 #region Private Methods
@@ -373,6 +496,15 @@ func _new_outcome() -> Dictionary:
 		"kills": [],
 		"card_value_changes": [],
 		"damage_events": [],
+		# Enemy -> ally damage rows, tagged with the enemy and the skill that caused
+		# them. Only the turn buffer ever fills this (enemies act in Step 7).
+		"enemy_damage_events": [],
+		# What the player actually did this turn, so turn_ended can answer "what
+		# strategy was used" without replaying every decision.
+		"player_skills_used": [],
+		"player_ultimates_cast": [],
+		"merges_made": 0,
+		"converts_made": 0,
 	}
 
 
@@ -391,24 +523,102 @@ func _append_damage_event(entry: Dictionary) -> void:
 
 
 ## Everything the player could have done at this instant: the full hand, every
-## legal merge pair, the ready Ultimates and the resources left. This is what
-## makes a "pick rate" metric meaningful - the denominator, not just the choice.
+## legal (ally, card) play, every legal merge pair, the ready Ultimates, the living
+## enemies and how threatening their intents are. This is what makes a "pick rate"
+## metric meaningful - the denominator, not just the choice.
 func _build_offered(state: GameState) -> Dictionary:
+	var living_ally_ids: Array = []
+	var dead_ally_ids: Array = []
 	var ready_ultimates: Array = []
-	var ally_ids: Array = []
+	var ready_ultimate_skills: Array = []
 	for unit: Unit in state.allies:
-		ally_ids.append(TelemetrySchema.unit_id_of(unit))
-		if not unit.is_dead and unit.can_cast_ultimate:
+		if unit.is_dead:
+			dead_ally_ids.append(TelemetrySchema.unit_id_of(unit))
+			continue
+		living_ally_ids.append(TelemetrySchema.unit_id_of(unit))
+		if unit.can_cast_ultimate:
 			ready_ultimates.append(TelemetrySchema.unit_ref(unit))
+			var ult: SkillData = unit.data.ultimate if unit.data != null else null
+			var ult_id: String = TelemetrySchema.skill_id_of(ult)
+			if not ult_id.is_empty() and not ready_ultimate_skills.has(ult_id):
+				ready_ultimate_skills.append(ult_id)
+
+	var card_keys: Array = []
+	for card: Card in state.hand:
+		if card_keys.size() >= TelemetrySchema.MAX_ROWS:
+			break
+		card_keys.append(TelemetrySchema.card_key(card))
+
+	var options: Array = _playable_skill_options(state)
+	var playable_skill_ids: Array = []
+	for option: Dictionary in options:
+		var skill_id: String = str(option.get("skill_id", ""))
+		if not skill_id.is_empty() and not playable_skill_ids.has(skill_id):
+			playable_skill_ids.append(skill_id)
+
+	var active_enemy_ids: Array = []
+	var intent_max_roll: int = 0
+	var intent_condition_met: bool = false
+	var intent_ult_imminent: bool = false
+	for intent: EnemyIntent in _intents:
+		if intent.enemy == null or intent.enemy.is_dead:
+			continue
+		active_enemy_ids.append(TelemetrySchema.unit_id_of(intent.enemy))
+		intent_max_roll = maxi(intent_max_roll, intent.effective_value)
+		if intent.condition_met:
+			intent_condition_met = true
+		if intent.will_trigger_ultimate():
+			intent_ult_imminent = true
+
 	return {
 		"actions_left": state.actions_left,
 		"merges_left": state.merges_left,
 		"hand_size": state.hand.size(),
 		"cards_in_hand": TelemetrySchema.cards_snapshot(state.hand),
-		"ally_ids": ally_ids,
+		"offered_card_keys": card_keys,
+		"living_ally_ids": living_ally_ids,
+		"dead_ally_ids": dead_ally_ids,
+		"playable_skill_ids": playable_skill_ids,
+		"playable_skills": options,
 		"legal_merge_pairs": _legal_merge_pairs(state),
 		"ready_ultimates": ready_ultimates,
+		"ready_ultimate_skills": ready_ultimate_skills,
+		"active_enemy_ids": active_enemy_ids,
+		"intent_max_roll": intent_max_roll,
+		"intent_condition_met": intent_condition_met,
+		"intent_ultimate_imminent": intent_ult_imminent,
 	}
+
+
+## Every (ally, card) play the player could legally make right now. This is the
+## true denominator behind a skill pick rate: "striker_1 was playable on N
+## decisions and was the choice on M of them".
+func _playable_skill_options(state: GameState) -> Array:
+	var options: Array = []
+	for unit: Unit in state.allies:
+		if unit.is_dead or unit.data == null:
+			continue
+		for card: Card in state.hand:
+			if card.costs_action() and state.actions_left <= 0:
+				continue
+			var skill: SkillData = unit.data.skill_1 if card.is_odd() else unit.data.skill_2
+			var skill_id: String = TelemetrySchema.skill_id_of(skill)
+			if skill_id.is_empty():
+				continue
+			if options.size() >= TelemetrySchema.MAX_ROWS:
+				return options
+			options.append({
+				"ally_id": TelemetrySchema.unit_id_of(unit),
+				"slot": unit.slot_index,
+				"skill_id": skill_id,
+				"skill_slot": 1 if card.is_odd() else 2,
+				"card_key": TelemetrySchema.card_key(card),
+				"card_effective_value": card.get_effective_value(),
+				"costs_action": card.costs_action(),
+				"is_merged": card.is_merged,
+				"is_double_merged": card.is_double_merged,
+			})
+	return options
 
 
 func _legal_merge_pairs(state: GameState) -> Array:
@@ -563,6 +773,16 @@ func _ally_lineup(state: GameState) -> Array:
 	return lineup
 
 
+## Ids of the enemies still alive, in board order (used to slice strategy by who
+## the player was actually facing).
+func _living_enemy_ids(state: GameState) -> Array:
+	var ids: Array = []
+	for unit: Unit in state.enemies:
+		if not unit.is_dead:
+			ids.append(TelemetrySchema.unit_id_of(unit))
+	return ids
+
+
 ## The anonymous, stable player id. Generated once, only after consent is given.
 func _load_or_create_player_id() -> String:
 	if FileAccess.file_exists(_player_id_path):
@@ -585,6 +805,12 @@ func _project_version() -> String:
 	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
 
 
+## Non-empty when a metric server is configured (see project.godot / TelemetryUploader),
+## which switches the spool from the local-only directory to the upload outbox.
+func _upload_endpoint() -> String:
+	return str(ProjectSettings.get_setting(TelemetryUploader.ENDPOINT_SETTING, ""))
+
+
 ## The balance fingerprint of the JSON the run is playing, so metrics can be
 ## split per balance patch without a manual version bump.
 func _current_balance_hash() -> String:
@@ -600,14 +826,28 @@ func _int(value: Variant, fallback: int = 0) -> int:
 func _on_damage_dealt(source: Unit, target: Unit, amount: int, hp_lost: int) -> void:
 	_accumulate("damage_dealt", amount)
 	_accumulate("hp_lost", hp_lost)
-	_append_damage_event({
+	var row: Dictionary = {
 		"source_id": TelemetrySchema.unit_id_of(source),
 		"source_is_ally": source.is_ally if source != null else false,
 		"target_id": TelemetrySchema.unit_id_of(target),
 		"target_is_ally": target.is_ally if target != null else false,
 		"damage": amount,
 		"hp_lost": hp_lost,
-	})
+	}
+	_append_damage_event(row)
+	# Enemy -> ally damage is attributed to the enemy *and* the skill it cast, so a
+	# situational matchup ("HP lost to boss_enemy while playing healer_2") can be
+	# answered without replaying the turn.
+	if not _active_enemy.is_empty() and target != null and target.is_ally:
+		var enemy_row: Dictionary = row.duplicate()
+		enemy_row["enemy_unit_id"] = str(_active_enemy.get("unit_id", ""))
+		enemy_row["enemy_skill_id"] = str(_active_enemy.get("skill_id", ""))
+		enemy_row["enemy_roll"] = _int(_active_enemy.get("effective_value", 0))
+		var condition_met: bool = _active_enemy.get("condition_met", false)
+		enemy_row["enemy_condition_met"] = condition_met
+		var enemy_rows: Array = _turn_outcome["enemy_damage_events"]
+		if enemy_rows.size() < TelemetrySchema.MAX_ROWS:
+			enemy_rows.append(enemy_row)
 
 
 func _on_shield_gained(_target: Unit, amount: int) -> void:

@@ -1,19 +1,19 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleScene/BattleScene.gd` — `class_name BattleScene` extends `GameUI`
 
-`615` lines · [back to the map](../../../CODEBASE_MAP.md)
+`631` lines · [back to the map](../../../CODEBASE_MAP.md)
 
-> extends GameUI, 2 signal(s), 8 export(s), 44 function(s)
+> extends GameUI, 2 signal(s), 8 export(s), 45 function(s)
 
 Sections: GameUI Overrides · Helpers & Interaction Handlers · Debug Menu · Battle Result · Telemetry Consent
 
 Signals:
-- L56 `action_decided(action_dict: Dictionary)`
-- L57 `unit_selected_for_target(unit: Unit)`
+- L59 `action_decided(action_dict: Dictionary)`
+- L60 `unit_selected_for_target(unit: Unit)`
 
 Constants:
-- L60 `INTENT_STAGGER: float = 0.08` — seconds between each enemy's intent appearing
-- L64 `ICON_BUTTON_HOVER_TINT: Color = Color(1.25, 1.25, 1.25)` — The two top-bar action buttons draw no button chrome (see BattleScene.tscn), so hovering brightens their icon a little instead, the same cue the ultimate orbs g…
+- L63 `INTENT_STAGGER: float = 0.08` — seconds between each enemy's intent appearing
+- L67 `ICON_BUTTON_HOVER_TINT: Color = Color(1.25, 1.25, 1.25)` — The two top-bar action buttons draw no button chrome (see BattleScene.tscn), so hovering brightens their icon a little instead, the same cue the ultimate orbs g…
 
 Exports:
 - L5 `icon_catalog: CardIconCatalog`
@@ -50,58 +50,60 @@ State:
 - L46 `result_back_buffer: BackBufferCopy` — Copies the rendered battle into the back buffer, so the cutscene's backdrop shader can grade what is behind it (a CanvasItem screen texture needs a BackBufferCo…
 - L49 `consent_popup: TelemetryConsentPopup` — First-launch telemetry disclosure, built in code and mounted on its own top layer so it owns the screen until the player answers.
 - L50 `consent_layer: CanvasLayer`
-- L53 `_awaiting_player_action: bool = false` — True only while GameManager awaits a player action: the one window in which a debug tool may be applied, because the turn loop is sitting on the action queue.
-- L54 `_intent_cache: Dictionary[Unit, Dictionary] = {}`
+- L53 `telemetry_uploader: TelemetryUploader` — Background uploader for the telemetry outbox (Stage 2). Does nothing until `telemetry/endpoint` is configured in project settings.
+- L56 `_awaiting_player_action: bool = false` — True only while GameManager awaits a player action: the one window in which a debug tool may be applied, because the turn loop is sitting on the action queue.
+- L57 `_intent_cache: Dictionary[Unit, Dictionary] = {}`
 
 Public API:
-- L109-111 `on_card_played(card: Card, state: GameState) -> void`
-- L117-119 `on_cards_merged(source_a: Card, source_b: Card, result: Card, state: GameState) -> void` — Two cards in hand were fused into `result`: the hand plays the merge (the two cards drift into each other from where they were dropped, fold closed, and the mer…
-- L124-125 `flash_auto_selected_cards(cards: Array[Card], hostile: bool = false) -> void` — Cards the game selected without asking (auto_top_n / auto_highest) get a short highlight so the player can see what was picked for them. `hostile` is set when a…
-- L130-142 `show_battle_result(victory: bool) -> void` — End of battle: the turn loop is parked, so every player control is locked and the Victory / Defeat cutscene takes over the screen. Awaited by GameManager, so th…
-- L147-152 `play_unit_skill(unit: Unit, skill_index: int, rank: int = 0, lead: float = 1.0) -> void` — `lead` is the fraction of the skill animation to wait for: 1.0 for the player's own actions, lower for chained enemy turns that overlap their animations (see Ga…
-- L155-158 `play_unit_ultimate(unit: Unit) -> void`
-- L160-165 `show_message(msg: String) -> void`
-- L168-175 `show_game_state(state: GameState) -> void`
-- L178-182 `show_hand_and_resources(state: GameState) -> void`
-- L205-217 `show_enemy_intents(intents: Array[EnemyIntent]) -> void`
-- L220-224 `clear_unit_intent(unit: Unit) -> void`
-- L251-270 `get_player_action(state: GameState) -> Dictionary`
-- L273-296 `ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]`
-- L299-327 `ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]`
+- L113-115 `on_card_played(card: Card, state: GameState) -> void`
+- L121-123 `on_cards_merged(source_a: Card, source_b: Card, result: Card, state: GameState) -> void` — Two cards in hand were fused into `result`: the hand plays the merge (the two cards drift into each other from where they were dropped, fold closed, and the mer…
+- L128-129 `flash_auto_selected_cards(cards: Array[Card], hostile: bool = false) -> void` — Cards the game selected without asking (auto_top_n / auto_highest) get a short highlight so the player can see what was picked for them. `hostile` is set when a…
+- L134-146 `show_battle_result(victory: bool) -> void` — End of battle: the turn loop is parked, so every player control is locked and the Victory / Defeat cutscene takes over the screen. Awaited by GameManager, so th…
+- L151-156 `play_unit_skill(unit: Unit, skill_index: int, rank: int = 0, lead: float = 1.0) -> void` — `lead` is the fraction of the skill animation to wait for: 1.0 for the player's own actions, lower for chained enemy turns that overlap their animations (see Ga…
+- L159-162 `play_unit_ultimate(unit: Unit) -> void`
+- L164-169 `show_message(msg: String) -> void`
+- L172-179 `show_game_state(state: GameState) -> void`
+- L182-186 `show_hand_and_resources(state: GameState) -> void`
+- L209-221 `show_enemy_intents(intents: Array[EnemyIntent]) -> void`
+- L224-228 `clear_unit_intent(unit: Unit) -> void`
+- L255-274 `get_player_action(state: GameState) -> Dictionary`
+- L277-300 `ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]`
+- L303-331 `ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]`
 
 Private:
-- L66-104 `_ready`
-- L185-195 `_update_top_bar`
-- L200-202 `_setup_icon_button_hover`
-- L227-231 `_apply_cached_intents`
-- L234-246 `_apply_intent_to`
-- L332-337 `_on_merge_requested`
-- L340-345 `_on_card_dropped_on_unit`
-- L348-349 `_on_unit_clicked`
-- L355-356 `_on_ally_ultimate_requested`
-- L360-369 `_sync_overlay_units`
-- L372-376 `_highlight_target_candidates`
-- L379-386 `_get_unit_ui`
-- L389-420 `_sync_unit_row`
-- L434-435 `_debug_tools_allowed`
-- L438-447 `_unhandled_key_input`
-- L452-463 `_setup_debug_menu`
-- L466-471 `_on_debug_button_pressed`
-- L475-478 `_sync_debug_toggle`
-- L481-483 `_set_debug_interactive`
-- L488-491 `_on_debug_command_requested`
-- L494-500 `_refresh_debug_menu`
-- L503-506 `_debug_state`
-- L510-523 `_debug_snapshot`
-- L529-538 `_build_debug_targets`
-- L548-563 `_setup_result_overlay`
-- L569-571 `_on_restart_requested`
-- L575-580 `_debug_target_entry`
-- L587-595 `_setup_consent_gate`
-- L601-605 `_run_consent_gate`
-- L608-613 `_should_prompt_consent`
+- L69-108 `_ready`
+- L189-199 `_update_top_bar`
+- L204-206 `_setup_icon_button_hover`
+- L231-235 `_apply_cached_intents`
+- L238-250 `_apply_intent_to`
+- L336-341 `_on_merge_requested`
+- L344-349 `_on_card_dropped_on_unit`
+- L352-353 `_on_unit_clicked`
+- L359-360 `_on_ally_ultimate_requested`
+- L364-373 `_sync_overlay_units`
+- L376-380 `_highlight_target_candidates`
+- L383-390 `_get_unit_ui`
+- L393-424 `_sync_unit_row`
+- L438-439 `_debug_tools_allowed`
+- L442-451 `_unhandled_key_input`
+- L456-467 `_setup_debug_menu`
+- L470-475 `_on_debug_button_pressed`
+- L479-482 `_sync_debug_toggle`
+- L485-487 `_set_debug_interactive`
+- L492-495 `_on_debug_command_requested`
+- L498-504 `_refresh_debug_menu`
+- L507-510 `_debug_state`
+- L514-527 `_debug_snapshot`
+- L533-542 `_build_debug_targets`
+- L552-567 `_setup_result_overlay`
+- L573-575 `_on_restart_requested`
+- L579-584 `_debug_target_entry`
+- L591-599 `_setup_consent_gate`
+- L605-613 `_run_consent_gate`
+- L618-621 `_setup_telemetry_uploader`
+- L624-629 `_should_prompt_consent`
 
-Uses: BattleOverlayController, BattleResultOverlay, Card, CardIconCatalog, DataLoader, DebugMenuPopup, EnemyIntent, GameDatabase, GameManager, GameState, GameUI, HandBar, StatusIconCatalog, TelemetryConsentPopup, TooltipIconCatalog, Unit, UnitData, UnitUI
+Uses: BattleOverlayController, BattleResultOverlay, Card, CardIconCatalog, DataLoader, DebugMenuPopup, EnemyIntent, GameDatabase, GameManager, GameState, GameUI, HandBar, StatusIconCatalog, TelemetryConsentPopup, TelemetryUploader, TooltipIconCatalog, Unit, UnitData, UnitUI
 Used by: GDTest/BattleEndTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/BattleUnit/SpinePortrait.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleResultOverlay.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Tools/check_navigation.gd
 Loads: res://Scenes/BattleUnit/UnitUI.tscn, res://Scenes/BattleScene/Assets/icon2.png, res://Scenes/BattleScene/Assets/icon.svg
 
