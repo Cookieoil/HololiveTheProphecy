@@ -687,11 +687,15 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths,
            coverage=None, waste=None, cohorts=None, deaths=None) -> str:
     lines: list[str] = []
     add = lines.append
-    finished = {rid: run for rid, run in runs.items() if not run["abandoned"]}
-    abandoned = [run for run in runs.values() if run["abandoned"]]
+    # Everything the header reports must describe the same set the sections do, or
+    # `--production-only` would claim "1 finished run" above empty tables.
+    visible_ids: set = {str(event.get("run_id", "")) for event in events}
+    visible = {rid: run for rid, run in runs.items() if rid in visible_ids}
+    finished = {rid: run for rid, run in visible.items() if not run["abandoned"]}
+    abandoned = [run for run in visible.values() if run["abandoned"]]
     victories = sum(1 for run in finished.values() if run["victory"])
-    tainted = sum(1 for run in runs.values() if run["tainted"])
-    dev_builds = sum(1 for run in runs.values() if run["dev_build"])
+    tainted = sum(1 for run in visible.values() if run["tainted"])
+    dev_builds = sum(1 for run in visible.values() if run["dev_build"])
     decisions = [e for e in events if e.get("type") == "decision"]
 
     add("=== TELEMETRY BALANCE REPORT ===")
@@ -713,7 +717,7 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths,
     if abandoned:
         waves: Counter = Counter("wave %d" % run["final_wave"] for run in abandoned)
         add("  abandoned at: " + ", ".join("%s x%d" % kv for kv in waves.most_common()))
-    hashes: Counter = Counter(run["balance_hash"][:12] for run in runs.values())
+    hashes: Counter = Counter(run["balance_hash"][:12] for run in visible.values())
     for digest, count in hashes.most_common():
         add("  balance %s  %d run(s)" % (digest or "-", count))
 
@@ -867,7 +871,7 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths,
     else:
         add("  (no defeats and no ally deaths recorded)")
 
-    seeds = [run.get("run_seed") for run in runs.values()
+    seeds = [run.get("run_seed") for run in visible.values()
              if run.get("run_seed") is not None and not run["abandoned"]]
     if seeds:
         add("")
