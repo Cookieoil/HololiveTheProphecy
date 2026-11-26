@@ -51,11 +51,6 @@ func before_test() -> void:
 	_player_path = "%s/player_%s.txt" % [_temp_dir, run]
 
 
-func after_test() -> void:
-	TelemetryManager.enabled_override = TelemetryManager.FORCE_ENGINE
-	TelemetryManager.sink_override = null
-
-
 ## Deletes a directory tree under user:// (tests only).
 func _remove_tree(path: String) -> void:
 	var dir: DirAccess = DirAccess.open(path)
@@ -176,10 +171,8 @@ func test_popup_decline_writes_consent_and_emits_false() -> void:
 
 #region No collection without consent
 func test_declined_consent_records_nothing() -> void:
-	TelemetryManager.enabled_override = TelemetryManager.FORCE_ON
 	var sink: MemorySink = MemorySink.new()
-	TelemetryManager.sink_override = sink
-	var manager: TelemetryManager = TelemetryManager.new(_consent_path, _temp_dir, _player_path)
+	var manager: TelemetryManager = TelemetryManager.new(_consent_path, _temp_dir, _player_path, sink)
 	var state: GameState = _make_state()
 
 	manager.start_run(state)
@@ -199,10 +192,8 @@ func test_declined_consent_records_nothing() -> void:
 
 func test_granted_consent_opens_a_run_and_writes_events() -> void:
 	TelemetryConsent.new(_consent_path).decide(true)
-	TelemetryManager.enabled_override = TelemetryManager.FORCE_ON
 	var sink: MemorySink = MemorySink.new()
-	TelemetryManager.sink_override = sink
-	var manager: TelemetryManager = TelemetryManager.new(_consent_path, _temp_dir, _player_path)
+	var manager: TelemetryManager = TelemetryManager.new(_consent_path, _temp_dir, _player_path, sink)
 	var state: GameState = _make_state()
 
 	manager.start_run(state)
@@ -215,4 +206,19 @@ func test_granted_consent_opens_a_run_and_writes_events() -> void:
 	var first_event: Dictionary = sink.events[0]
 	assert_str(str(first_event.get("type", ""))).is_equal("run_started")
 	manager.shutdown()
+
+
+## Regression lock: a recorder with no test sink must never collect in a headless
+## run, even when the player has agreed - that is what keeps the CI gates, the
+## validator and every test run from writing a spool file.
+func test_a_default_recorder_never_collects_headless() -> void:
+	TelemetryConsent.new(_consent_path).decide(true)
+	var manager: TelemetryManager = TelemetryManager.new(_consent_path, _temp_dir, _player_path)
+	assert_bool(manager.sink_override == null).is_true()
+	assert_bool(manager.may_collect()).is_false()
+	var state: GameState = _make_state()
+	manager.start_run(state)
+	assert_bool(manager.enabled).is_false()
+	assert_bool(manager.run_id.is_empty()).is_true()
+	assert_bool(FileAccess.file_exists(_player_path)).is_false()
 #endregion
