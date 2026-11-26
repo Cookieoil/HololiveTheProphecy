@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/BattleEndTest.gd` — `class_name BattleEndTest` extends `GdUnitTestSuite`
 
-`551` lines · [back to the map](../../CODEBASE_MAP.md)
+`581` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the end of a battle: - a unit that dies never keeps Moxie (or a "ULT READY" glow) on the board - the skill that kills the final boss does not charge the c…
 
@@ -30,12 +30,14 @@ Public API:
 - L397-408 `test_the_orb_releases_its_preview_when_the_unit_dies() -> void`
 - L414-428 `test_the_orb_ring_dims_even_when_the_gauge_never_moved() -> void` — The reported bug: a unit that dies without its gauge moving (it was empty, or its fill never changed) used to keep a fully lit ring, because the ring only re-sy…
 - L431-443 `test_the_orb_ring_follows_the_drained_gauge_to_empty() -> void`
-- L460-471 `test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> void`
-- L474-482 `test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void`
-- L485-492 `test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void`
-- L495-504 `test_play_again_asks_the_owner_to_restart() -> void`
-- L520-536 `test_the_battle_scene_mounts_the_cutscene_above_every_other_layer() -> void` — The battle scene is where the cutscene layer, the overlay and the restart signal meet, so this loads the real scene and checks they are connected.
-- L541-549 `test_the_scene_cutscene_raises_the_banner_and_locks_the_player_controls() -> void` — The scene's cutscene: banner up, player controls locked, placeholder emblem in place. The game loop is parked on the player action, so this never restarts.
+- L460-470 `test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> void`
+- L473-481 `test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void`
+- L486-494 `test_the_cutscene_keeps_no_backdrop_panel_subtitle_or_divider() -> void` — The cutscene keeps no chrome at all: no backdrop rectangle, no panel slab, no subtitle and no divider - only the emblem/title mark and the button.
+- L499-507 `test_the_title_laps_over_the_emblem() -> void` — The requested look: the title laps slightly over the emblem's bottom edge, and the title is the mark's last child so it draws on top of it.
+- L510-522 `test_the_result_screen_blocks_clicks_and_keeps_a_borderless_button() -> void`
+- L525-534 `test_play_again_asks_the_owner_to_restart() -> void`
+- L550-566 `test_the_battle_scene_mounts_the_cutscene_above_every_other_layer() -> void` — The battle scene is where the cutscene layer, the overlay and the restart signal meet, so this loads the real scene and checks they are connected.
+- L571-579 `test_the_scene_cutscene_raises_the_banner_and_locks_the_player_controls() -> void` — The scene's cutscene: banner up, player controls locked, placeholder emblem in place. The game loop is parked on the player action, so this never restarts.
 
 Private:
 - L57-63 `_make_unit_data`
@@ -46,7 +48,7 @@ Private:
 - L390-394 `_make_orb`
 - L448-451 `_make_overlay`
 - L456-457 `_is_flat_sdr`
-- L509-515 `_load_battle_scene`
+- L539-545 `_load_battle_scene`
 
 Uses: BattleResultOverlay, BattleScene, Card, EffectBlock, EnemyIntent, GameManager, GameState, GameUI, MoxieOrbUI, SkillData, SkillEffect, Unit, UnitData
 Used by: —
