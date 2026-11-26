@@ -466,6 +466,16 @@ func _has_no_border(style: StyleBox) -> bool:
 		and flat.border_width_right == 0 and flat.border_width_bottom == 0
 
 
+## Reads one shader uniform off a node's material as a Color.
+func _shader_color(node: CanvasItem, param: String) -> Color:
+	var mat: ShaderMaterial = node.material as ShaderMaterial
+	assert_object(mat).is_not_null()
+	var value: Variant = mat.get_shader_parameter(param)
+	assert_bool(value is Color).is_true()
+	var color: Color = value
+	return color
+
+
 func test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
@@ -473,11 +483,14 @@ func test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> v
 
 	assert_bool(overlay.is_showing()).is_true()
 	assert_str(overlay._title.text).is_equal("VICTORY")
+	assert_str(overlay._title_ghost.text).is_equal("VICTORY")
 	assert_bool(overlay.victory_icon == BattleResultOverlay.PLACEHOLDER_VICTORY_ICON).is_true()
 	assert_bool(overlay._emblem.texture == overlay.victory_icon).is_true()
-	assert_bool(_is_flat_sdr(overlay._backdrop.color)).is_true()
 	assert_bool(_is_flat_sdr(overlay._title.get_theme_color("font_color"))).is_true()
-	assert_bool(_is_flat_sdr(overlay._emblem.self_modulate)).is_true()
+	assert_bool(_is_flat_sdr(_shader_color(overlay._backdrop, "grade_tint"))).is_true()
+	assert_bool(_is_flat_sdr(_shader_color(overlay._emblem, "seal_color"))).is_true()
+	# The reveal ends with the tracking condensed into its locked value.
+	assert_int(overlay._title_variation.spacing_glyph).is_equal(BattleResultOverlay.TITLE_TRACK_TO)
 
 
 func test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void:
@@ -486,6 +499,7 @@ func test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void:
 	await overlay.play_cutscene(false)
 
 	assert_str(overlay._title.text).is_equal("DEFEAT")
+	assert_str(overlay._title_ghost.text).is_equal("DEFEAT")
 	assert_bool(overlay.defeat_icon == BattleResultOverlay.PLACEHOLDER_DEFEAT_ICON).is_true()
 	assert_bool(overlay._emblem.texture == overlay.defeat_icon).is_true()
 	assert_bool(_is_flat_sdr(overlay._title.get_theme_color("font_color"))).is_true()
@@ -493,7 +507,7 @@ func test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void:
 
 ## Removed on request: the small rectangle around the title (the slab) and the
 ## rectangle around the icon (the emblem tile). The backdrop stays, and so do the
-## title, the emblem and the button - and no subtitle or divider between them.
+## emblem, the title and the prompt - and no subtitle or divider between them.
 func test_the_cutscene_boxes_neither_the_title_nor_the_icon() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
@@ -506,19 +520,8 @@ func test_the_cutscene_boxes_neither_the_title_nor_the_icon() -> void:
 	assert_object(overlay.find_child("Divider", true, false)).is_null()
 
 
-## Removed on request: the outlines. The button keeps its own surface but draws no
-## border.
-func test_the_button_draws_no_outline() -> void:
-	var overlay: BattleResultOverlay = _make_overlay()
-
-	await overlay.play_cutscene(true)
-
-	assert_bool(_has_no_border(overlay._restart_button.get_theme_stylebox("normal"))).is_true()
-	assert_bool(_has_no_border(overlay._restart_button.get_theme_stylebox("hover"))).is_true()
-
-
-## The requested look: the title laps slightly over the emblem, and the title is
-## the mark's last child, so it draws on top of it.
+## The requested look: the title laps over the emblem, and the emblem is added
+## before the title stack so it stays behind it.
 func test_the_title_laps_over_the_emblem() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
@@ -526,8 +529,31 @@ func test_the_title_laps_over_the_emblem() -> void:
 
 	var separation: int = overlay._mark.get_theme_constant("separation")
 	assert_bool(separation < 0).is_true()
-	var last_child: Node = overlay._mark.get_child(overlay._mark.get_child_count() - 1)
-	assert_bool(last_child == overlay._title).is_true()
+	assert_bool(overlay._mark.get_child(0) == overlay._emblem).is_true()
+	assert_bool(overlay._mark.get_child(1) == overlay._title_stack).is_true()
+	var emblem: Rect2 = overlay._emblem.get_global_rect()
+	var title: Rect2 = overlay._title.get_global_rect()
+	assert_bool(emblem.end.y > title.position.y).is_true()
+
+
+## The prompt replaced the old filled button: no box, no border, and pressing it
+## asks the scene to restart.
+func test_the_prompt_has_no_box_and_asks_the_owner_to_restart() -> void:
+	var overlay: BattleResultOverlay = _make_overlay()
+	await overlay.play_cutscene(true)
+	var requests: Array[bool] = []
+	overlay.restart_requested.connect(func() -> void: requests.append(true))
+
+	assert_bool(overlay._prompt is BattleResultPrompt).is_true()
+	assert_bool(overlay._prompt.interactive).is_true()
+	var variation: FontVariation = overlay._prompt._label.get_theme_font("font") as FontVariation
+	assert_object(variation).is_not_null()
+	assert_int(variation.spacing_glyph).is_equal(BattleResultPrompt.GLYPH_SPACING)
+
+	overlay._prompt.pressed.emit()
+
+	assert_int(requests.size()).is_equal(1)
+	assert_bool(overlay.is_showing()).is_false()
 
 
 func test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void:
@@ -537,19 +563,7 @@ func test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void:
 
 	assert_int(overlay.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
 	assert_int(overlay._backdrop.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
-	assert_bool(overlay._restart_button.disabled).is_false()
-
-
-func test_play_again_asks_the_owner_to_restart() -> void:
-	var overlay: BattleResultOverlay = _make_overlay()
-	await overlay.play_cutscene(true)
-	var requests: Array[bool] = []
-	overlay.restart_requested.connect(func() -> void: requests.append(true))
-
-	overlay._on_restart_pressed()
-
-	assert_int(requests.size()).is_equal(1)
-	assert_bool(overlay.is_showing()).is_false()
+	assert_int(overlay._prompt.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
 #endregion
 
 
@@ -572,6 +586,10 @@ func test_the_battle_scene_mounts_the_cutscene_above_every_other_layer() -> void
 	# and its overlay already exist by the time add_child() returns.
 	assert_object(scene.result_layer).is_not_null()
 	assert_object(scene.result_overlay).is_not_null()
+	# The backdrop shader grades what is behind it, so the battle has to be copied
+	# into the back buffer first.
+	assert_object(scene.result_back_buffer).is_not_null()
+	assert_bool(scene.result_back_buffer.copy_mode == BackBufferCopy.COPY_MODE_VIEWPORT).is_true()
 	assert_bool(scene.result_overlay.visible).is_false()
 	# Above the HUD (2), the Moxie rails (3), the tooltip layer (10) and debug (20).
 	assert_int(scene.result_layer.layer).is_equal(30)
@@ -582,6 +600,17 @@ func test_the_battle_scene_mounts_the_cutscene_above_every_other_layer() -> void
 			Callable(scene, "_on_restart_requested")
 		)
 	).is_true()
+
+
+## The Moxie rails are combat chrome, so they step off stage before the cutscene
+## takes the screen and leave the battlefield alone behind it.
+func test_the_moxie_rails_retreat_for_the_result() -> void:
+	var scene: BattleScene = _load_battle_scene()
+
+	await scene.battle_overlay.retreat_for_result()
+
+	assert_float(scene.battle_overlay._enemy_rail.modulate.a).is_equal(0.0)
+	assert_float(scene.battle_overlay._ally_rail.modulate.a).is_equal(0.0)
 
 
 ## The scene's cutscene: banner up, player controls locked, placeholder emblem in

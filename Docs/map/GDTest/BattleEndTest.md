@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/BattleEndTest.gd` — `class_name BattleEndTest` extends `GdUnitTestSuite`
 
-`599` lines · [back to the map](../../CODEBASE_MAP.md)
+`628` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the end of a battle: - a unit that dies never keeps Moxie (or a "ULT READY" glow) on the board - the skill that kills the final boss does not charge the c…
 
@@ -30,15 +30,15 @@ Public API:
 - L397-408 `test_the_orb_releases_its_preview_when_the_unit_dies() -> void`
 - L414-428 `test_the_orb_ring_dims_even_when_the_gauge_never_moved() -> void` — The reported bug: a unit that dies without its gauge moving (it was empty, or its fill never changed) used to keep a fully lit ring, because the ring only re-sy…
 - L431-443 `test_the_orb_ring_follows_the_drained_gauge_to_empty() -> void`
-- L469-480 `test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> void`
-- L483-491 `test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void`
-- L497-506 `test_the_cutscene_boxes_neither_the_title_nor_the_icon() -> void` — Removed on request: the small rectangle around the title (the slab) and the rectangle around the icon (the emblem tile). The backdrop stays, and so do the title…
-- L511-517 `test_the_button_draws_no_outline() -> void` — Removed on request: the outlines. The button keeps its own surface but draws no border.
-- L522-530 `test_the_title_laps_over_the_emblem() -> void` — The requested look: the title laps slightly over the emblem, and the title is the mark's last child, so it draws on top of it.
-- L533-540 `test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void`
-- L543-552 `test_play_again_asks_the_owner_to_restart() -> void`
-- L568-584 `test_the_battle_scene_mounts_the_cutscene_above_every_other_layer() -> void` — The battle scene is where the cutscene layer, the overlay and the restart signal meet, so this loads the real scene and checks they are connected.
-- L589-597 `test_the_scene_cutscene_raises_the_banner_and_locks_the_player_controls() -> void` — The scene's cutscene: banner up, player controls locked, placeholder emblem in place. The game loop is parked on the player action, so this never restarts.
+- L479-493 `test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> void`
+- L496-505 `test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void`
+- L511-520 `test_the_cutscene_boxes_neither_the_title_nor_the_icon() -> void` — Removed on request: the small rectangle around the title (the slab) and the rectangle around the icon (the emblem tile). The backdrop stays, and so do the emble…
+- L525-536 `test_the_title_laps_over_the_emblem() -> void` — The requested look: the title laps over the emblem, and the emblem is added before the title stack so it stays behind it.
+- L541-556 `test_the_prompt_has_no_box_and_asks_the_owner_to_restart() -> void` — The prompt replaced the old filled button: no box, no border, and pressing it asks the scene to restart.
+- L559-566 `test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void`
+- L582-602 `test_the_battle_scene_mounts_the_cutscene_above_every_other_layer() -> void` — The battle scene is where the cutscene layer, the overlay and the restart signal meet, so this loads the real scene and checks they are connected.
+- L607-613 `test_the_moxie_rails_retreat_for_the_result() -> void` — The Moxie rails are combat chrome, so they step off stage before the cutscene takes the screen and leave the battlefield alone behind it.
+- L618-626 `test_the_scene_cutscene_raises_the_banner_and_locks_the_player_controls() -> void` — The scene's cutscene: banner up, player controls locked, placeholder emblem in place. The game loop is parked on the player action, so this never restarts.
 
 Private:
 - L57-63 `_make_unit_data`
@@ -50,9 +50,10 @@ Private:
 - L448-451 `_make_overlay`
 - L456-457 `_is_flat_sdr`
 - L461-466 `_has_no_border`
-- L557-563 `_load_battle_scene`
+- L470-476 `_shader_color`
+- L571-577 `_load_battle_scene`
 
-Uses: BattleResultOverlay, BattleScene, Card, EffectBlock, EnemyIntent, GameManager, GameState, GameUI, MoxieOrbUI, SkillData, SkillEffect, Unit, UnitData
+Uses: BattleResultOverlay, BattleResultPrompt, BattleScene, Card, EffectBlock, EnemyIntent, GameManager, GameState, GameUI, MoxieOrbUI, SkillData, SkillEffect, Unit, UnitData
 Used by: —
 Loads: res://Scenes/BattleScene/BattleScene.tscn
 

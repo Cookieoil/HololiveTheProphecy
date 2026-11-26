@@ -6,6 +6,9 @@ extends Node
 
 signal ally_ultimate_requested(ally: Unit)
 
+## How long the rails take to step off stage when the battle ends.
+const RAIL_RETREAT_TIME: float = 0.22
+
 var icon_catalog: CardIconCatalog
 var tooltip_icon_catalog: TooltipIconCatalog
 var game_manager: Node # GameManager
@@ -153,6 +156,21 @@ func clear_enemy_intent_previews() -> void:
 		var uui := _get_valid_unit_ui(u)
 		if uui != null and uui.has_method("set_intent_ult_warning"):
 			uui.set_intent_ult_warning(false)
+
+
+## The battle is over: the rails are combat chrome, so they step off stage and
+## leave the battlefield - and the result cutscene - alone on screen. Awaited by
+## the caller, so the stage is clear before the cutscene starts.
+func retreat_for_result() -> void:
+	if _enemy_rail == null and _ally_rail == null:
+		return
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	for rail: VBoxContainer in [_enemy_rail, _ally_rail]:
+		if rail != null:
+			tween.tween_property(rail, "modulate:a", 0.0, RAIL_RETREAT_TIME) \
+				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	await tween.finished
 
 
 #region Safe Instance Lookup & Auto Row Sync
