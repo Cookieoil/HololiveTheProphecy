@@ -155,6 +155,28 @@ func test_popup_agree_writes_consent_and_emits_true() -> void:
 	assert_bool(TelemetryConsent.new(_consent_path).is_granted()).is_true()
 
 
+## Locks the disclosure wording and the button order the mock-up asks for.
+func test_popup_shows_the_required_wording_and_button_order() -> void:
+	var popup: TelemetryConsentPopup = _make_popup()
+	assert_bool(popup.header_label != null).is_true()
+	assert_str(popup.header_label.text).is_equal("Data Consent")
+	assert_bool(popup.main_label != null).is_true()
+	assert_str(popup.main_label.text).is_equal("We need your consent to collect anonymous gameplay data.")
+	assert_bool(popup.sub_label != null).is_true()
+	assert_str(popup.sub_label.text).is_equal(
+		"Your data will only be used to help improve the game design and balance. "
+		+ "None of your personal data will be recorded.")
+	# Allow is the left button, Decline the right one.
+	assert_str(popup.agree_button.text).is_equal("Allow")
+	assert_str(popup.decline_button.text).is_equal("Decline")
+	assert_bool(popup.buttons_row != null).is_true()
+	assert_int(popup.buttons_row.get_child_count()).is_equal(2)
+	assert_str(str(popup.buttons_row.get_child(0).name)).is_equal("AllowButton")
+	assert_str(str(popup.buttons_row.get_child(1).name)).is_equal("DeclineButton")
+	# The header plate carries the thicker frame.
+	assert_bool(TelemetryConsentPopup.HEADER_BORDER > TelemetryConsentPopup.FRAME_BORDER).is_true()
+
+
 func test_popup_decline_writes_consent_and_emits_false() -> void:
 	var popup: TelemetryConsentPopup = _make_popup()
 	var answers: Array[bool] = []

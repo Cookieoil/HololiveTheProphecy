@@ -24,7 +24,10 @@ enum Status {
 
 #region Constants
 ## Bump this when the disclosure text changes so every player is asked again.
-const CONSENT_VERSION: int = 1
+## v2: the window was restyled and the wording became "Data Consent / We need your
+## consent to collect anonymous gameplay data / ... None of your personal data will
+## be recorded", so an earlier "Allow" no longer reflects what is being agreed to.
+const CONSENT_VERSION: int = 2
 const SCHEMA_VERSION: int = 1
 const DEFAULT_PATH: String = "user://telemetry_consent.json"
 const STATUS_GRANTED: String = "granted"

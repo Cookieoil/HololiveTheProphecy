@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/TelemetryConsentTest.gd` — `class_name TelemetryConsentTest` extends `GdUnitTestSuite`
 
-`225` lines · [back to the map](../../CODEBASE_MAP.md)
+`247` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Agree" grants and persists; "Decline" persists and never grants -…
 
@@ -26,10 +26,11 @@ Public API:
 - L113-117 `test_a_new_disclosure_version_re_asks_everyone() -> void`
 - L120-127 `test_a_corrupt_file_needs_the_prompt_and_never_grants() -> void`
 - L140-155 `test_popup_agree_writes_consent_and_emits_true() -> void`
-- L158-168 `test_popup_decline_writes_consent_and_emits_false() -> void`
-- L173-190 `test_declined_consent_records_nothing() -> void`
-- L193-208 `test_granted_consent_opens_a_run_and_writes_events() -> void`
-- L214-223 `test_a_default_recorder_never_collects_headless() -> void` — Regression lock: a recorder with no test sink must never collect in a headless run, even when the player has agreed - that is what keeps the CI gates, the valid…
+- L159-177 `test_popup_shows_the_required_wording_and_button_order() -> void` — Locks the disclosure wording and the button order the mock-up asks for.
+- L180-190 `test_popup_decline_writes_consent_and_emits_false() -> void`
+- L195-212 `test_declined_consent_records_nothing() -> void`
+- L215-230 `test_granted_consent_opens_a_run_and_writes_events() -> void`
+- L236-245 `test_a_default_recorder_never_collects_headless() -> void` — Regression lock: a recorder with no test sink must never collect in a headless run, even when the player has agreed - that is what keeps the CI gates, the valid…
 
 Private:
 - L55-62 `_remove_tree`
