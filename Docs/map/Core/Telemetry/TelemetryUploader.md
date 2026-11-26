@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/Telemetry/TelemetryUploader.gd` — `class_name TelemetryUploader` extends `Node`
 
-`217` lines · [back to the map](../../../CODEBASE_MAP.md)
+`218` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSONL files HttpBatchSink leaves in user://telemetry/outbox/, POSTs…
 
@@ -33,22 +33,22 @@ State:
 - L47 `_failed: int = 0`
 
 Public API:
-- L62-67 `is_enabled() -> bool` — True when an endpoint is configured and the player agreed to telemetry.
-- L70-73 `endpoint() -> String`
-- L76-77 `anon_key() -> String`
-- L83-90 `drain() -> void` — Starts one drain pass. Safe to call often: a second call while a pass is in flight is ignored, and a disabled uploader does nothing.
-- L189-193 `retry_later() -> void` — Waits, then tries the whole outbox again (a dropped connection is temporary).
+- L63-68 `is_enabled() -> bool` — True when an endpoint is configured and the player agreed to telemetry.
+- L71-74 `endpoint() -> String`
+- L77-78 `anon_key() -> String`
+- L84-91 `drain() -> void` — Starts one drain pass. Safe to call often: a second call while a pass is in flight is ignored, and a disabled uploader does nothing.
+- L190-194 `retry_later() -> void` — Waits, then tries the whole outbox again (a dropped connection is temporary).
 
 Private:
-- L51-58 `_ready`
-- L95-103 `_list_outbox`
-- L107-120 `_next_file`
-- L123-148 `_read_batches`
-- L151-163 `_post_current`
-- L166-170 `_archive`
-- L174-178 `_fail_current`
-- L181-185 `_finish`
-- L198-214 `_on_request_completed`
+- L51-59 `_ready`
+- L96-104 `_list_outbox`
+- L108-121 `_next_file`
+- L124-149 `_read_batches`
+- L152-164 `_post_current`
+- L167-171 `_archive`
+- L175-179 `_fail_current`
+- L182-186 `_finish`
+- L199-215 `_on_request_completed`
 
 Uses: JsonlFileSink, TelemetryConsent
 Used by: GDTest/TelemetryTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd

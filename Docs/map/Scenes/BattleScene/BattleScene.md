@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleScene/BattleScene.gd` — `class_name BattleScene` extends `GameUI`
 
-`631` lines · [back to the map](../../../CODEBASE_MAP.md)
+`635` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > extends GameUI, 2 signal(s), 8 export(s), 45 function(s)
 
@@ -101,7 +101,7 @@ Private:
 - L591-599 `_setup_consent_gate`
 - L605-613 `_run_consent_gate`
 - L618-621 `_setup_telemetry_uploader`
-- L624-629 `_should_prompt_consent`
+- L628-633 `_should_prompt_consent`
 
 Uses: BattleOverlayController, BattleResultOverlay, Card, CardIconCatalog, DataLoader, DebugMenuPopup, EnemyIntent, GameDatabase, GameManager, GameState, GameUI, HandBar, StatusIconCatalog, TelemetryConsentPopup, TelemetryUploader, TooltipIconCatalog, Unit, UnitData, UnitUI
 Used by: GDTest/BattleEndTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/BattleUnit/SpinePortrait.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleResultOverlay.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Tools/check_navigation.gd

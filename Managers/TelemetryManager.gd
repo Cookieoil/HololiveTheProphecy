@@ -63,6 +63,9 @@ var start_ms: int = 0
 #region Private Variables
 var _spool_dir: String = DEFAULT_SPOOL_DIR
 var _player_id_path: String = PLAYER_ID_PATH
+## Where the consent answer is read from (and re-read at `start_run`, because the
+## disclosure can be answered after this recorder was constructed).
+var _consent_path: String = TelemetryConsent.DEFAULT_PATH
 var _state: GameState = null
 var _owns_sink: bool = false
 var _connected: bool = false
@@ -93,6 +96,7 @@ func _init(
 	player_id_path: String = PLAYER_ID_PATH,
 	p_sink_override: TelemetrySink = null
 ) -> void:
+	_consent_path = consent_path
 	consent = TelemetryConsent.load_from(consent_path)
 	_spool_dir = spool_dir
 	_player_id_path = player_id_path
@@ -124,7 +128,13 @@ func start_run(state: GameState, version: String = "") -> void:
 	_last_closed_turn = -1
 	_turn_outcome = _new_outcome()
 	_decision_outcome = _new_outcome()
-	enabled = may_collect() and consent.is_granted()
+	# Re-read the answer from disk: the disclosure is shown once per launch, so the
+	# answer given a moment ago must win over the one loaded when this recorder was
+	# constructed (which may be from a previous session).
+	consent.load_from_path(_consent_path)
+	# And require that answer to come from *this* launch: a stored "granted" left
+	# over from an earlier session must never start collection on its own.
+	enabled = may_collect() and consent.is_granted() and TelemetryConsent.answered_this_launch()
 	if not enabled:
 		return
 	run_id = TelemetrySchema.new_id()

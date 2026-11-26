@@ -41,8 +41,9 @@ const HEADER_PAD_Y: int = 12
 const FRAME_BORDER: int = 2
 const HEADER_BORDER: int = 4
 
-## Near-black stage, so the window is the only thing lit on screen.
-const DIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.88)
+## Stage behind the window: dark enough to read against, light enough that the
+## battle stays visible through it.
+const DIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.6)
 ## Window: black plate with a blue frame, matching the disclosure mock-up.
 const FRAME_BG: Color = Color(0.06, 0.07, 0.10, 1.0)
 const FRAME_BORDER_COLOR: Color = Color(0.24, 0.48, 0.74, 1.0)
@@ -79,6 +80,31 @@ var sub_label: Label
 var buttons_row: HBoxContainer
 #endregion
 
+#region Private Variables
+## True once this launch has asked. Static on purpose: "Play Again" reloads the
+## battle scene in the same process and must not ask a second time, while a fresh
+## process still gets the prompt.
+static var _asked_this_launch: bool = false
+## Slot that lifts the header plate onto the window's top edge.
+var _header_slot: MarginContainer
+var _header_row: CenterContainer
+#endregion
+
+#region Public Methods
+## True while this launch has not asked yet.
+##
+## Deliberately ignores the stored answer: the disclosure is shown once per launch
+## so a returning player still sees what they are allowing, and can change their
+## mind. Only a scene reload within the same launch is skipped.
+static func should_prompt_this_launch() -> bool:
+	return not _asked_this_launch
+
+
+## Test seam: forgets the launch flag so the once-per-launch rule can be checked.
+static func reset_launch_flag() -> void:
+	_asked_this_launch = false
+#endregion
+
 #region Lifecycle Methods
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -97,6 +123,7 @@ func _ready() -> void:
 #region Public Methods
 ## Shows the panel. Callers `await decided` to hold the game until answered.
 func open() -> void:
+	_asked_this_launch = true
 	_sync_to_viewport()
 	visible = true
 	if agree_button != null:
@@ -157,11 +184,17 @@ func _build_ui() -> void:
 
 
 ## The top plate, whose blue border is the thicker one. It is centred in a full
-## width row and shrunk to its text, so it frames the title rather than the window.
-func _build_header() -> CenterContainer:
-	var row: CenterContainer = CenterContainer.new()
-	row.name = "HeaderRow"
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+## width row and shrunk to its text, so it frames the title rather than the window,
+## and it is lifted so its border sits centred on the window's top edge.
+func _build_header() -> MarginContainer:
+	_header_slot = MarginContainer.new()
+	_header_slot.name = "HeaderSlot"
+	_header_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	_header_row = CenterContainer.new()
+	_header_row.name = "HeaderRow"
+	_header_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_header_slot.add_child(_header_row)
 
 	var header: PanelContainer = PanelContainer.new()
 	header.name = "Header"
@@ -172,11 +205,28 @@ func _build_header() -> CenterContainer:
 	header_label.name = "HeaderLabel"
 	header_label.text = HEADER_TEXT
 	header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header_label.add_theme_font_size_override("font_size", HEADER_FONT_SIZE)
 	header_label.add_theme_color_override("font_color", HEADER_COLOR)
 	header.add_child(header_label)
-	row.add_child(header)
-	return row
+	header.resized.connect(_sync_header_lift)
+	_header_row.add_child(header)
+	return _header_slot
+
+
+## Pulls the plate up by half its own height, so half of it sits above the window's
+## top border and half below: the plate ends up centred on the blue frame rather
+## than hanging under it. The build happens after the text is sized, so the height
+## is read back from the plate itself.
+func _sync_header_lift() -> void:
+	if _header_row == null or _header_row.get_child_count() == 0:
+		return
+	var plate: Control = _header_row.get_child(0)
+	var lift: int = -int(roundf(plate.size.y * 0.5))
+	if _header_slot.get_theme_constant("margin_top") == lift:
+		return
+	_header_slot.add_theme_constant_override("margin_top", lift)
+	_header_slot.add_theme_constant_override("margin_bottom", 0)
 
 
 func _build_body() -> MarginContainer:

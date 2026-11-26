@@ -41,6 +41,9 @@ func before() -> void:
 
 
 func after() -> void:
+	# Launch flags are process-wide, so they are cleared between suites.
+	TelemetryConsent.reset_launch_flag()
+	TelemetryConsentPopup.reset_launch_flag()
 	_remove_tree(_temp_dir)
 	_remove_tree(TEMP_ROOT)
 
@@ -212,6 +215,81 @@ func test_popup_fills_and_centres_on_a_canvas_layer() -> void:
 	var screen_center: Vector2 = screen * 0.5
 	assert_bool(absf(frame_center.x - screen_center.x) < 2.0).is_true()
 	assert_bool(absf(frame_center.y - screen_center.y) < 2.0).is_true()
+
+
+## The disclosure is asked once per *launch*, not once ever: a stored "Allow" from a
+## previous session must not silence it, while the reload behind "Play Again" (same
+## launch) must not ask again.
+func test_the_prompt_comes_back_on_a_new_launch() -> void:
+	TelemetryConsentPopup.reset_launch_flag()
+	TelemetryConsent.new(_consent_path).decide(true) # answered in an earlier session
+	assert_bool(TelemetryConsentPopup.should_prompt_this_launch()).is_true()
+
+	var popup: TelemetryConsentPopup = _make_popup()
+	popup.open()
+	assert_bool(TelemetryConsentPopup.should_prompt_this_launch()).is_false()
+
+	TelemetryConsentPopup.reset_launch_flag()
+	assert_bool(TelemetryConsentPopup.should_prompt_this_launch()).is_true()
+
+
+## A battle starts after the disclosure is answered, so the recorder must use the
+## answer given this launch, not the one it loaded when it was constructed.
+func test_a_battle_started_after_the_answer_uses_it() -> void:
+	# Constructed while the stored answer is still "declined".
+	TelemetryConsent.new(_consent_path).decide(false)
+	var sink: MemorySink = MemorySink.new()
+	var recorder: TelemetryManager = TelemetryManager.new(_consent_path, _temp_dir, _player_path, sink)
+	assert_bool(recorder.consent.is_granted()).is_false()
+
+	# The player then allows it, which is what the popup writes.
+	TelemetryConsent.new(_consent_path).decide(true)
+
+	recorder.start_run(_make_state())
+	assert_bool(recorder.enabled).is_true()
+	assert_int(sink.events.size()).is_equal(1)
+	recorder.shutdown()
+
+
+## A stored "granted" left over from an earlier launch must not authorise collection
+## on its own: the player has to be asked in the session that is running.
+func test_a_stale_granted_file_cannot_start_collection() -> void:
+	TelemetryConsent.new(_consent_path).decide(true)
+	assert_bool(TelemetryConsent.answered_this_launch()).is_true()
+	# The next launch starts with no answer yet, even though the file says granted.
+	TelemetryConsent.reset_launch_flag()
+
+	var sink: MemorySink = MemorySink.new()
+	var recorder: TelemetryManager = TelemetryManager.new(_consent_path, _temp_dir, _player_path, sink)
+	var state: GameState = _make_state()
+	recorder.start_run(state)
+
+	assert_bool(recorder.consent.is_granted()).is_true()
+	assert_bool(TelemetryConsent.answered_this_launch()).is_false()
+	assert_bool(recorder.enabled).is_false()
+	assert_int(sink.events.size()).is_equal(0)
+	assert_bool(FileAccess.file_exists(_player_path)).is_false()
+	recorder.shutdown()
+
+
+## The stage must stay translucent enough to see the battle, and the header plate
+## must be lifted so its border sits centred on the window's top edge.
+func test_dim_is_translucent_and_the_header_is_lifted() -> void:
+	assert_bool(TelemetryConsentPopup.DIM_COLOR.a < 0.75).is_true()
+
+	var popup: TelemetryConsentPopup = _make_popup()
+	popup.open()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var slot: Control = popup.get_node_or_null("Center/Frame/Column/HeaderSlot")
+	var plate: Control = popup.get_node_or_null("Center/Frame/Column/HeaderSlot/HeaderRow/Header")
+	assert_bool(slot != null).is_true()
+	assert_bool(plate != null).is_true()
+	assert_bool(plate.size.y > 0.0).is_true()
+	var expected: int = -int(roundf(plate.size.y * 0.5))
+	assert_bool(expected < 0).is_true()
+	assert_int(slot.get_theme_constant("margin_top")).is_equal(expected)
 
 
 func test_popup_decline_writes_consent_and_emits_false() -> void:

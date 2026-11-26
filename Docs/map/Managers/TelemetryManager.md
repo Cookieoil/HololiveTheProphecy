@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Managers/TelemetryManager.gd` — `class_name TelemetryManager` extends `RefCounted`
 
-`903` lines · [back to the map](../../CODEBASE_MAP.md)
+`913` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Records every decision a player makes, for game design and balancing. It is a passive observer: GameManager (or a test) calls the `begin_*` / `record_*` hooks a…
 
@@ -41,76 +41,77 @@ State:
 - L60 `start_ms: int = 0`
 - L64 `_spool_dir: String = DEFAULT_SPOOL_DIR`
 - L65 `_player_id_path: String = PLAYER_ID_PATH`
-- L66 `_state: GameState = null`
-- L67 `_owns_sink: bool = false`
-- L68 `_connected: bool = false`
-- L70 `_intents: Array[EnemyIntent] = []`
-- L71 `_turn_outcome: Dictionary = {}`
-- L72 `_decision_outcome: Dictionary = {}`
-- L73 `_decision_ctx: Dictionary = {}`
-- L74 `_decision_offered: Dictionary = {}`
-- L75 `_decision_sub: Array = []`
-- L76 `_decision_start_ms: int = 0`
-- L77 `_action_received_ms: int = 0`
-- L78 `_decision_counter: int = 0`
-- L79 `_merge_result: Dictionary = {}`
-- L83 `_active_enemy: Dictionary = {}` — The enemy currently resolving its skill, so the damage it deals can be attributed to the enemy *and* the skill that caused it. Empty when no enemy is acting (ev…
-- L86 `_last_closed_turn: int = -1` — Last turn number already closed, so `record_turn_ended` may be called on every exit path of the loop while still writing exactly one turn_ended per turn.
+- L68 `_consent_path: String = TelemetryConsent.DEFAULT_PATH` — Where the consent answer is read from (and re-read at `start_run`, because the disclosure can be answered after this recorder was constructed).
+- L69 `_state: GameState = null`
+- L70 `_owns_sink: bool = false`
+- L71 `_connected: bool = false`
+- L73 `_intents: Array[EnemyIntent] = []`
+- L74 `_turn_outcome: Dictionary = {}`
+- L75 `_decision_outcome: Dictionary = {}`
+- L76 `_decision_ctx: Dictionary = {}`
+- L77 `_decision_offered: Dictionary = {}`
+- L78 `_decision_sub: Array = []`
+- L79 `_decision_start_ms: int = 0`
+- L80 `_action_received_ms: int = 0`
+- L81 `_decision_counter: int = 0`
+- L82 `_merge_result: Dictionary = {}`
+- L86 `_active_enemy: Dictionary = {}` — The enemy currently resolving its skill, so the damage it deals can be attributed to the enemy *and* the skill that caused it. Empty when no enemy is acting (ev…
+- L89 `_last_closed_turn: int = -1` — Last turn number already closed, so `record_turn_ended` may be called on every exit path of the loop while still writing exactly one turn_ended per turn.
 
 Public API:
-- L107-110 `may_collect() -> bool` — True when this recorder may collect at all: a real (non-headless) session, or a test that supplied its own sink. Consent is checked on top in `start_run`.
-- L115-165 `start_run(state: GameState, version: String = "") -> void` — Opens a run: creates the spool file, a player id and the `run_started` event. A no-op (leaving every buffer empty) when collection is not allowed.
-- L171-189 `end_run(victory: bool, reason: String, state: GameState, abandoned: bool = false) -> void` — Closes a run with its result. Safe to call twice. `abandoned` marks a run the player never finished (restart / quit), so it is reported separately instead of be…
-- L194-197 `abandon_run(state: GameState) -> void` — Closes an unfinished run when the battle scene goes away (a restart or a quit). Idempotent: a buttoned-up run has already stopped recording, so this is a no-op.
-- L201-210 `shutdown() -> void` — Disconnects the bus and closes an owned sink. Always safe to call.
-- L214-215 `mark_debug_tainted() -> void` — Flags the whole run as tester-tainted so balance views can ignore it.
-- L219-220 `is_recording() -> bool` — True while a live run is being recorded.
-- L225-233 `record_wave_started(wave_index: int) -> void` — Records a wave spawn (subscribed to EventBus.wave_started).
-- L237-257 `record_turn_started(state: GameState, intents: Array[EnemyIntent], dice_sides: int) -> void` — Records the start-of-turn state: intents rolled, hand dealt, board snapshot.
-- L265-279 `record_turn_ended(state: GameState) -> void` — Records the end of a turn, including everything that happened in it. Idempotent per turn: GameManager closes the turn on every way out of the loop (including a…
-- L285-308 `begin_decision(state: GameState, intents: Array[EnemyIntent]) -> void` — Opens a decision window: snapshots everything the player can see *before* they choose, and starts the thinking clock. Every `record_*` outcome lands in this dec…
-- L313-316 `note_action_received() -> void` — Marks the moment the player's answer arrived (thinking time ends here, before any animation plays).
-- L320-323 `note_merge_result(result: Card) -> void` — Remembers a merge result so the decision can name the card it produced.
-- L327-354 `end_decision(action: Dictionary, state: GameState) -> void` — Closes the decision window and writes the event.
-- L384-394 `note_pick_target(candidates: Array[Unit], count: int, picked: Array[Unit], thinking_ms: int) -> void` — Records a target prompt inside a skill: every candidate and what was picked.
-- L398-408 `note_pick_card(candidates: Array[Card], count: int, picked: Array[Card], thinking_ms: int) -> void` — Records a card prompt inside a skill: every candidate and what was picked.
-- L413-423 `begin_enemy_action(enemy: Unit, skill: SkillData, intent: EnemyIntent) -> void` — Opens the window in which one enemy resolves its skill, so the damage it deals can be attributed to that enemy and that skill (see `_on_damage_dealt`).
-- L426-427 `end_enemy_action() -> void`
-- L433-465 `record_draft_decision(category: String, offered_ids: Array[String], picked_id: String, state: GameState) -> void` — Records an explicit reward / draft choice (card reward, ally recruit, skill upgrade). Documents the offer so pick rate works for future progression, even though…
+- L111-114 `may_collect() -> bool` — True when this recorder may collect at all: a real (non-headless) session, or a test that supplied its own sink. Consent is checked on top in `start_run`.
+- L119-175 `start_run(state: GameState, version: String = "") -> void` — Opens a run: creates the spool file, a player id and the `run_started` event. A no-op (leaving every buffer empty) when collection is not allowed.
+- L181-199 `end_run(victory: bool, reason: String, state: GameState, abandoned: bool = false) -> void` — Closes a run with its result. Safe to call twice. `abandoned` marks a run the player never finished (restart / quit), so it is reported separately instead of be…
+- L204-207 `abandon_run(state: GameState) -> void` — Closes an unfinished run when the battle scene goes away (a restart or a quit). Idempotent: a buttoned-up run has already stopped recording, so this is a no-op.
+- L211-220 `shutdown() -> void` — Disconnects the bus and closes an owned sink. Always safe to call.
+- L224-225 `mark_debug_tainted() -> void` — Flags the whole run as tester-tainted so balance views can ignore it.
+- L229-230 `is_recording() -> bool` — True while a live run is being recorded.
+- L235-243 `record_wave_started(wave_index: int) -> void` — Records a wave spawn (subscribed to EventBus.wave_started).
+- L247-267 `record_turn_started(state: GameState, intents: Array[EnemyIntent], dice_sides: int) -> void` — Records the start-of-turn state: intents rolled, hand dealt, board snapshot.
+- L275-289 `record_turn_ended(state: GameState) -> void` — Records the end of a turn, including everything that happened in it. Idempotent per turn: GameManager closes the turn on every way out of the loop (including a…
+- L295-318 `begin_decision(state: GameState, intents: Array[EnemyIntent]) -> void` — Opens a decision window: snapshots everything the player can see *before* they choose, and starts the thinking clock. Every `record_*` outcome lands in this dec…
+- L323-326 `note_action_received() -> void` — Marks the moment the player's answer arrived (thinking time ends here, before any animation plays).
+- L330-333 `note_merge_result(result: Card) -> void` — Remembers a merge result so the decision can name the card it produced.
+- L337-364 `end_decision(action: Dictionary, state: GameState) -> void` — Closes the decision window and writes the event.
+- L394-404 `note_pick_target(candidates: Array[Unit], count: int, picked: Array[Unit], thinking_ms: int) -> void` — Records a target prompt inside a skill: every candidate and what was picked.
+- L408-418 `note_pick_card(candidates: Array[Card], count: int, picked: Array[Card], thinking_ms: int) -> void` — Records a card prompt inside a skill: every candidate and what was picked.
+- L423-433 `begin_enemy_action(enemy: Unit, skill: SkillData, intent: EnemyIntent) -> void` — Opens the window in which one enemy resolves its skill, so the damage it deals can be attributed to that enemy and that skill (see `_on_damage_dealt`).
+- L436-437 `end_enemy_action() -> void`
+- L443-475 `record_draft_decision(category: String, offered_ids: Array[String], picked_id: String, state: GameState) -> void` — Records an explicit reward / draft choice (card reward, ally recruit, skill upgrade). Documents the offer so pick rate works for future progression, even though…
 
 Private:
-- L90-101 `_init`
-- L360-380 `_note_turn_action`
-- L470-484 `_emit`
-- L487-508 `_new_outcome`
-- L511-513 `_accumulate`
-- L516-522 `_append_damage_event`
-- L529-590 `_build_offered`
-- L596-621 `_playable_skill_options`
-- L624-645 `_legal_merge_pairs`
-- L648-663 `_decision_type`
-- L666-686 `_chosen`
-- L689-703 `_chosen_play`
-- L706-714 `_chosen_merge`
-- L717-726 `_chosen_ultimate`
-- L730-742 `_connect_bus`
-- L745-766 `_disconnect_bus`
-- L769-773 `_ally_lineup`
-- L778-783 `_living_enemy_ids`
-- L787-801 `_load_or_create_player_id`
-- L804-805 `_project_version`
-- L810-811 `_upload_endpoint`
-- L816-818 `_current_balance_hash`
-- L821-822 `_int`
-- L826-850 `_on_damage_dealt`
-- L853-854 `_on_shield_gained`
-- L857-858 `_on_shield_reduced`
-- L861-862 `_on_unit_healed`
-- L865-870 `_on_unit_died`
-- L873-874 `_on_card_drawn`
-- L877-878 `_on_card_discarded`
-- L881-895 `_on_card_value_changed`
-- L898-899 `_on_wave_started`
+- L93-105 `_init`
+- L370-390 `_note_turn_action`
+- L480-494 `_emit`
+- L497-518 `_new_outcome`
+- L521-523 `_accumulate`
+- L526-532 `_append_damage_event`
+- L539-600 `_build_offered`
+- L606-631 `_playable_skill_options`
+- L634-655 `_legal_merge_pairs`
+- L658-673 `_decision_type`
+- L676-696 `_chosen`
+- L699-713 `_chosen_play`
+- L716-724 `_chosen_merge`
+- L727-736 `_chosen_ultimate`
+- L740-752 `_connect_bus`
+- L755-776 `_disconnect_bus`
+- L779-783 `_ally_lineup`
+- L788-793 `_living_enemy_ids`
+- L797-811 `_load_or_create_player_id`
+- L814-815 `_project_version`
+- L820-821 `_upload_endpoint`
+- L826-828 `_current_balance_hash`
+- L831-832 `_int`
+- L836-860 `_on_damage_dealt`
+- L863-864 `_on_shield_gained`
+- L867-868 `_on_shield_reduced`
+- L871-872 `_on_unit_healed`
+- L875-880 `_on_unit_died`
+- L883-884 `_on_card_drawn`
+- L887-888 `_on_card_discarded`
+- L891-905 `_on_card_value_changed`
+- L908-909 `_on_wave_started`
 
 Uses: Card, DataLoader, EnemyIntent, GameDatabase, GameState, HttpBatchSink, JsonlFileSink, SkillData, TelemetryConsent, TelemetrySchema, TelemetrySink, TelemetryUploader, Unit
 Used by: GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, Managers/GameManager.gd
