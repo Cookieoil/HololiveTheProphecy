@@ -245,6 +245,30 @@ func test_unit_tool_without_a_target_does_nothing() -> void:
 
 	_find_button(popup, "Kill").pressed.emit()
 	assert_int(emitted.size()).is_equal(0)
+
+
+## The result cutscene is otherwise only reachable by actually winning or losing,
+## so the panel offers a preview tool for each outcome.
+func test_result_preview_tools_emit_their_commands() -> void:
+	var popup: DebugMenuPopup = DebugMenuPopup.new()
+	add_child(popup)
+	popup.refresh(_snapshot(), _targets())
+
+	var commands: Array[String] = []
+	popup.debug_command_requested.connect(
+		func(command: String, _args: Dictionary) -> void: commands.append(command)
+	)
+
+	var victory_button: Button = _find_button(popup, "Preview victory")
+	var defeat_button: Button = _find_button(popup, "Preview defeat")
+	assert_object(victory_button).is_not_null()
+	assert_object(defeat_button).is_not_null()
+	victory_button.pressed.emit()
+	defeat_button.pressed.emit()
+
+	assert_int(commands.size()).is_equal(2)
+	assert_str(commands[0]).is_equal(DebugMenuPopup.CMD_SHOW_VICTORY)
+	assert_str(commands[1]).is_equal(DebugMenuPopup.CMD_SHOW_DEFEAT)
 #endregion
 
 

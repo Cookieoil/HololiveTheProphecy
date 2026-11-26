@@ -386,6 +386,65 @@ func test_the_loop_ends_the_battle_as_soon_as_the_final_wave_dies() -> void:
 #endregion
 
 
+#region Debug result preview
+## The tools reset the shared build gate, so a leftover forced answer from another
+## suite can never hide the debug commands here.
+func before_test() -> void:
+	GameManager.debug_build_override = GameManager.DEBUG_BUILD_ENGINE
+
+
+func after_test() -> void:
+	GameManager.debug_build_override = GameManager.DEBUG_BUILD_ENGINE
+
+
+## The Debug menu's preview tools are the only way to see the cutscene without
+## actually winning, so they run through the normal player-action queue and leave
+## the battle through the same exit a real ending uses.
+func test_the_debug_preview_raises_the_victory_cutscene() -> void:
+	var manager: GameManager = _make_manager()
+	_prepare_wave(manager, 1, 0)
+	var recorder: RecordingUI = _recorder(manager)
+	recorder.scripted_actions = [{"type": "debug", "command": "show_victory", "args": {}}]
+
+	await manager._player_action_phase()
+
+	assert_bool(manager.game_running).is_false()
+	assert_int(recorder.battle_results.size()).is_equal(1)
+	assert_bool(recorder.battle_results[0]).is_true()
+	# A preview never touches the board: the boss is still standing.
+	assert_bool(manager.state.all_enemies_dead()).is_false()
+
+
+func test_the_debug_preview_raises_the_defeat_cutscene() -> void:
+	var manager: GameManager = _make_manager()
+	_prepare_wave(manager, 1, 0)
+	var recorder: RecordingUI = _recorder(manager)
+	recorder.scripted_actions = [{"type": "debug", "command": "show_defeat", "args": {}}]
+
+	await manager._player_action_phase()
+
+	assert_bool(manager.game_running).is_false()
+	assert_int(recorder.battle_results.size()).is_equal(1)
+	assert_bool(recorder.battle_results[0]).is_false()
+
+
+## A preview taken inside the running loop stops the battle before the enemy turn.
+func test_the_loop_stops_after_a_debug_preview() -> void:
+	var manager: GameManager = _make_manager()
+	_prepare_wave(manager, 1, 0)
+	manager.game_running = true
+	var recorder: RecordingUI = _recorder(manager)
+	recorder.scripted_actions = [{"type": "debug", "command": "show_victory", "args": {}}]
+
+	await manager._run_game_loop()
+
+	assert_bool(manager.game_running).is_false()
+	assert_int(recorder.battle_results.size()).is_equal(1)
+	# No enemy ever acted.
+	assert_int(recorder.skill_plays.size()).is_equal(0)
+#endregion
+
+
 #region Moxie orb: a dead unit's orb drains
 func _make_orb(enemy: Unit) -> MoxieOrbUI:
 	var orb: MoxieOrbUI = MoxieOrbUI.new()

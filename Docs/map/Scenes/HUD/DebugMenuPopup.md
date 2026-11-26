@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/DebugMenuPopup.gd` — `class_name DebugMenuPopup` extends `PanelContainer`
 
-`563` lines · [back to the map](../../../CODEBASE_MAP.md)
+`573` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Tester-only tool palette for the battle scene. Every button here is a *request*: it emits `debug_command_requested` upward and the turn loop performs the mutati…
 
@@ -39,76 +39,78 @@ Constants:
 - L58 `CMD_REROLL_INTENTS: String = "reroll_intents"       # {}`
 - L59 `CMD_RESPAWN_WAVE: String = "respawn_wave"           # {}`
 - L60 `CMD_CLEAR_WAVE: String = "clear_wave"               # {}`
-- L63 `DAMAGE_STEP: int = 5` — Amounts the quick action buttons apply.
-- L64 `SHIELD_STEP: int = 10`
-- L65 `REGEN_STEP: int = 2`
-- L66 `GLOOM_STEP: int = 3`
-- L69 `PANEL_WIDTH: float = 336.0` — Where the panel sits: bottom-left, directly above the button that opens it.
-- L70 `PANEL_HEIGHT: float = 404.0`
-- L71 `SEAT_LEFT: float = 18.0`
-- L72 `SEAT_BOTTOM: float = 50.0`
-- L73 `PADDING: int = 10`
-- L75 `CORNER_RADIUS: int = 0` — Square corners (0 px): the panel and the hover tooltip slabs are one flat surface.
-- L77 `BORDER_WIDTH: int = 2` — Accent border width, shared with the hover tooltip slab (HudTooltipTheme.tres).
-- L78 `ROW_SEPARATION: int = 5`
-- L79 `BUTTON_MIN_SIZE: Vector2 = Vector2(0.0, 26.0)`
-- L82 `PANEL_BG: Color = Color(0.07, 0.08, 0.11, 0.97)` — Palette lifted from SkillTooltipPopup so the tools read as part of the HUD.
-- L83 `PANEL_BORDER: Color = Color(0.45, 0.78, 0.95, 0.5)`
-- L84 `TITLE_COLOR: Color = Color(0.55, 0.86, 1.0)`
-- L85 `SECTION_COLOR: Color = Color(0.62, 0.72, 0.85)`
-- L86 `READOUT_COLOR: Color = Color(0.80, 0.85, 0.93)`
-- L87 `OVERFLOW_COLOR: Color = Color(1.0, 0.55, 0.45)`
-- L88 `READY_COLOR: Color = Color(0.55, 1.0, 0.68)`
-- L89 `LOCKED_COLOR: Color = Color(1.0, 0.72, 0.35)`
+- L61 `CMD_SHOW_VICTORY: String = "show_victory"           # {}`
+- L62 `CMD_SHOW_DEFEAT: String = "show_defeat"             # {}`
+- L65 `DAMAGE_STEP: int = 5` — Amounts the quick action buttons apply.
+- L66 `SHIELD_STEP: int = 10`
+- L67 `REGEN_STEP: int = 2`
+- L68 `GLOOM_STEP: int = 3`
+- L71 `PANEL_WIDTH: float = 336.0` — Where the panel sits: bottom-left, directly above the button that opens it.
+- L72 `PANEL_HEIGHT: float = 464.0`
+- L73 `SEAT_LEFT: float = 18.0`
+- L74 `SEAT_BOTTOM: float = 50.0`
+- L75 `PADDING: int = 10`
+- L77 `CORNER_RADIUS: int = 0` — Square corners (0 px): the panel and the hover tooltip slabs are one flat surface.
+- L79 `BORDER_WIDTH: int = 2` — Accent border width, shared with the hover tooltip slab (HudTooltipTheme.tres).
+- L80 `ROW_SEPARATION: int = 5`
+- L81 `BUTTON_MIN_SIZE: Vector2 = Vector2(0.0, 26.0)`
+- L84 `PANEL_BG: Color = Color(0.07, 0.08, 0.11, 0.97)` — Palette lifted from SkillTooltipPopup so the tools read as part of the HUD.
+- L85 `PANEL_BORDER: Color = Color(0.45, 0.78, 0.95, 0.5)`
+- L86 `TITLE_COLOR: Color = Color(0.55, 0.86, 1.0)`
+- L87 `SECTION_COLOR: Color = Color(0.62, 0.72, 0.85)`
+- L88 `READOUT_COLOR: Color = Color(0.80, 0.85, 0.93)`
+- L89 `OVERFLOW_COLOR: Color = Color(1.0, 0.55, 0.45)`
+- L90 `READY_COLOR: Color = Color(0.55, 1.0, 0.68)`
+- L91 `LOCKED_COLOR: Color = Color(1.0, 0.72, 0.35)`
 
 State:
-- L93 `_status_label: Label`
-- L94 `_hand_label: Label`
-- L95 `_deck_label: Label`
-- L96 `_turn_label: Label`
-- L97 `_hand_cap_label: Label`
-- L98 `_target_selector: OptionButton`
-- L99 `_tier_selector: OptionButton`
-- L100 `_value_spin: SpinBox`
-- L101 `_close_button: Button`
-- L103 `_header: HBoxContainer` — Header row: the drag handle for the whole panel.
-- L105 `_dragging: bool = false` — True while the header is held down and dragging the panel.
-- L108 `_gated_buttons: Array[Button] = []` — Buttons that mutate battle state. They stay disabled while the turn loop is not waiting for a player action, because that is the only moment it can accept one.
-- L110 `_target_entries: Array[Dictionary] = []` — Payload (scope/slot) of each entry in `_target_selector`, in the same order.
-- L112 `_target_labels: PackedStringArray = PackedStringArray()` — Labels currently in `_target_selector`, so an unchanged unit list is not rebuilt.
+- L95 `_status_label: Label`
+- L96 `_hand_label: Label`
+- L97 `_deck_label: Label`
+- L98 `_turn_label: Label`
+- L99 `_hand_cap_label: Label`
+- L100 `_target_selector: OptionButton`
+- L101 `_tier_selector: OptionButton`
+- L102 `_value_spin: SpinBox`
+- L103 `_close_button: Button`
+- L105 `_header: HBoxContainer` — Header row: the drag handle for the whole panel.
+- L107 `_dragging: bool = false` — True while the header is held down and dragging the panel.
+- L110 `_gated_buttons: Array[Button] = []` — Buttons that mutate battle state. They stay disabled while the turn loop is not waiting for a player action, because that is the only moment it can accept one.
+- L112 `_target_entries: Array[Dictionary] = []` — Payload (scope/slot) of each entry in `_target_selector`, in the same order.
+- L114 `_target_labels: PackedStringArray = PackedStringArray()` — Labels currently in `_target_selector`, so an unchanged unit list is not rebuilt.
 
 Public API:
-- L137-158 `refresh(snapshot: Dictionary, targets: Array[Dictionary]) -> void` — Pushes live readouts and the unit list down from the scene. Called whenever the state changes (every action, every turn), never by this panel itself. turn/wave/…
-- L163-172 `set_gameplay_enabled(enabled: bool) -> void` — Enables or greys out every state-mutating tool. The scene locks the panel while the game is animating and unlocks it as soon as it waits for a player action.
-- L175-176 `is_open() -> bool`
-- L179-180 `open_menu() -> void`
-- L183-185 `close_menu() -> void`
-- L188-192 `toggle_menu() -> void`
+- L139-160 `refresh(snapshot: Dictionary, targets: Array[Dictionary]) -> void` — Pushes live readouts and the unit list down from the scene. Called whenever the state changes (every action, every turn), never by this panel itself. turn/wave/…
+- L165-174 `set_gameplay_enabled(enabled: bool) -> void` — Enables or greys out every state-mutating tool. The scene locks the panel while the game is animating and unlocks it as soon as it waits for a player action.
+- L177-178 `is_open() -> bool`
+- L181-182 `open_menu() -> void`
+- L185-187 `close_menu() -> void`
+- L190-194 `toggle_menu() -> void`
 
 Private:
-- L117-128 `_init`
-- L198-206 `_seat_above_bottom_left`
-- L212-222 `_move_by`
-- L227-237 `_apply_chrome`
-- L240-277 `_build_layout`
-- L282-329 `_build_cards_tab`
-- L332-367 `_build_resources_tab`
-- L370-421 `_build_units_tab`
-- L424-429 `_make_tab`
-- L432-438 `_make_label`
-- L441-442 `_make_section`
-- L445-450 `_make_row`
-- L454-462 `_make_gated_button`
-- L466-467 `_make_button`
-- L471-472 `_make_unit_button`
-- L476-480 `_current_target_args`
-- L485-499 `_rebuild_targets`
-- L504-519 `_snap_int`
-- L526-533 `_on_header_gui_input`
-- L536-537 `_on_close_pressed`
-- L540-541 `_on_action_pressed`
-- L546-552 `_on_unit_action_pressed`
-- L555-559 `_on_spawn_custom_pressed`
+- L119-130 `_init`
+- L200-208 `_seat_above_bottom_left`
+- L214-224 `_move_by`
+- L229-239 `_apply_chrome`
+- L242-279 `_build_layout`
+- L284-331 `_build_cards_tab`
+- L334-369 `_build_resources_tab`
+- L372-431 `_build_units_tab`
+- L434-439 `_make_tab`
+- L442-448 `_make_label`
+- L451-452 `_make_section`
+- L455-460 `_make_row`
+- L464-472 `_make_gated_button`
+- L476-477 `_make_button`
+- L481-482 `_make_unit_button`
+- L486-490 `_current_target_args`
+- L495-509 `_rebuild_targets`
+- L514-529 `_snap_int`
+- L536-543 `_on_header_gui_input`
+- L546-547 `_on_close_pressed`
+- L550-551 `_on_action_pressed`
+- L556-562 `_on_unit_action_pressed`
+- L565-569 `_on_spawn_custom_pressed`
 
 Uses: Card
 Used by: GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, Scenes/BattleScene/BattleScene.gd
