@@ -28,7 +28,7 @@ uniform float grade_mix : hint_range(0.0, 1.0) = 0.18;
 uniform float dim : hint_range(0.0, 1.0) = 0.42;
 // How far the scene behind is blurred, in screen pixels. A soft dark blur is what
 // keeps the battlefield present without competing with the title.
-uniform float blur_radius : hint_range(0.0, 24.0) = 7.0;
+uniform float blur_radius : hint_range(0.0, 24.0) = 12.0;
 // The viewport size, so the blur step can be expressed in pixels. canvas_item
 // shaders have no SCREEN_PIXEL_SIZE, so the overlay feeds this in.
 uniform vec2 screen_size = vec2(1280.0, 720.0);
@@ -57,28 +57,28 @@ uniform float rule_alpha : hint_range(0.0, 1.0) = 0.20;
 uniform float rule_wipe : hint_range(0.0, 1.0) = 1.0;
 group_uniforms;
 
-// A soft 13-tap gaussian over the screen texture. One pass is enough for a static
-// backdrop, and it keeps the battlefield readable as shapes without any detail
-// fighting the title.
-vec3 blurred_scene(vec2 uv) {
+// A real 5x5 Gaussian blur over the screen texture. The tap weights come from
+// exp(-d^2 / 2*sigma^2) on the tap grid, so the falloff is a proper gaussian
+// instead of the cross-shaped streaks a few axis taps would leave.
+const int BLUR_TAPS = 2;
+const float BLUR_SIGMA_INV = 0.35;
+
+vec3 gaussian_blur(vec2 uv) {
 	if (blur_radius <= 0.01) {
 		return texture(screen_tex, uv).rgb;
 	}
-	vec2 texel = blur_radius / max(screen_size, vec2(1.0));
-	vec3 sum = texture(screen_tex, uv).rgb * 0.16;
-	sum += (texture(screen_tex, uv + vec2(texel.x, 0.0)).rgb
-		+ texture(screen_tex, uv - vec2(texel.x, 0.0)).rgb
-		+ texture(screen_tex, uv + vec2(0.0, texel.y)).rgb
-		+ texture(screen_tex, uv - vec2(0.0, texel.y)).rgb) * 0.10;
-	sum += (texture(screen_tex, uv + texel).rgb
-		+ texture(screen_tex, uv - texel).rgb
-		+ texture(screen_tex, uv + vec2(texel.x, -texel.y)).rgb
-		+ texture(screen_tex, uv + vec2(-texel.x, texel.y)).rgb) * 0.06;
-	sum += (texture(screen_tex, uv + vec2(texel.x * 2.0, 0.0)).rgb
-		+ texture(screen_tex, uv - vec2(texel.x * 2.0, 0.0)).rgb
-		+ texture(screen_tex, uv + vec2(0.0, texel.y * 2.0)).rgb
-		+ texture(screen_tex, uv - vec2(0.0, texel.y * 2.0)).rgb) * 0.05;
-	return sum;
+	vec2 texel = (blur_radius / float(BLUR_TAPS)) / max(screen_size, vec2(1.0));
+	vec3 sum = vec3(0.0);
+	float weight_sum = 0.0;
+	for (int y = -BLUR_TAPS; y <= BLUR_TAPS; y++) {
+		for (int x = -BLUR_TAPS; x <= BLUR_TAPS; x++) {
+			float dist2 = float(x * x + y * y);
+			float weight = exp(-dist2 * BLUR_SIGMA_INV);
+			sum += texture(screen_tex, uv + vec2(float(x), float(y)) * texel).rgb * weight;
+			weight_sum += weight;
+		}
+	}
+	return sum / weight_sum;
 }
 
 // One soft rule: a thin horizontal line that fades out at the wipe's leading edge
@@ -95,7 +95,7 @@ float horizon_rule(float y_uv, float dist, float wipe) {
 }
 
 void fragment() {
-	vec3 col = blurred_scene(SCREEN_UV);
+	vec3 col = gaussian_blur(SCREEN_UV);
 
 	// 1. Drain the scene and lean it towards this result's tone.
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));

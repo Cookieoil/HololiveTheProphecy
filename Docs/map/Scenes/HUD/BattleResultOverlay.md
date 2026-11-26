@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/BattleResultOverlay.gd` — `class_name BattleResultOverlay` extends `Control`
 
-`383` lines · [back to the map](../../../CODEBASE_MAP.md)
+`384` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > End-of-battle cutscene, staged like a big-budget result screen. The battle scene is the only scene, so the result screen is built in code and mounted on its own…
 
@@ -39,54 +39,54 @@ Constants:
 - L81 `DEFEAT_TITLE: Color = Color(0.86, 0.42, 0.40, 1.0)`
 - L83 `VICTORY_SEAL: Color = Color(0.76, 0.64, 0.38, 1.0)` — The seal's ink: burnished antique gold for a win, weathered iron for a loss.
 - L84 `DEFEAT_SEAL: Color = Color(0.58, 0.27, 0.27, 1.0)`
-- L86 `VICTORY_GRADE: Color = Color(0.86, 0.80, 0.68, 1.0)` — What the drained battlefield leans towards: warm parchment or cold ash.
-- L87 `DEFEAT_GRADE: Color = Color(0.62, 0.66, 0.72, 1.0)`
-- L89 `TITLE_TEXT_VICTORY: String = "VICTORY"`
-- L90 `TITLE_TEXT_DEFEAT: String = "DEFEAT"`
+- L87 `VICTORY_GRADE: Color = Color(0.86, 0.80, 0.68, 1.0)` — What the drained battlefield leans towards: warm parchment for a win, a deep blood red for a loss.
+- L88 `DEFEAT_GRADE: Color = Color(0.80, 0.18, 0.16, 1.0)`
+- L90 `TITLE_TEXT_VICTORY: String = "VICTORY"`
+- L91 `TITLE_TEXT_DEFEAT: String = "DEFEAT"`
 
 Exports:
-- L95 `victory_icon: Texture2D = PLACEHOLDER_VICTORY_ICON` — Placeholder emblem for a won battle (swapped for hand-drawn art later).
-- L97 `defeat_icon: Texture2D = PLACEHOLDER_DEFEAT_ICON` — Placeholder emblem for a lost battle (swapped for hand-drawn art later).
-- L100 `raw_emblem_mode: bool = false` — Draw the emblem as authored instead of etching it into a seal. Turn this on once a bespoke crest replaces the placeholder icons.
+- L96 `victory_icon: Texture2D = PLACEHOLDER_VICTORY_ICON` — Placeholder emblem for a won battle (swapped for hand-drawn art later).
+- L98 `defeat_icon: Texture2D = PLACEHOLDER_DEFEAT_ICON` — Placeholder emblem for a lost battle (swapped for hand-drawn art later).
+- L101 `raw_emblem_mode: bool = false` — Draw the emblem as authored instead of etching it into a seal. Turn this on once a bespoke crest replaces the placeholder icons.
 
 State:
-- L104 `_backdrop: ColorRect`
-- L105 `_backdrop_mat: ShaderMaterial`
-- L106 `_center: CenterContainer`
-- L107 `_column: VBoxContainer`
-- L108 `_mark: VBoxContainer`
-- L109 `_emblem: TextureRect`
-- L110 `_emblem_mat: ShaderMaterial`
-- L111 `_title_stack: MarginContainer`
-- L112 `_title: Label`
-- L113 `_title_ghost: Label`
-- L114 `_title_variation: FontVariation`
-- L115 `_ghost_variation: FontVariation`
-- L116 `_prompt: BattleResultPrompt`
-- L117 `_cutscene: Tween`
-- L118 `_ghost_tween: Tween`
-- L119 `_is_showing: bool = false`
+- L105 `_backdrop: ColorRect`
+- L106 `_backdrop_mat: ShaderMaterial`
+- L107 `_center: CenterContainer`
+- L108 `_column: VBoxContainer`
+- L109 `_mark: VBoxContainer`
+- L110 `_emblem: TextureRect`
+- L111 `_emblem_mat: ShaderMaterial`
+- L112 `_title_stack: MarginContainer`
+- L113 `_title: Label`
+- L114 `_title_ghost: Label`
+- L115 `_title_variation: FontVariation`
+- L116 `_ghost_variation: FontVariation`
+- L117 `_prompt: BattleResultPrompt`
+- L118 `_cutscene: Tween`
+- L119 `_ghost_tween: Tween`
+- L120 `_is_showing: bool = false`
 
 Public API:
-- L139-184 `play_cutscene(victory: bool) -> void` — Plays the cutscene for a finished battle and keeps the banner on screen until the player presses "Play Again". Callers may `await` it.
-- L188-189 `is_showing() -> bool` — True while the result banner owns the screen.
+- L140-185 `play_cutscene(victory: bool) -> void` — Plays the cutscene for a finished battle and keeps the banner on screen until the player presses "Play Again". Callers may `await` it.
+- L189-190 `is_showing() -> bool` — True while the result banner owns the screen.
 
 Private:
-- L124-133 `_init`
-- L193-225 `_build_ui`
-- L231-265 `_build_mark`
-- L270-278 `_build_title_label`
-- L283-298 `_configure`
-- L303-312 `_reset_cutscene_pose`
-- L318-332 `_start_ghost_tween`
-- L335-336 `_set_band_open`
-- L341-343 `_sync_screen_size`
-- L346-347 `_set_rule_wipe`
-- L350-351 `_set_title_tracking`
-- L355-357 `_sync_column_pivot`
-- L361-363 `_sync_ghost_pivot`
-- L366-372 `_kill_cutscene`
-- L377-381 `_on_restart_pressed`
+- L125-134 `_init`
+- L194-226 `_build_ui`
+- L232-266 `_build_mark`
+- L271-279 `_build_title_label`
+- L284-299 `_configure`
+- L304-313 `_reset_cutscene_pose`
+- L319-333 `_start_ghost_tween`
+- L336-337 `_set_band_open`
+- L342-344 `_sync_screen_size`
+- L347-348 `_set_rule_wipe`
+- L351-352 `_set_title_tracking`
+- L356-358 `_sync_column_pivot`
+- L362-364 `_sync_ghost_pivot`
+- L367-373 `_kill_cutscene`
+- L378-382 `_on_restart_pressed`
 
 Uses: BattleResultPrompt, BattleScene
 Used by: GDTest/BattleEndTest.gd, Scenes/BattleScene/BattleScene.gd
