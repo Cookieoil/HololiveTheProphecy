@@ -82,8 +82,8 @@ Write the **base formula** in the JSON; the formatter fills in the live number o
 | `[Value * N]` / `[Value / N]` | gold number | multiplier / divisor |
 | `[Value / N + M]` | gold number | scaled then offset (e.g. `[Value / 2 + 1]`) |
 | `[Value + Shield]` | number `(+X from Shield)` / `(+1 per Shield)` | shield-slam scaling |
-| `[Value + Highest Card / N]` | number `(+X from highest card)` | hand-scaling |
-| `[N + Highest Card]` | number `(+X from highest card)` | fixed + hand scaling |
+| `[Value + Highest Card / N]` | number `(+X from half your highest card in hand)` | hand-scaling |
+| `[N + Highest Card]` | number `(+X from your highest card in hand)` | fixed + hand scaling |
 
 Rules:
 - Never hand-write a resolved number into the JSON — always use a token so the tooltip stays live.
