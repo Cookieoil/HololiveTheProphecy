@@ -124,7 +124,7 @@ func test_formatter_replaces_shield_token_with_clean_number() -> void:
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 5, state, blocks, ally, catalog, 0)
 	assert_str(result).not_contains("[Value + Shield]")
-	assert_str(result).contains("[color=#FFD966]9[/color]")  # 5 + 4 shield
+	assert_str(result).contains("[color=#FFD966]9[/color] damage")  # 5 + 4 shield, glued to "damage"
 	assert_str(result).contains("(+4 from Shield)")
 
 func test_formatter_shield_token_teaches_the_rule_at_zero_shield() -> void:
@@ -135,7 +135,7 @@ func test_formatter_shield_token_teaches_the_rule_at_zero_shield() -> void:
 	var description: String = "Deal [Value + Shield] damage to an enemy."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 5, state, [], ally, catalog, 0)
-	assert_str(result).contains("(+1 per Shield)")
+	assert_str(result).contains("(+Shield)")
 
 func test_formatter_replaces_highest_card_token_with_clean_number() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
@@ -146,8 +146,8 @@ func test_formatter_replaces_highest_card_token_with_clean_number() -> void:
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0)
 	assert_str(result).not_contains("[Value + Highest Card in Hand / 2]")
-	assert_str(result).contains("[color=#FFD966]7[/color]")  # 4 + (7/2=3)
-	assert_str(result).contains("(+3 from half your highest card in hand)")
+	assert_str(result).contains("[color=#FFD966]7[/color] damage")  # 4 + (7/2=3), glued to "damage"
+	assert_str(result).contains("(+half of highest card in hand)")
 
 func test_formatter_highest_card_token_teaches_the_rate_at_zero() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
@@ -157,7 +157,7 @@ func test_formatter_highest_card_token_teaches_the_rate_at_zero() -> void:
 	var description: String = "Deal [Value + Highest Card in Hand / 2] damage to an enemy."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0)
-	assert_str(result).contains("(+1 per 2 Value of your highest card in hand)")
+	assert_str(result).contains("(+half of highest card in hand)")
 
 func test_formatter_highest_card_token_excludes_dragged_card() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
@@ -168,8 +168,8 @@ func test_formatter_highest_card_token_excludes_dragged_card() -> void:
 	var description: String = "Deal [Value + Highest Card in Hand / 2] damage to an enemy."
 	
 	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0, dragged)
-	assert_str(result).contains("(+3 from half your highest card in hand)")   # highest non-dragged card is 7
-	assert_str(result).not_contains("(+5 from half your highest card in hand)")  # never counts the dragged 10
+	assert_str(result).contains("[color=#FFD966]7[/color] damage")   # highest non-dragged card is 7 -> +3
+	assert_str(result).not_contains("[color=#FFD966]9[/color]")       # never counts the dragged 10 (+5)
 
 func test_formatter_replaces_div_add_token_with_clean_number() -> void:
 	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
@@ -192,6 +192,19 @@ func test_formatter_replaces_multiply_token_with_clean_number() -> void:
 	assert_str(result).not_contains("[Value * 2]")
 	assert_str(result).contains("[color=#FFD966]10[/color]")  # 5 * 2 = 10
 	assert_str(result).not_contains("(")
+
+## Style A: the resolved number stays glued to "damage" and the rule sits at the
+## end of the sentence. This is the exact sentence the player reads.
+func test_formatter_places_rule_at_end_of_sentence() -> void:
+	var catalog: TooltipIconCatalog = TooltipIconCatalog.new()
+	var state: GameState = GameState.new()
+	state.hand = [Card.new(3), Card.new(7), Card.new(2)]
+	var ally: Unit = _make_ally(null, null, null, 0)
+	var description: String = "Deal [Value + Highest Card in Hand / 2] damage to an enemy."
+	
+	var result: String = SkillPreviewFormatter._substitute_tokens(description, 4, state, [], ally, catalog, 0)
+	var plain: String = result.replace("[color=#FFD966]", "").replace("[color=#9CA3AF]", "").replace("[/color]", "")
+	assert_str(plain).is_equal("Deal 7 damage to an enemy (+half of highest card in hand).")
 #endregion
 
 #region SkillPreviewFormatter: build_card_on_ally_data with new kits
@@ -217,7 +230,8 @@ func test_build_healer_1_shows_shield_slam_preview() -> void:
 	var card: Card = Card.new(5)
 	
 	var data: Dictionary = SkillPreviewFormatter.build_card_on_ally_data(ally, card, state, null)
-	assert_str(data.get("body", "")).contains("(+3 from Shield)")  # 5 + 3 shield
+	assert_str(data.get("body", "")).contains("[color=#FFD966]8[/color] damage")  # 5 + 3 shield, glued to "damage"
+	assert_str(data.get("body", "")).contains("(+3 from Shield)")
 	assert_str(data.get("body", "")).contains("Reduce its next roll")
 
 func test_build_buff_2_shows_value_positive_preview() -> void:

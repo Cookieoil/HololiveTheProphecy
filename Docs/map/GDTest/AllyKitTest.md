@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/AllyKitTest.gd` — `class_name AllyKitTest` extends `GdUnitTestSuite`
 
-`274` lines · [back to the map](../../CODEBASE_MAP.md)
+`288` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Tests for the MOBA-style pure-skill rework of all ally kits. Covers: shield-slam, hand-scaling, value-positive buff, self-shield cleave, and the corrected Skill…
 
@@ -20,9 +20,10 @@ Public API:
 - L162-172 `test_formatter_highest_card_token_excludes_dragged_card() -> void`
 - L174-183 `test_formatter_replaces_div_add_token_with_clean_number() -> void`
 - L185-194 `test_formatter_replaces_multiply_token_with_clean_number() -> void`
-- L198-221 `test_build_healer_1_shows_shield_slam_preview() -> void`
-- L223-247 `test_build_buff_2_shows_value_positive_preview() -> void`
-- L249-272 `test_build_striker_2_shows_shield_category() -> void`
+- L198-207 `test_formatter_places_rule_at_end_of_sentence() -> void` — Style A: the resolved number stays glued to "damage" and the rule sits at the end of the sentence. This is the exact sentence the player reads.
+- L211-235 `test_build_healer_1_shows_shield_slam_preview() -> void`
+- L237-261 `test_build_buff_2_shows_value_positive_preview() -> void`
+- L263-286 `test_build_striker_2_shows_shield_category() -> void`
 
 Private:
 - L11-12 `_make_enemy_skill`

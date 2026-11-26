@@ -285,8 +285,8 @@ static func _substitute_tokens(
 		for shield_match: RegExMatch in shield_rx.search_all(result):
 			var shield_val: int = caster.shield
 			var total: int = val + shield_val
-			var shield_hint: String = "(+%d from Shield)" % shield_val if shield_val > 0 else "(+1 per Shield)"
-			result = result.replace(shield_match.get_string(0), "%s [color=%s]%s[/color]" % [_num_bb(total), COL_MUTED, shield_hint])
+			var shield_hint: String = "(+%d from Shield)" % shield_val if shield_val > 0 else "(+Shield)"
+			result = _place_clause_hint(result, shield_match.get_string(0), _num_bb(total), shield_hint)
 
 	var hand_rx := RegEx.new()
 	hand_rx.compile("\\[Value\\s*\\+\\s*Highest\\s+Card(?:\\s+in\\s+Hand)?\\s*/\\s*(\\d+)\\]")
@@ -299,18 +299,11 @@ static func _substitute_tokens(
 				hand_val = hi_card.get_effective_value()
 		var bonus: int = maxi(1, hand_val / maxi(1, divisor)) if hand_val > 0 else 0
 		var total: int = val + bonus
-		# Name the source and the rate so "+N from highest card" is never a mystery:
-		# a divisor of 2 reads as "half your highest card in hand", anything else
-		# spells out the per-Value rate. At zero the rate is shown so the combo is
-		# still discoverable before the player ever holds a big card.
-		var hand_hint: String
-		if bonus > 0:
-			hand_hint = "(+%d from half your highest card in hand)" % bonus if divisor == 2 \
-				else "(+%d from your highest card in hand, 1 per %d Value)" % [bonus, divisor]
-		else:
-			hand_hint = "(+1 per 2 Value of your highest card in hand)" if divisor == 2 \
-				else "(+1 per %d Value of your highest card in hand)" % divisor
-		result = result.replace(hand_match.get_string(0), "%s [color=%s]%s[/color]" % [_num_bb(total), COL_MUTED, hand_hint])
+		# Style A (Slay the Spire): the total sits right before the word it modifies
+		# ("Deal 7 damage"), and the short rule is tucked at the end of the sentence.
+		var hand_hint: String = "(+half of highest card in hand)" if divisor == 2 \
+			else "(+1/%d of highest card in hand)" % divisor
+		result = _place_clause_hint(result, hand_match.get_string(0), _num_bb(total), hand_hint)
 
 	var div_add_rx := RegEx.new()
 	div_add_rx.compile("\\[Value\\s*/\\s*(\\d+)\\s*\\+\\s*(\\d+)\\]")
@@ -353,10 +346,7 @@ static func _substitute_tokens(
 		hi_math_rx.compile("\\[?(\\d+)\\s*\\+\\s*Highest Card(?:\\s+in\\s+Hand)?\\]?")
 		for hm: RegExMatch in hi_math_rx.search_all(result):
 			var total := int(hm.get_string(1)) + hi_val
-			var hi_hint: String = "(+%d from your highest card in hand)" % hi_val if hi_val > 0 else "(+your highest card in hand)"
-			result = result.replace(hm.get_string(0), "%s [color=%s]%s[/color]" % [
-				_num_bb(total), COL_MUTED, hi_hint
-			])
+			result = _place_clause_hint(result, hm.get_string(0), _num_bb(total), "(+highest card in hand)")
 
 	# 4. Replace common prose placeholders ({value}, card value, rolled value, standalone V)
 	var phrase_rx := RegEx.new()
@@ -369,6 +359,33 @@ static func _substitute_tokens(
 	if tooltip_catalog != null:
 		result = tooltip_catalog.format_description(result, icon_size)
 	return result
+
+
+## Style A (Slay the Spire): keep the resolved number glued to the word right after
+## it and tuck the short rule at the end of the sentence that contains the token.
+## "Deal 7 damage to an enemy (+half of highest card in hand)." rather than
+## "Deal 7 (+half of highest card in hand) damage to an enemy." The first "." or
+## newline at/after the token marks the sentence end; without one the hint goes to
+## the end of the text.
+static func _place_clause_hint(text: String, token: String, number_bb: String, hint: String) -> String:
+	var idx: int = text.find(token)
+	if idx < 0:
+		return text
+	var before: String = text.substr(0, idx)
+	var after: String = text.substr(idx + token.length())
+	var hint_bb: String = " [color=%s]%s[/color]" % [COL_MUTED, hint]
+	var dot_idx: int = after.find(".")
+	var nl_idx: int = after.find("\n")
+	var cut: int = -1
+	if dot_idx >= 0 and nl_idx >= 0:
+		cut = mini(dot_idx, nl_idx)
+	elif dot_idx >= 0:
+		cut = dot_idx
+	elif nl_idx >= 0:
+		cut = nl_idx
+	if cut >= 0:
+		return before + number_bb + after.substr(0, cut) + hint_bb + after.substr(cut)
+	return before + number_bb + after + hint_bb
 
 
 static func _pick_sample_target(caster: Unit, state: GameState) -> Unit:

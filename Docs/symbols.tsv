@@ -968,7 +968,7 @@ _normalized_text	func	Tools/gen_code_index.gd:179-180	(res_path: String) -> Stri
 _notification	func	Scenes/BattleUnit/UnitUI.gd:498-500	(what: int) -> void
 _notification	func	Scenes/Cards/CardUI.gd:1194-1216	(what: int) -> void
 _notification	func	Scenes/HUD/MoxieOrbUI.gd:188-202	(what: int) -> void
-_num_bb	func	Skills/SkillPreviewFormatter.gd:381-382	static (n: int) -> String
+_num_bb	func	Skills/SkillPreviewFormatter.gd:398-399	static (n: int) -> String
 _object_bool	func	Scenes/BattleUnit/StatusIconCatalog.gd:231-238	(target: Object, prop_name: String, fallback: bool) -> bool
 _on_action_pressed	func	Scenes/HUD/DebugMenuPopup.gd:540-541	(command: String, args: Dictionary) -> void
 _on_ally_ultimate_requested	func	Scenes/BattleScene/BattleScene.gd:318-319	(ally: Unit) -> void
@@ -1028,8 +1028,9 @@ _pending_intent	var	Scenes/BattleUnit/UnitUI.gd:55-55	: Dictionary = {}
 _pending_status_timer	var	Scenes/BattleUnit/UnitUI.gd:135-135	: float = -1.0
 _pick_active	var	Scenes/Cards/HandBar.gd:37-37	: bool = false
 _pick_candidates	var	Scenes/Cards/HandBar.gd:38-38	: Array[Card] = []
-_pick_sample_target	func	Skills/SkillPreviewFormatter.gd:374-378	static (caster: Unit, state: GameState) -> Unit
+_pick_sample_target	func	Skills/SkillPreviewFormatter.gd:391-395	static (caster: Unit, state: GameState) -> Unit
 _pick_selectable	var	Scenes/Cards/CardUI.gd:155-155	: bool = false
+_place_clause_hint	func	Skills/SkillPreviewFormatter.gd:370-388	static (text: String, token: String, number_bb: String, hint: String) -> String
 _plates	func	GDTest/CardMergeAnimationTest.gd:71-81	(ui: CardUI) -> Array[ForgePlate]
 _play_base_animation	func	Scenes/BattleUnit/SpinePortrait.gd:376-410	(anim_name: StringName, loop: bool = false, hold_on_end: bool = false) -> void
 _play_death_animation	func	Scenes/BattleUnit/SpinePortrait.gd:412-423	() -> void
@@ -1210,7 +1211,7 @@ _strip_bbcode	func	GDTest/EnemySkillBalanceTest.gd:52-55	static (text: String) -
 _style_card_panel	func	Scenes/Cards/CardUI.gd:342-358	() -> void
 _style_keyword	func	Scenes/HUD/TooltipIconEntry.gd:123-131	(label: String) -> String
 _style_merge_glow	func	Scenes/Cards/CardUI.gd:367-382	() -> void
-_substitute_tokens	func	Skills/SkillPreviewFormatter.gd:255-371	static (text: String, val: int, state: GameState, blocks: Array[SkillEffect] = [], caster: Unit = null, tooltip_catalog: TooltipIconCatalog = null, icon_size: int = 0, exclude_card: Card = null) -> String
+_substitute_tokens	func	Skills/SkillPreviewFormatter.gd:255-361	static (text: String, val: int, state: GameState, blocks: Array[SkillEffect] = [], caster: Unit = null, tooltip_catalog: TooltipIconCatalog = null, icon_size: int = 0, exclude_card: Card = null) -> String
 _subtitle_label	var	Scenes/HUD/SkillTooltipPopup.gd:25-25	: Label
 _summary_path	var	Tools/validate_gameData.gd:123-123	: String = ""
 _surface	var	Scenes/Cards/ForgePlate.gd:29-29	: SubViewport
@@ -1787,9 +1788,9 @@ test_battle_scene_mounts_and_toggles_the_debug_menu	func	GDTest/DebugMenuTest.gd
 test_bonus_before_cached_damage_still_applies	func	GDTest/EnemySkillBalanceTest.gd:225-247	() -> void
 test_boss_aoe_hit_stays_below_weakest_ally_hp	func	GDTest/EnemySkillBalanceTest.gd:107-117	() -> void
 test_buff_hand_raises_every_card_and_announces_it	func	GDTest/DebugMenuTest.gd:419-434	() -> void
-test_build_buff_2_shows_value_positive_preview	func	GDTest/AllyKitTest.gd:223-247	() -> void
-test_build_healer_1_shows_shield_slam_preview	func	GDTest/AllyKitTest.gd:198-221	() -> void
-test_build_striker_2_shows_shield_category	func	GDTest/AllyKitTest.gd:249-272	() -> void
+test_build_buff_2_shows_value_positive_preview	func	GDTest/AllyKitTest.gd:237-261	() -> void
+test_build_healer_1_shows_shield_slam_preview	func	GDTest/AllyKitTest.gd:211-235	() -> void
+test_build_striker_2_shows_shield_category	func	GDTest/AllyKitTest.gd:263-286	() -> void
 test_card_back_wears_the_emblem_image	func	GDTest/CardDrawAnimationTest.gd:98-122	() -> void
 test_card_category_token_falls_back_to_a_pure_glyph	func	GDTest/TooltipIconCatalogTest.gd:108-119	() -> void
 test_card_effective_value_with_buff	func	GDTest/CardTest.gd:18-23	() -> void
@@ -1837,6 +1838,7 @@ test_explicit_tokens_honor_the_requested_mode	func	GDTest/TooltipIconCatalogTest
 test_fill_moxie_makes_the_ultimate_castable	func	GDTest/DebugMenuTest.gd:487-495	() -> void
 test_formatter_highest_card_token_excludes_dragged_card	func	GDTest/AllyKitTest.gd:162-172	() -> void
 test_formatter_highest_card_token_teaches_the_rate_at_zero	func	GDTest/AllyKitTest.gd:152-160	() -> void
+test_formatter_places_rule_at_end_of_sentence	func	GDTest/AllyKitTest.gd:198-207	() -> void
 test_formatter_replaces_div_add_token_with_clean_number	func	GDTest/AllyKitTest.gd:174-183	() -> void
 test_formatter_replaces_highest_card_token_with_clean_number	func	GDTest/AllyKitTest.gd:140-150	() -> void
 test_formatter_replaces_multiply_token_with_clean_number	func	GDTest/AllyKitTest.gd:185-194	() -> void
