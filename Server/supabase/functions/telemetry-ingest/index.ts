@@ -61,13 +61,16 @@ Deno.serve(async (request: Request) => {
 
   const balance = new Map<string, Event>();
   const runs = new Map<string, Event[]>();
-  const turns = new Map<string, Event[]>();
+  // One cell per (run, turn): `turn_started` and `turn_ended` are merged so a
+  // single row carries both the start-of-turn state and the turn's outcome.
+  const turns = new Map<string, { started: Event | null; ended: Event | null }>();
   const decisions: Event[] = [];
 
   for (const event of events) {
     if (num(event.schema_version, 0) !== SCHEMA_VERSION) continue;
     const runId = str(event.run_id);
     if (!runId) continue;
+    const turnKey = `${runId}|${num(event.turn_number, -1)}`;
     switch (str(event.type)) {
       case "run_started": {
         const hash = str(event.balance_hash);
@@ -81,9 +84,18 @@ Deno.serve(async (request: Request) => {
         runs.set(runId, [...(runs.get(runId) ?? []), event]);
         break;
       }
-      case "turn_started":
-        turns.set(runId, [...(turns.get(runId) ?? []), event]);
+      case "turn_started": {
+        const cell = turns.get(turnKey) ?? { started: null, ended: null };
+        cell.started = event;
+        turns.set(turnKey, cell);
         break;
+      }
+      case "turn_ended": {
+        const cell = turns.get(turnKey) ?? { started: null, ended: null };
+        cell.ended = event;
+        turns.set(turnKey, cell);
+        break;
+      }
       case "decision":
         decisions.push(event);
         break;
@@ -111,6 +123,7 @@ Deno.serve(async (request: Request) => {
       game_version: str(started.game_version) || null,
       is_debug_build: bool(started.is_debug_build),
       was_debug_tainted: bool(ended.was_debug_tainted),
+      abandoned: bool(ended.abandoned),
       ally_lineup: Array.isArray(started.ally_lineup) ? started.ally_lineup : [],
       starting_deck: started.decklist ?? null,
       config_snapshot: started.config ?? null,
@@ -128,29 +141,36 @@ Deno.serve(async (request: Request) => {
     if (error) return json({ error: error.message }, 500);
   }
 
-  const turnRows = [...turns.entries()].flatMap(([run_id, group]) =>
-    group.map((event) => {
-      const metrics = obj(event.metrics);
-      const outcome = obj(event.outcome);
-      return {
-        run_id,
-        turn_number: num(event.turn_number),
-        wave_index: event.wave_index ?? null,
-        dice_sides: event.dice_sides ?? null,
-        ally_hp_pct_start: metrics.ally_hp_pct ?? null,
-        enemy_hp_pct_start: metrics.enemy_hp_pct ?? null,
-        incoming_intent_damage: metrics.incoming_intent_damage ?? null,
-        threat_ratio: metrics.threat_ratio ?? null,
-        unused_actions: event.unused_actions ?? null,
-        unused_merges: event.unused_merges ?? null,
-        damage_dealt: outcome.damage_dealt ?? null,
-        hp_lost: outcome.hp_lost ?? null,
-        shield_blocked: outcome.shield_gained ?? null,
-        intents_json: event.intents ?? null,
-        hand_start_json: event.hand ?? null,
-      };
-    })
-  );
+  const turnRows = [...turns.values()].map((cell) => {
+    const started = cell.started ?? {};
+    const ended = cell.ended ?? {};
+    const runId = str(started.run_id || ended.run_id);
+    const metrics = obj(started.metrics);
+    const outcome = obj(ended.outcome);
+    return {
+      run_id: runId,
+      turn_number: num(started.turn_number ?? ended.turn_number),
+      wave_index: started.wave_index ?? ended.wave_index ?? null,
+      dice_sides: started.dice_sides ?? null,
+      active_enemy_ids: Array.isArray(started.active_enemy_ids) ? started.active_enemy_ids : [],
+      ally_hp_pct_start: metrics.ally_hp_pct ?? null,
+      enemy_hp_pct_start: metrics.enemy_hp_pct ?? null,
+      incoming_intent_damage: metrics.incoming_intent_damage ?? null,
+      threat_ratio: metrics.threat_ratio ?? null,
+      unused_actions: ended.unused_actions ?? null,
+      unused_merges: ended.unused_merges ?? null,
+      damage_dealt: outcome.damage_dealt ?? null,
+      hp_lost: outcome.hp_lost ?? null,
+      shield_blocked: outcome.shield_gained ?? null,
+      merges_made: outcome.merges_made ?? null,
+      converts_made: outcome.converts_made ?? null,
+      player_skills_used: Array.isArray(outcome.player_skills_used) ? outcome.player_skills_used : [],
+      player_ultimates_cast: Array.isArray(outcome.player_ultimates_cast) ? outcome.player_ultimates_cast : [],
+      intents_json: started.intents ?? null,
+      hand_start_json: started.hand ?? null,
+      enemy_damage_json: Array.isArray(outcome.enemy_damage_events) ? outcome.enemy_damage_events : null,
+    };
+  });
   if (turnRows.length > 0) {
     const { error } = await db.from("telemetry_turns")
       .upsert(turnRows, { onConflict: "run_id,turn_number" });
@@ -159,6 +179,7 @@ Deno.serve(async (request: Request) => {
 
   const decisionRows = decisions.map((event) => {
     const metrics = obj(obj(event.context).metrics);
+    const offered = obj(event.offered);
     const chosen = obj(event.chosen);
     const card = obj(chosen.card);
     return {
@@ -171,9 +192,18 @@ Deno.serve(async (request: Request) => {
       thinking_time_ms: event.thinking_time_ms ?? null,
       actor_unit_id: str(chosen.target_ally_id || chosen.caster_id) || null,
       skill_id: str(chosen.skill_id || chosen.ultimate_skill_id) || null,
+      card_key: str(card.key) || null,
       card_effective_value: card.effective_value ?? null,
       card_is_odd: card.parity ? str(card.parity) === "odd" : null,
       card_merge_rank: card.merge_rank ?? null,
+      offered_skills: Array.isArray(offered.playable_skill_ids) ? offered.playable_skill_ids : [],
+      offered_card_keys: Array.isArray(offered.offered_card_keys) ? offered.offered_card_keys : [],
+      ready_ultimate_skills: Array.isArray(offered.ready_ultimate_skills)
+        ? offered.ready_ultimate_skills : [],
+      active_enemy_ids: Array.isArray(offered.active_enemy_ids) ? offered.active_enemy_ids : [],
+      intent_max_roll: offered.intent_max_roll ?? null,
+      intent_condition_met: bool(offered.intent_condition_met),
+      intent_ult_imminent: bool(offered.intent_ultimate_imminent),
       ally_hp_pct_before: metrics.ally_hp_pct ?? null,
       enemy_hp_pct_before: metrics.enemy_hp_pct ?? null,
       threat_ratio_before: metrics.threat_ratio ?? null,

@@ -31,6 +31,6 @@ Private:
 - L89-92 `_ensure_dir`
 
 Uses: TelemetrySink
-Used by: Managers/TelemetryManager.gd
+Used by: Core/Telemetry/HttpBatchSink.gd, Core/Telemetry/TelemetryUploader.gd, Managers/TelemetryManager.gd
 Loads: —
 

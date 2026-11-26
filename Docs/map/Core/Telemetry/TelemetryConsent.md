@@ -38,6 +38,6 @@ Private:
 - L164-171 `_to_float`
 
 Uses: —
-Used by: GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, Managers/TelemetryManager.gd, Scenes/HUD/TelemetryConsentPopup.gd
+Used by: Core/Telemetry/TelemetryUploader.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, Managers/TelemetryManager.gd, Scenes/HUD/TelemetryConsentPopup.gd
 Loads: —
 

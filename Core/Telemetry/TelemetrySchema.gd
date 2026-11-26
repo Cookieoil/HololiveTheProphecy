@@ -44,6 +44,7 @@ static func card_snapshot(card: Card) -> Dictionary:
 		"card_id": card.id,
 		"base_value": card.base_value,
 		"effective_value": card.get_effective_value(),
+		"key": card_key(card),
 		"parity": parity_of(card),
 		"merge_rank": merge_rank(card),
 		"is_merged": card.is_merged,
@@ -69,6 +70,21 @@ static func parity_of(card: Card) -> String:
 	if card == null:
 		return ""
 	return PARITY_ODD if card.is_odd() else PARITY_EVEN
+
+
+## A stable identity for one offered card, independent of its slot: the effective
+## value plus its merge tier ("3", "5_merged", "9_double_merged"). Two copies of
+## the same value collapse to the same key on purpose, so a card-level pick rate
+## ("how often was a 3 played, merged or held?") has a real denominator.
+static func card_key(card: Card) -> String:
+	if card == null:
+		return ""
+	var tier: String = ""
+	if card.is_double_merged:
+		tier = "_double_merged"
+	elif card.is_merged:
+		tier = "_merged"
+	return "%d%s" % [card.get_effective_value(), tier]
 
 
 static func cards_snapshot(cards: Array[Card]) -> Array:

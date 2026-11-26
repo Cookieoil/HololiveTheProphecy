@@ -167,9 +167,11 @@ func _enemy_data(unit_id: String) -> UnitData:
 	data.is_enemy = true
 	data.max_hp = 10
 	data.max_moxie = 20
-	data.skill_1 = _nuke_skill("normal_enemy_1", EffectBlock.TargetMode.ALL_ALLIES, 2)
-	data.skill_2 = _nuke_skill("normal_enemy_2", EffectBlock.TargetMode.ALL_ALLIES, 2)
-	data.ultimate = _nuke_skill("normal_enemy_ult", EffectBlock.TargetMode.ALL_ALLIES, 2)
+	# From an enemy caster ALL_ENEMIES resolves to the player's allies (see
+	# EffectBlock's target resolution), so this is the enemy's attack.
+	data.skill_1 = _nuke_skill("normal_enemy_1", EffectBlock.TargetMode.ALL_ENEMIES, 2)
+	data.skill_2 = _nuke_skill("normal_enemy_2", EffectBlock.TargetMode.ALL_ENEMIES, 2)
+	data.ultimate = _nuke_skill("normal_enemy_ult", EffectBlock.TargetMode.ALL_ENEMIES, 2)
 	return data
 
 
@@ -184,6 +186,14 @@ func _events_of(sink: MemorySink, type_name: String) -> Array:
 func _first_decision(sink: MemorySink, decision_type: String) -> Dictionary:
 	for event: Dictionary in _events_of(sink, "decision"):
 		if str(event.get("decision_type", "")) == decision_type:
+			return event
+	return {}
+
+
+func _turn_ended(sink: MemorySink, turn_number: int) -> Dictionary:
+	for event: Dictionary in _events_of(sink, "turn_ended"):
+		var number: int = event.get("turn_number", -1)
+		if number == turn_number:
 			return event
 	return {}
 
@@ -284,7 +294,24 @@ func test_a_play_decision_carries_its_alternatives_and_outcome() -> void:
 	assert_int(pairs.size()).is_greater(0)
 	var pair: Dictionary = pairs[0]
 	assert_bool(pair.has("kind")).is_true()
-	assert_bool(offered.has("ally_ids")).is_true()
+	# The living lineup, the exact plays that were legal, the card identities and
+	# the enemy actually being faced: the denominators the reports divide by.
+	var living: Array = offered.get("living_ally_ids", [])
+	assert_int(living.size()).is_equal(1)
+	assert_str(str(living[0])).is_equal("striker")
+	assert_bool(offered.has("dead_ally_ids")).is_true()
+	var card_keys: Array = offered.get("offered_card_keys", [])
+	assert_int(card_keys.size()).is_equal(cards_offered.size())
+	var playable_ids: Array = offered.get("playable_skill_ids", [])
+	assert_bool(playable_ids.has("striker_1")).is_true()
+	var playable: Array = offered.get("playable_skills", [])
+	assert_int(playable.size()).is_greater(0)
+	var option: Dictionary = playable[0]
+	assert_str(str(option.get("ally_id", ""))).is_equal("striker")
+	assert_bool(str(option.get("skill_id", "")).is_empty()).is_false()
+	var facing: Array = offered.get("active_enemy_ids", [])
+	assert_int(facing.size()).is_greater(0)
+	assert_bool(offered.has("intent_max_roll")).is_true()
 
 	# Chosen = the card, the ally and the skill it unlocked.
 	var chosen: Dictionary = play.get("chosen", {})
@@ -356,3 +383,134 @@ func test_a_debug_command_taints_the_run() -> void:
 	assert_bool(tainted).is_true()
 	assert_bool(_first_decision(sink, TelemetryManager.DECISION_DEBUG).is_empty()).is_false()
 #endregion
+
+
+#region Turn strategy and enemy attribution
+## Every turn records what the player did (skills / Ultimates / merges / converts)
+## and the damage the enemy dealt back, attributed to the enemy *and* its skill.
+func test_turn_ended_records_strategy_and_enemy_damage() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var ui: ScriptedUI = ScriptedUI.new()
+	var manager: GameManager = _prepare(sink, ui, "turns")
+	var allies: Array[UnitData] = [_ally_data()]
+
+	await manager.setup_game(allies, _waves(), ui, _config())
+
+	# Every turn that started is closed, including the lethal final one that never
+	# reaches Step 8 of the loop.
+	assert_int(_events_of(sink, "turn_ended").size()).is_equal(_events_of(sink, "turn_started").size())
+
+	# Turn 1 was a merge turn.
+	var merge_turn: Dictionary = _turn_ended(sink, 1)
+	assert_bool(merge_turn.is_empty()).is_false()
+	var merge_outcome: Dictionary = merge_turn.get("outcome", {})
+	var merges_made: int = merge_outcome.get("merges_made", 0)
+	assert_int(merges_made).is_equal(1)
+
+	# The enemy attack in Step 7 is attributed to the enemy and its skill, and to
+	# the ally it hit - the row the situational matchup table is built from.
+	var enemy_rows: Array = merge_outcome.get("enemy_damage_events", [])
+	assert_int(enemy_rows.size()).is_greater(0)
+	var row: Dictionary = enemy_rows[0]
+	assert_str(str(row.get("enemy_unit_id", ""))).is_equal("boss_enemy")
+	assert_bool(str(row.get("enemy_skill_id", "")).is_empty()).is_false()
+	assert_str(str(row.get("target_id", ""))).is_equal("striker")
+	var target_is_ally: bool = row.get("target_is_ally", false)
+	var hp_lost: int = row.get("hp_lost", 0)
+	assert_bool(target_is_ally).is_true()
+	assert_int(hp_lost).is_greater(0)
+
+	# Turn 2 was a convert turn.
+	var convert_outcome: Dictionary = _turn_ended(sink, 2).get("outcome", {})
+	var converts_made: int = convert_outcome.get("converts_made", 0)
+	assert_int(converts_made).is_equal(1)
+
+	# Turn 3 was the Ultimate turn and it ended the battle.
+	var ult_turn: Dictionary = _turn_ended(sink, 3)
+	assert_bool(ult_turn.is_empty()).is_false()
+	var ult_outcome: Dictionary = ult_turn.get("outcome", {})
+	var ults: Array = ult_outcome.get("player_ultimates_cast", [])
+	assert_bool(ults.has("striker_ult")).is_true()
+#endregion
+
+
+#region Abandoned runs
+func test_an_abandoned_run_is_flagged_and_closed_once() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var consent_path: String = "%s/consent_abandon.json" % _temp_dir
+	var player_path: String = "%s/player_abandon.txt" % _temp_dir
+	TelemetryConsent.new(consent_path).decide(true)
+	var recorder: TelemetryManager = TelemetryManager.new(consent_path, _temp_dir, player_path, sink)
+	var state: GameState = GameState.new()
+
+	recorder.start_run(state)
+	assert_bool(recorder.enabled).is_true()
+	assert_bool(FileAccess.file_exists(player_path)).is_true()
+
+	recorder.abandon_run(state)
+	var ended: Array = _events_of(sink, "run_ended")
+	assert_int(ended.size()).is_equal(1)
+	var end_event: Dictionary = ended[0]
+	var abandoned: bool = end_event.get("abandoned", false)
+	var victory: bool = end_event.get("victory", true)
+	assert_bool(abandoned).is_true()
+	assert_bool(victory).is_false()
+	assert_str(str(end_event.get("end_reason", ""))).is_equal(TelemetryManager.REASON_ABANDONED)
+
+	# Idempotent: closing again must not write a second run_ended.
+	recorder.abandon_run(state)
+	assert_int(_events_of(sink, "run_ended").size()).is_equal(1)
+
+
+## Leaving the tree while the battle is still running (a restart or a quit) closes
+## the run instead of losing it.
+func test_leaving_the_tree_mid_battle_abandons_the_run() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var ui: ScriptedUI = ScriptedUI.new()
+	var manager: GameManager = _prepare(sink, ui, "quit")
+	manager.state = GameState.new()
+	manager.game_running = true
+	manager.telemetry.start_run(manager.state)
+	assert_bool(manager.telemetry.enabled).is_true()
+
+	remove_child(manager)
+
+	var ended: Array = _events_of(sink, "run_ended")
+	assert_int(ended.size()).is_equal(1)
+	var end_event: Dictionary = ended[0]
+	var abandoned: bool = end_event.get("abandoned", false)
+	assert_bool(abandoned).is_true()
+	assert_bool(manager.telemetry.enabled).is_false()
+#endregion
+
+
+
+#region Stage 2 upload plumbing
+## The Stage 2 sink must spool into the upload outbox (never the local-only spool),
+## so TelemetryUploader can find it.
+func test_http_batch_sink_spools_into_the_outbox() -> void:
+	var sink: HttpBatchSink = HttpBatchSink.new("test-run-%s" % TelemetrySchema.new_id())
+	assert_bool(sink.file_path.begins_with(HttpBatchSink.OUTBOX_DIR)).is_true()
+	sink.write_event({"type": "run_started", "schema_version": 1})
+	assert_int(sink.event_count).is_equal(1)
+	var events: Array = sink.read_all()
+	assert_int(events.size()).is_equal(1)
+	sink.close()
+	if FileAccess.file_exists(sink.file_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(sink.file_path))
+	# Removes the directories only when they are empty, so a real outbox is safe.
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(HttpBatchSink.OUTBOX_DIR))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://telemetry"))
+
+
+## With no endpoint configured the uploader must be completely inert: a local-only
+## build never opens a socket.
+func test_uploader_is_inert_without_an_endpoint() -> void:
+	var uploader: TelemetryUploader = TelemetryUploader.new()
+	uploader.name = "TestTelemetryUploader"
+	add_child(uploader)
+	auto_free(uploader)
+	assert_bool(uploader.endpoint().is_empty()).is_true()
+	assert_bool(uploader.is_enabled()).is_false()
+#endregion
+

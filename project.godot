@@ -77,3 +77,11 @@ theme/custom="res://Scenes/HUD/HudTooltipTheme.tres"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 viewport/hdr_2d=true
+
+; Stage 2 telemetry: set `endpoint` to the metric-server ingest URL to upload the
+; outbox in the background. Left empty the game stays entirely local. The anon key
+; is the publishable key the ingest function expects, never a service-role key.
+[telemetry]
+
+endpoint=""
+anon_key=""
