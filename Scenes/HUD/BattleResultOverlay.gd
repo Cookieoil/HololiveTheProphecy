@@ -82,9 +82,10 @@ const DEFEAT_TITLE: Color = Color(0.86, 0.42, 0.40, 1.0)
 ## The seal's ink: burnished antique gold for a win, weathered iron for a loss.
 const VICTORY_SEAL: Color = Color(0.76, 0.64, 0.38, 1.0)
 const DEFEAT_SEAL: Color = Color(0.58, 0.27, 0.27, 1.0)
-## What the drained battlefield leans towards: warm parchment or cold ash.
+## What the drained battlefield leans towards: warm parchment for a win, a deep
+## blood red for a loss.
 const VICTORY_GRADE: Color = Color(0.86, 0.80, 0.68, 1.0)
-const DEFEAT_GRADE: Color = Color(0.62, 0.66, 0.72, 1.0)
+const DEFEAT_GRADE: Color = Color(0.80, 0.18, 0.16, 1.0)
 
 const TITLE_TEXT_VICTORY: String = "VICTORY"
 const TITLE_TEXT_DEFEAT: String = "DEFEAT"
