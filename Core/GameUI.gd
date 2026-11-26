@@ -67,6 +67,12 @@ func on_cards_merged(
 ## Callers may `await` this; implementations that animate should be coroutines.
 func flash_auto_selected_cards(_cards: Array[Card], _hostile: bool = false) -> void:
 	pass
+
+## Presentation cue: the battle is over. Plays the Victory / Defeat cutscene and
+## keeps the result on screen until the player restarts. Callers may `await`
+## this; implementations that animate should be coroutines.
+func show_battle_result(_victory: bool) -> void:
+	pass
 #endregion
 
 #region Player Input (async)

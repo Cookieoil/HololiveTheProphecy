@@ -10,6 +10,10 @@ extends GameUI
 ## Tester tools (the Debug button + F1). Turn off for a build that must not show them.
 ## A release export hides them regardless of this flag — see `_debug_tools_allowed`.
 @export var debug_menu_enabled: bool = true
+## Emblems for the end-of-battle cutscene. Placeholder art until the hand-drawn
+## icons land; the overlay shows them framed above the VICTORY / DEFEAT banner.
+@export var victory_icon: Texture2D = preload("res://Scenes/BattleScene/Assets/icon2.png")
+@export var defeat_icon: Texture2D = preload("res://Scenes/BattleScene/Assets/icon.svg")
 
 @onready var hand_bar: HandBar = $HUD/HandBar
 @onready var allies_container: HBoxContainer = $EntityOverlay/AlliesRow
@@ -33,6 +37,9 @@ extends GameUI
 var game_manager: GameManager
 ## Tester overlay, built in code and mounted on `debug_layer`.
 var debug_menu: DebugMenuPopup
+## End-of-battle cutscene, built in code and mounted on its own top layer.
+var result_overlay: BattleResultOverlay
+var result_layer: CanvasLayer
 ## True only while GameManager awaits a player action: the one window in which a
 ## debug tool may be applied, because the turn loop is sitting on the action queue.
 var _awaiting_player_action: bool = false
@@ -60,6 +67,7 @@ func _ready() -> void:
 	_setup_icon_button_hover(end_turn_button)
 	hand_bar.merge_requested.connect(_on_merge_requested)
 	_setup_debug_menu()
+	_setup_result_overlay()
 
 	game_manager = GameManager.new()
 	add_child(game_manager)
@@ -103,6 +111,20 @@ func on_cards_merged(source_a: Card, source_b: Card, result: Card, state: GameSt
 ## `hostile` is set when an enemy caused the change; those cards flash red.
 func flash_auto_selected_cards(cards: Array[Card], hostile: bool = false) -> void:
 	await hand_bar.flash_auto_selected(cards, hostile)
+
+## End of battle: the turn loop is parked, so every player control is locked and
+## the Victory / Defeat cutscene takes over the screen. Awaited by GameManager, so
+## the loop only finishes once the banner has settled in.
+func show_battle_result(victory: bool) -> void:
+	end_turn_button.disabled = true
+	convert_button.disabled = true
+	battle_overlay.set_player_turn_interactive(false)
+	if debug_menu != null and debug_menu.is_open():
+		debug_menu.close_menu()
+		_sync_debug_toggle()
+	if result_overlay == null:
+		return
+	await result_overlay.play_cutscene(victory)
 
 ## `lead` is the fraction of the skill animation to wait for: 1.0 for the
 ## player's own actions, lower for chained enemy turns that overlap their
@@ -499,6 +521,35 @@ func _build_debug_targets(state: GameState) -> Array[Dictionary]:
 	for i: int in state.enemies.size():
 		targets.append(_debug_target_entry("E%d" % (i + 1), state.enemies[i], i, false))
 	return targets
+#endregion
+
+
+#region Battle Result
+## Builds the end-of-battle cutscene in code and mounts it on its own CanvasLayer.
+## Layer 30 sits above the HUD (2), the Moxie rails (3), the tooltip layer (10) and
+## the debug palette (20), so the result banner owns the screen and no leftover
+## glow or tooltip can draw over it. Built in code for the same reason as the
+## debug menu: the .tscn carries no extra nodes to keep in sync.
+func _setup_result_overlay() -> void:
+	result_layer = CanvasLayer.new()
+	result_layer.name = "ResultLayer"
+	result_layer.layer = 30
+	add_child(result_layer)
+
+	result_overlay = BattleResultOverlay.new()
+	result_overlay.victory_icon = victory_icon
+	result_overlay.defeat_icon = defeat_icon
+	result_overlay.restart_requested.connect(_on_restart_requested)
+	result_layer.add_child(result_overlay)
+
+
+## "Play Again": restart from a clean scene. Reloading rebuilds GameManager,
+## GameState and the whole board, so nothing from the finished battle (Moxie,
+## intents, hand, shields) can leak into the new run.
+func _on_restart_requested() -> void:
+	_awaiting_player_action = false
+	get_tree().reload_current_scene()
+#endregion
 
 
 func _debug_target_entry(code: String, unit: Unit, slot: int, is_ally: bool) -> Dictionary:

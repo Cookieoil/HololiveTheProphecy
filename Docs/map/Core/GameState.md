@@ -71,6 +71,6 @@ Private:
 - L393-409 `_to_int`
 
 Uses: Card, Unit, UnitData
-Used by: Core/DataLoader.gd, Core/GameUI.gd, GDTest/AllyKitTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/GameStateMergeTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, Core/GameUI.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/GameStateMergeTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
 Loads: —
 

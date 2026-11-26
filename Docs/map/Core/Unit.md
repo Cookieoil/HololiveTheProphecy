@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/Unit.gd` — `class_name Unit` extends `RefCounted`
 
-`373` lines · [back to the map](../../CODEBASE_MAP.md)
+`387` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data
 
@@ -41,34 +41,35 @@ State:
 Public API:
 - L93-101 `gain_moxie(amount: int) -> int`
 - L103-106 `consume_moxie() -> void`
-- L113-117 `set_moxie(value: int) -> void` — Tester/debug hook: forces the Moxie gauge to `value` and clears the once-per-turn Ultimate lock, so a tester can fire an Ultimate on demand instead of waiting f…
-- L124-144 `take_damage(amount: int, ignore_shield: bool = false) -> int` — Absorbs via shield, then applies the remainder to HP. Emits `damaged` after both values have been updated so UnitUI can react (flinch + bar drop). Also fires wh…
-- L146-150 `heal(amount: int) -> int` — Capped at max_hp. Returns actual HP restored.
-- L151-159 `gain_shield(amount: int) -> int`
-- L160-162 `reset_shield() -> void`
-- L166-170 `reduce_shield(amount: int) -> int` — Directly reduce shield (e.g. Buff merged skill 1). Can't go below 0.
-- L175-177 `deal_true_damage(amount: int) -> int` — Deal damage to HP directly, bypassing shields. Can't go below 0.
-- L180-181 `apply_value_modifier(amount: int) -> void` — Modify the value based on the amount
-- L184-185 `clear_value_modifier() -> void` — Reset the value modifer to 0
-- L189-192 `raise_max_hp(new_max: int) -> void` — raise the unit max HP based on the new max HP
-- L198-212 `apply_status(status_id: String, amount: int = 1) -> int` — Applies (or stacks) a status. Duration statuses add to their remaining rounds, stack statuses add to their stack count.
-- L216-220 `get_status_count(status_id: String) -> int`
-- L223-224 `has_status(status_id: String) -> bool`
-- L228-232 `clear_statuses() -> void` — Removes every status (used when a unit dies so no badge lingers).
-- L240-296 `tick_round_end_statuses() -> Array[Dictionary]` — Runs every active status once, at the end of a round. "duration" statuses fire their effect then lose 1 round (expiring at 0), "stacks" statuses fire their effe…
+- L113-118 `clear_moxie() -> void` — Empties the Moxie gauge and releases the once-per-turn Ultimate lock, without pretending an Ultimate was cast. Used when a unit dies and when the battle ends, s…
+- L125-129 `set_moxie(value: int) -> void` — Tester/debug hook: forces the Moxie gauge to `value` and clears the once-per-turn Ultimate lock, so a tester can fire an Ultimate on demand instead of waiting f…
+- L136-158 `take_damage(amount: int, ignore_shield: bool = false) -> int` — Absorbs via shield, then applies the remainder to HP. Emits `damaged` after both values have been updated so UnitUI can react (flinch + bar drop). Also fires wh…
+- L160-164 `heal(amount: int) -> int` — Capped at max_hp. Returns actual HP restored.
+- L165-173 `gain_shield(amount: int) -> int`
+- L174-176 `reset_shield() -> void`
+- L180-184 `reduce_shield(amount: int) -> int` — Directly reduce shield (e.g. Buff merged skill 1). Can't go below 0.
+- L189-191 `deal_true_damage(amount: int) -> int` — Deal damage to HP directly, bypassing shields. Can't go below 0.
+- L194-195 `apply_value_modifier(amount: int) -> void` — Modify the value based on the amount
+- L198-199 `clear_value_modifier() -> void` — Reset the value modifer to 0
+- L203-206 `raise_max_hp(new_max: int) -> void` — raise the unit max HP based on the new max HP
+- L212-226 `apply_status(status_id: String, amount: int = 1) -> int` — Applies (or stacks) a status. Duration statuses add to their remaining rounds, stack statuses add to their stack count.
+- L230-234 `get_status_count(status_id: String) -> int`
+- L237-238 `has_status(status_id: String) -> bool`
+- L242-246 `clear_statuses() -> void` — Removes every status (used when a unit dies so no badge lingers).
+- L254-310 `tick_round_end_statuses() -> Array[Dictionary]` — Runs every active status once, at the end of a round. "duration" statuses fire their effect then lose 1 round (expiring at 0), "stacks" statuses fire their effe…
 
 Private:
 - L81-89 `_init`
-- L301-305 `_to_string`
-- L309-310 `_normalize_status_id`
-- L314-321 `_status_def`
-- L324-327 `_def_int`
-- L330-337 `_def_bool`
-- L340-343 `_def_string`
-- L347-351 `_entry_count`
-- L355-371 `_coerce_int`
+- L315-319 `_to_string`
+- L323-324 `_normalize_status_id`
+- L328-335 `_status_def`
+- L338-341 `_def_int`
+- L344-351 `_def_bool`
+- L354-357 `_def_string`
+- L361-365 `_entry_count`
+- L369-385 `_coerce_int`
 
 Uses: UnitData
-Used by: Core/DiceRoller.gd, Core/EnemyIntent.gd, Core/GameState.gd, Core/GameUI.gd, GDTest/AllyKitTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/EventBus.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
+Used by: Core/DiceRoller.gd, Core/EnemyIntent.gd, Core/GameState.gd, Core/GameUI.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/EventBus.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/HandBar.gd, Scenes/HUD/BattleOverlayController.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Skills/EffectBlock.gd, Skills/SkillContext.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
 Loads: —
 

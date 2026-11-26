@@ -38,6 +38,7 @@ func _ready() -> void:
 	EventBus.ultimate_cast.connect(_on_ultimate_cast)
 	EventBus.wave_started.connect(_on_wave_or_turn_changed)
 	EventBus.turn_started.connect(_on_wave_or_turn_changed)
+	EventBus.game_over.connect(_on_game_over)
 	call_deferred("_auto_bind_scene_rows")
 
 
@@ -489,5 +490,21 @@ func _on_ultimate_cast(caster: Unit, _skill_name: String) -> void:
 	var orb := _get_valid_orb(caster)
 	if orb != null:
 		orb.play_cast_burst()
+
+
+## The battle is over: nothing on the rails is actionable anymore, so the open
+## tooltip is dismissed, every orb stops accepting clicks and every pending
+## preview segment (enemy rolls included) is released.
+func _on_game_over(_victory: bool) -> void:
+	if _tooltip != null:
+		_tooltip.hide_callout()
+	set_player_turn_interactive(false)
+	for u: Unit in _orbs_by_unit.keys().duplicate():
+		var orb := _get_valid_orb(u)
+		if orb != null:
+			orb.set_preview_gain(0)
+		var uui := _get_valid_unit_ui(u)
+		if uui != null and uui.has_method("set_orb_linked_highlight"):
+			uui.set_orb_linked_highlight(false)
 
 #endregion

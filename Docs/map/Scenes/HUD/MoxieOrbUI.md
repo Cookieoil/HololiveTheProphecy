@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/MoxieOrbUI.gd` — `class_name MoxieOrbUI` extends `Control`
 
-`594` lines · [back to the map](../../../CODEBASE_MAP.md)
+`605` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > extends Control, 3 signal(s), 1 export(s), 22 function(s)
 
@@ -96,38 +96,39 @@ State:
 - L122 `_ready_blend: float = 0.0`
 - L123 `_hover_blend: float = 0.0`
 - L124 `_preview_gain: int = 0`
-- L125 `_is_hovered: bool = false`
-- L126 `_is_pressed: bool = false`
-- L127 `_burst_timer: float = 0.0`
-- L128 `_anim_time: float = 0.0`
+- L125 `_was_dead: bool = false`
+- L126 `_is_hovered: bool = false`
+- L127 `_is_pressed: bool = false`
+- L128 `_burst_timer: float = 0.0`
+- L129 `_anim_time: float = 0.0`
 
 Public API:
-- L221-243 `bind_unit(p_unit: Unit, p_badge_code: String, p_portrait: Texture2D = null) -> void`
-- L246-273 `set_portrait(tex: Texture2D = null) -> void`
-- L276-282 `set_preview_gain(amount: int) -> void`
-- L285-289 `set_interactable(enabled: bool) -> void`
-- L292-294 `play_cast_burst() -> void`
+- L222-245 `bind_unit(p_unit: Unit, p_badge_code: String, p_portrait: Texture2D = null) -> void`
+- L248-275 `set_portrait(tex: Texture2D = null) -> void`
+- L278-284 `set_preview_gain(amount: int) -> void`
+- L287-291 `set_interactable(enabled: bool) -> void`
+- L294-296 `play_cast_burst() -> void`
 
 Private:
-- L131-140 `_init`
-- L143-147 `_ready`
-- L150-155 `_build_glow_node`
-- L158-169 `_build_portrait_node`
-- L172-185 `_build_ring_node`
-- L188-202 `_notification`
-- L205-218 `_layout_subrects`
-- L297-308 `_on_unit_moxie_changed`
-- L311-312 `_can_click_cast`
-- L315-321 `_should_show_glow`
-- L324-375 `_sync_ring_shader`
-- L378-412 `_sync_glow`
-- L415-416 `_update_cursor`
-- L419-434 `_gui_input`
-- L437-484 `_process`
-- L487-588 `_draw`
-- L591-592 `_tint`
+- L132-141 `_init`
+- L144-148 `_ready`
+- L151-156 `_build_glow_node`
+- L159-170 `_build_portrait_node`
+- L173-186 `_build_ring_node`
+- L189-203 `_notification`
+- L206-219 `_layout_subrects`
+- L299-310 `_on_unit_moxie_changed`
+- L313-314 `_can_click_cast`
+- L317-323 `_should_show_glow`
+- L326-377 `_sync_ring_shader`
+- L380-414 `_sync_glow`
+- L417-418 `_update_cursor`
+- L421-436 `_gui_input`
+- L439-495 `_process`
+- L498-599 `_draw`
+- L602-603 `_tint`
 
 Uses: BattleScene, OutlineGlow, Unit
-Used by: GDTest/EnemyUltAuraTest.gd, Scenes/HUD/BattleOverlayController.gd
+Used by: GDTest/BattleEndTest.gd, GDTest/EnemyUltAuraTest.gd, Scenes/HUD/BattleOverlayController.gd
 Loads: res://Scenes/HUD/MoxieOrbPortrait.gdshader, res://Scenes/HUD/MoxieOrbRing.gdshader, res://Scenes/BattleScene/Assets/icon.svg
 

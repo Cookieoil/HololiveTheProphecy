@@ -106,6 +106,18 @@ func consume_moxie() -> void:
 	moxie_changed.emit(moxie, max_moxie)
 
 
+## Empties the Moxie gauge and releases the once-per-turn Ultimate lock, without
+## pretending an Ultimate was cast. Used when a unit dies and when the battle
+## ends, so no residual Moxie crystals (or "ULT READY" glow) outlive the unit or
+## the fight. Emits `moxie_changed` only when something actually changed.
+func clear_moxie() -> void:
+	var changed: bool = moxie != 0 or ult_used_this_turn
+	moxie = 0
+	ult_used_this_turn = false
+	if changed:
+		moxie_changed.emit(moxie, max_moxie)
+
+
 ## Tester/debug hook: forces the Moxie gauge to `value` and clears the once-per-turn
 ## Ultimate lock, so a tester can fire an Ultimate on demand instead of waiting for
 ## it to charge (or to re-test the same one).
@@ -136,9 +148,11 @@ func take_damage(amount: int, ignore_shield: bool = false) -> int:
 	if hp_lost > 0 or shield_lost > 0:
 		damaged.emit(hp_lost, shield_lost)
 
-	# A dead unit never keeps buffs/debuffs around.
+	# A dead unit never keeps buffs/debuffs or a Moxie gauge around, so its orb
+	# drains to empty instead of freezing on the crystals it died holding.
 	if is_dead:
 		clear_statuses()
+		clear_moxie()
 
 	return hp_lost
 	

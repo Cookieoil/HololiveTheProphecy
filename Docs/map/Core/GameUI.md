@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/GameUI.gd` — `class_name GameUI` extends `Node`
 
-`100` lines · [back to the map](../../CODEBASE_MAP.md)
+`106` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameManager only talks to this interface. Every input methods are asyn…
 
@@ -18,12 +18,13 @@ Public API:
 - L46-47 `on_card_played(_card: Card, _state: GameState) -> void` — Presentation cue: a card was accepted and left the hand.
 - L54-60 `on_cards_merged(_source_a: Card, _source_b: Card, _result: Card, _state: GameState) -> void` — Presentation cue: two cards in hand were fused into `result` by a merge. `source_a` is the card that was dragged and `source_b` the card it was dropped on; `res…
 - L68-69 `flash_auto_selected_cards(_cards: Array[Card], _hostile: bool = false) -> void` — Presentation cue: the game picked these cards out of the hand on its own (auto_top_n / auto_highest), so no prompt was shown. Briefly highlight them so the play…
-- L79-83 `get_player_action(_state: GameState) -> Dictionary` — Ask the player for their next action. Returns a Dictionary with at minimum a key "type": "play"		-> { type, card: Card, target_ally: Unit } "merge"		-> { type,…
-- L86-89 `ask_pick_targets(_units: Array[Unit], _count: int) -> Array[Unit]` — Ask the player to pick 'count' unit from 'units'. returns the chosen units (fewer if not enough).
-- L92-95 `ask_pick_cards(_cards: Array[Card], _count: int) -> Array[Card]` — Ask the player to pick 'count' cards from 'cards'. Returns the chosen cards.
-- L97-98 `show_hand_and_resources(_state: GameState) -> void` — Refresh hand and resource counters (Actions, Merges, Deck, Discard).
+- L74-75 `show_battle_result(_victory: bool) -> void` — Presentation cue: the battle is over. Plays the Victory / Defeat cutscene and keeps the result on screen until the player restarts. Callers may `await` this; im…
+- L85-89 `get_player_action(_state: GameState) -> Dictionary` — Ask the player for their next action. Returns a Dictionary with at minimum a key "type": "play"		-> { type, card: Card, target_ally: Unit } "merge"		-> { type,…
+- L92-95 `ask_pick_targets(_units: Array[Unit], _count: int) -> Array[Unit]` — Ask the player to pick 'count' unit from 'units'. returns the chosen units (fewer if not enough).
+- L98-101 `ask_pick_cards(_cards: Array[Card], _count: int) -> Array[Card]` — Ask the player to pick 'count' cards from 'cards'. Returns the chosen cards.
+- L103-104 `show_hand_and_resources(_state: GameState) -> void` — Refresh hand and resource counters (Actions, Merges, Deck, Discard).
 
 Uses: Card, EnemyIntent, GameState, Unit
-Used by: GDTest/CardFlashPolicyTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd
+Used by: GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd
 Loads: —
 
