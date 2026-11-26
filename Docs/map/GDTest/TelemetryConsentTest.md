@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/TelemetryConsentTest.gd` — `class_name TelemetryConsentTest` extends `GdUnitTestSuite`
 
-`247` lines · [back to the map](../../CODEBASE_MAP.md)
+`284` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Agree" grants and persists; "Decline" persists and never grants -…
 
@@ -27,10 +27,11 @@ Public API:
 - L120-127 `test_a_corrupt_file_needs_the_prompt_and_never_grants() -> void`
 - L140-155 `test_popup_agree_writes_consent_and_emits_true() -> void`
 - L159-177 `test_popup_shows_the_required_wording_and_button_order() -> void` — Locks the disclosure wording and the button order the mock-up asks for.
-- L180-190 `test_popup_decline_writes_consent_and_emits_false() -> void`
-- L195-212 `test_declined_consent_records_nothing() -> void`
-- L215-230 `test_granted_consent_opens_a_run_and_writes_events() -> void`
-- L236-245 `test_a_default_recorder_never_collects_headless() -> void` — Regression lock: a recorder with no test sink must never collect in a headless run, even when the player has agreed - that is what keeps the CI gates, the valid…
+- L184-214 `test_popup_fills_and_centres_on_a_canvas_layer() -> void` — BattleScene mounts the popup on a CanvasLayer. A top-level Control gets no parent rect from a CanvasLayer, so a FULL_RECT preset used to collapse to zero and le…
+- L217-227 `test_popup_decline_writes_consent_and_emits_false() -> void`
+- L232-249 `test_declined_consent_records_nothing() -> void`
+- L252-267 `test_granted_consent_opens_a_run_and_writes_events() -> void`
+- L273-282 `test_a_default_recorder_never_collects_headless() -> void` — Regression lock: a recorder with no test sink must never collect in a headless run, even when the player has agreed - that is what keeps the CI gates, the valid…
 
 Private:
 - L55-62 `_remove_tree`

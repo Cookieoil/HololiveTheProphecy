@@ -18,7 +18,7 @@ signal decided(agreed: bool)
 
 #region Constants
 const HEADER_TEXT: String = "Data Consent"
-const MAIN_TEXT: String = "We need your consent to collect anonymous gameplay data."
+const MAIN_TEXT: String = "I need your consent to collect anonymous gameplay data."
 const SUB_TEXT: String = \
 	"Your data will only be used to help improve the game design and balance. " \
 	+ "None of your personal data will be recorded."
@@ -31,6 +31,10 @@ const HEADER_FONT_SIZE: int = 30
 const MAIN_FONT_SIZE: int = 21
 const SUB_FONT_SIZE: int = 17
 const BUTTON_FONT_SIZE: int = 21
+## Padding around the header text, so the plate hugs the title instead of spanning
+## the whole window.
+const HEADER_PAD_X: int = 46
+const HEADER_PAD_Y: int = 12
 
 ## The frame is thin; the header plate sits inside it with a deliberately thicker
 ## blue border, which is what makes the top read as the heavier edge.
@@ -77,15 +81,23 @@ var buttons_row: HBoxContainer
 
 #region Lifecycle Methods
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_ui()
+	# BattleScene mounts this on a CanvasLayer, and a top-level Control has no parent
+	# rect to anchor against: a FULL_RECT preset collapses to zero there, which left
+	# the CenterContainer nothing to centre in (the window stuck at the top-left).
+	# Size the popup from the viewport instead and follow later resizes.
+	var viewport: Viewport = get_viewport()
+	if not viewport.size_changed.is_connected(_sync_to_viewport):
+		viewport.size_changed.connect(_sync_to_viewport)
+	_sync_to_viewport()
 	visible = false
 #endregion
 
 #region Public Methods
 ## Shows the panel. Callers `await decided` to hold the game until answered.
 func open() -> void:
+	_sync_to_viewport()
 	visible = true
 	if agree_button != null:
 		agree_button.grab_focus()
@@ -105,17 +117,27 @@ func decide(agreed: bool) -> void:
 #endregion
 
 #region Private Methods
+## Keeps the modal exactly the size of the screen, centred in it. Anchors are left
+## at the top-left corner on purpose: with anchors Godot would re-derive the size
+## from the (zero) CanvasLayer parent rect and collapse the window again.
+func _sync_to_viewport() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	var screen: Vector2 = get_viewport_rect().size
+	position = Vector2.ZERO
+	size = screen
+
+
 func _build_ui() -> void:
 	var dim: ColorRect = ColorRect.new()
 	dim.name = "Dim"
 	dim.color = DIM_COLOR
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 
 	var center: CenterContainer = CenterContainer.new()
 	center.name = "Center"
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
@@ -134,10 +156,16 @@ func _build_ui() -> void:
 	column.add_child(_build_body())
 
 
-## The top plate, whose blue border is the thicker one.
-func _build_header() -> PanelContainer:
+## The top plate, whose blue border is the thicker one. It is centred in a full
+## width row and shrunk to its text, so it frames the title rather than the window.
+func _build_header() -> CenterContainer:
+	var row: CenterContainer = CenterContainer.new()
+	row.name = "HeaderRow"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	var header: PanelContainer = PanelContainer.new()
 	header.name = "Header"
+	header.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	header.add_theme_stylebox_override("panel", _make_header_style())
 
 	header_label = Label.new()
@@ -147,7 +175,8 @@ func _build_header() -> PanelContainer:
 	header_label.add_theme_font_size_override("font_size", HEADER_FONT_SIZE)
 	header_label.add_theme_color_override("font_color", HEADER_COLOR)
 	header.add_child(header_label)
-	return header
+	row.add_child(header)
+	return row
 
 
 func _build_body() -> MarginContainer:
@@ -242,10 +271,10 @@ func _make_header_style() -> StyleBoxFlat:
 	style.border_color = HEADER_BORDER_COLOR
 	style.set_border_width_all(HEADER_BORDER)
 	style.set_corner_radius_all(10)
-	style.content_margin_left = 18.0
-	style.content_margin_right = 18.0
-	style.content_margin_top = 12.0
-	style.content_margin_bottom = 12.0
+	style.content_margin_left = float(HEADER_PAD_X)
+	style.content_margin_right = float(HEADER_PAD_X)
+	style.content_margin_top = float(HEADER_PAD_Y)
+	style.content_margin_bottom = float(HEADER_PAD_Y)
 	return style
 #endregion
 
