@@ -204,6 +204,11 @@ func _run_game_loop() -> void:
 		state.next_skill_bonus = 0
 		await _player_action_phase()
 
+		# The player phase can end the battle itself - a lethal card, an Ultimate, a
+		# cleared final wave or a debug result preview - so stop before the enemy turn.
+		if not game_running:
+			break
+
 		# ── Step 5: Cleanup played cards ──
 		state.end_player_turn_cleanup()
 
@@ -312,6 +317,13 @@ func _player_action_phase() -> void:
 
 			"debug":
 				_handle_debug_command(action)
+				# A result preview ends the battle right here, through the same exit
+				# a real ending uses (see _finish_battle).
+				if _debug_result_request != DEBUG_RESULT_NONE:
+					var preview_victory: bool = _debug_result_request == DEBUG_RESULT_VICTORY
+					_debug_result_request = DEBUG_RESULT_NONE
+					await _finish_battle(preview_victory)
+					break
 				# A debug tool can clear a wave (or finish off the last enemy), so
 				# run the exact same wave check the "play" branch does instead of
 				# inventing a second path for it.
@@ -496,6 +508,12 @@ const DEBUG_HAND_CAP_LIMIT: int = 20
 const DEBUG_SCOPE_ALLIES: int = 0
 const DEBUG_SCOPE_ENEMIES: int = 1
 const DEBUG_SCOPE_ALL: int = 2
+## Result-screen preview requested by the Debug menu: 0 = none, 1 = Victory,
+## 2 = Defeat. The panel only asks; the player-action loop applies it, so a preview
+## leaves the battle through exactly the same exit a real ending uses.
+const DEBUG_RESULT_NONE: int = 0
+const DEBUG_RESULT_VICTORY: int = 1
+const DEBUG_RESULT_DEFEAT: int = 2
 ## Values for `debug_build_override`: the engine decides, or the suite forces the
 ## release / debug answer so the gate below can be exercised without an export.
 const DEBUG_BUILD_ENGINE: int = -1
@@ -507,6 +525,10 @@ const DEBUG_BUILD_FORCED_ON: int = 1
 ## cannot be written from exported data, so it can never re-enable the tools in a
 ## release build.
 static var debug_build_override: int = DEBUG_BUILD_ENGINE
+
+## Result-screen preview the Debug menu asked for, applied by the player-action
+## loop (see `_player_action_phase`). `DEBUG_RESULT_NONE` when there is none.
+var _debug_result_request: int = DEBUG_RESULT_NONE
 
 ## Build-type gate for every tester tool (the Debug menu, the F1 hotkey and the
 ## "debug" action). Editor runs and debug exports report `true`; a **release** export
@@ -615,6 +637,12 @@ func _handle_debug_command(action: Dictionary) -> void:
 			# Let the turn loop's own all-enemies-dead check advance the wave or
 			# declare victory, so this needs no wave code of its own.
 			_debug_kill(state.get_living_enemies())
+		"show_victory":
+			_debug_result_request = DEBUG_RESULT_VICTORY
+			_debug_log("Previewing the Victory cutscene.")
+		"show_defeat":
+			_debug_result_request = DEBUG_RESULT_DEFEAT
+			_debug_log("Previewing the Defeat cutscene.")
 		_:
 			_debug_log("Unknown debug command '%s'." % command)
 

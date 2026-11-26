@@ -58,6 +58,8 @@ const CMD_CLEAR_STATUSES: String = "clear_statuses"       # { scope: int, slot: 
 const CMD_REROLL_INTENTS: String = "reroll_intents"       # {}
 const CMD_RESPAWN_WAVE: String = "respawn_wave"           # {}
 const CMD_CLEAR_WAVE: String = "clear_wave"               # {}
+const CMD_SHOW_VICTORY: String = "show_victory"           # {}
+const CMD_SHOW_DEFEAT: String = "show_defeat"             # {}
 
 ## Amounts the quick action buttons apply.
 const DAMAGE_STEP: int = 5
@@ -67,7 +69,7 @@ const GLOOM_STEP: int = 3
 
 ## Where the panel sits: bottom-left, directly above the button that opens it.
 const PANEL_WIDTH: float = 336.0
-const PANEL_HEIGHT: float = 404.0
+const PANEL_HEIGHT: float = 464.0
 const SEAT_LEFT: float = 18.0
 const SEAT_BOTTOM: float = 50.0
 const PADDING: int = 10
@@ -419,6 +421,14 @@ func _build_units_tab(tabs: TabContainer) -> void:
 	battle_row.add_child(_make_button("Reroll intents", CMD_REROLL_INTENTS))
 	battle_row.add_child(_make_button("Respawn wave", CMD_RESPAWN_WAVE))
 	battle_row.add_child(_make_button("Clear wave", CMD_CLEAR_WAVE))
+
+	# The result cutscene is otherwise only reachable by actually winning or
+	# losing, so it gets its own preview tools.
+	page.add_child(_make_section("Result screen"))
+	var result_row := _make_row()
+	page.add_child(result_row)
+	result_row.add_child(_make_button("Preview victory", CMD_SHOW_VICTORY))
+	result_row.add_child(_make_button("Preview defeat", CMD_SHOW_DEFEAT))
 
 
 func _make_tab(tabs: TabContainer, title: String) -> VBoxContainer:
