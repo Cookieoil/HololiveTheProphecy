@@ -11,6 +11,10 @@ var ui: GameUI
 var current_intents: Array[EnemyIntent] = []
 var game_running: bool = false
 var instructions_shown: bool = false
+## Passive gameplay recorder (see Managers/TelemetryManager.gd). It is a no-op
+## until the player has agreed to telemetry, so every hook below is safe to call
+## unconditionally.
+var telemetry: TelemetryManager = TelemetryManager.new()
 
 #region Constants
 ## JSON/config string -> WaveTransition (config.json stores readable names).
@@ -68,6 +72,9 @@ func setup_game(
 	state.wave_definitions = wave_defs
 	# Initialize allies
 	state.initialize_allies(ally_data)
+	# Open the telemetry run before the first wave spawns, so wave 0 and turn 1
+	# are captured from the very first session when the player agreed.
+	telemetry.start_run(state)
 	# Initialize enemies
 	_spawn_wave(0)
 	state.build_deck() # decklist already set by _apply_config
@@ -198,6 +205,9 @@ func _run_game_loop() -> void:
 			var count_str: String = ColorUtils.colorize(str(drawn.size()), ColorUtils.COLOR_CARD)
 			ui.show_message("Drew %s card(s)." % count_str)
 
+		# Snapshot the turn the player is about to act in: intents, hand, board.
+		telemetry.record_turn_started(state, current_intents, state.get_dice_size(state.turn_number))
+
 		# ── Step 4: Player action phase (async) ──
 		state.actions_left = state.actions_per_turn
 		state.merges_left = state.merges_per_turn
@@ -219,7 +229,7 @@ func _run_game_loop() -> void:
 			if _try_advance_wave():
 				state.turn_number += 1
 				continue # loop to next turn (enemies skip this turn)
-			await _finish_battle(true)
+			await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
 			break
 
 		# ── Step 6: Reset enemy shields & temp effects ──
@@ -232,27 +242,28 @@ func _run_game_loop() -> void:
 		
 		# Post-turn checks
 		if state.all_allies_dead():
-			await _finish_battle(false)
+			await _finish_battle(false, TelemetryManager.REASON_ALL_ALLIES_DEAD)
 			break
 		
 		if state.all_enemies_dead():
 			if not _try_advance_wave():
-				await _finish_battle(true)
+				await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
 				break
 				
 		# ── Step 8: Clean up (statuses tick once per round) ──
 		_end_of_turn_cleanup()
+		telemetry.record_turn_ended(state)
 
 		# A status tick can finish off the last unit, so re-check the outcome.
 		if state.all_allies_dead():
-			await _finish_battle(false)
+			await _finish_battle(false, TelemetryManager.REASON_STATUS_TICK)
 			break
 
 		if state.all_enemies_dead():
 			if _try_advance_wave():
 				state.turn_number += 1
 				continue
-			await _finish_battle(true)
+			await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
 			break
 
 		state.turn_number += 1
@@ -282,60 +293,71 @@ func _player_action_phase() -> void:
 	ui.show_hand_and_resources(state)
 		
 	while true:
+		# Snapshot everything the player can see *before* they choose, so the
+		# recorded decision carries the alternatives it was chosen over.
+		telemetry.begin_decision(state, current_intents)
 		var action: Dictionary = await ui.get_player_action(state)
+		telemetry.note_action_received()
 		var action_type: String = str(action.get("type", ""))
-	
+		var end_phase: bool = false
+
 		match action_type:
 			"play":
 				var play_card: Card = action["card"]
 				var target_ally: Unit = action["target_ally"]
 				await _handle_play(play_card, target_ally)
 				if _resolve_enemy_clear_after_action():
-					break # final wave cleared: the battle is won
-				
+					end_phase = true # final wave cleared: the battle is won
+
 			"merge":
 				var card_a: Card = action["card_a"]
 				var card_b: Card = action["card_b"]
 				_handle_merge(card_a, card_b)
-				
+
 			"convert":
 				_handle_convert()
-				
+
 			"ultimate":
 				var caster: Unit = action["caster"]
 				await _handle_ally_ultimate(caster)
 				# An Ultimate can clear the board too, so it runs the same wave /
 				# victory check a played card does instead of leaving the phase open.
 				if _resolve_enemy_clear_after_action():
-					break
-				
+					end_phase = true
+
 			"stats":
 				ui.show_game_state(state)
-				
+
 			"hand":
 				pass
 
 			"debug":
+				# Every tester tool taints the run, so balance views can ignore it.
+				telemetry.mark_debug_tainted()
 				_handle_debug_command(action)
 				# A result preview ends the battle right here, through the same exit
 				# a real ending uses (see _finish_battle).
 				if _debug_result_request != DEBUG_RESULT_NONE:
 					var preview_victory: bool = _debug_result_request == DEBUG_RESULT_VICTORY
 					_debug_result_request = DEBUG_RESULT_NONE
-					await _finish_battle(preview_victory)
-					break
-				# A debug tool can clear a wave (or finish off the last enemy), so
-				# run the exact same wave check the "play" branch does instead of
-				# inventing a second path for it.
-				if _resolve_enemy_clear_after_action():
-					break
-				
+					await _finish_battle(preview_victory, TelemetryManager.REASON_DEBUG_PREVIEW)
+					end_phase = true
+				elif _resolve_enemy_clear_after_action():
+					# A debug tool can clear a wave (or finish off the last enemy),
+					# so run the exact same wave check the "play" branch does.
+					end_phase = true
+
 			"end_turn":
 				ui.show_message("Ending player turn.")
-				break
+				end_phase = true
 			_:
 				ui.show_message("Unknown action.")
-				
+
+		# Close the decision window before leaving the phase, so the player's
+		# action is recorded even when it ended the battle.
+		telemetry.end_decision(action, state)
+		if end_phase:
+			break
 		ui.show_hand_and_resources(state)
 
 
@@ -479,6 +501,7 @@ func _handle_merge(a: Card, b: Card) -> void:
 	if result == null:
 		ui.show_message("Invalid merge.")
 		return
+	telemetry.note_merge_result(result)
 	state.merges_left -= 1
 	# Presentation first: the hand plays the merge, then the counters refresh. The
 	# merged card is reused by that refresh, so the merge is not interrupted by it.
@@ -860,7 +883,10 @@ func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
 				units.append(u)
 		if units.is_empty():
 			return []
-		return await ui.ask_pick_targets(units, count)
+		var started_ms: int = Time.get_ticks_msec()
+		var picked: Array[Unit] = await ui.ask_pick_targets(units, count)
+		telemetry.note_pick_target(units, count, picked, Time.get_ticks_msec() - started_ms)
+		return picked
 		
 	# Pick_n_card:
 	ctx.pick_n_card = func(count: int, filter: Callable) -> Array[Card]:
@@ -870,7 +896,10 @@ func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
 				units.append(c)
 		if units.is_empty():
 			return []
-		return await ui.ask_pick_cards(units, count)
+		var started_ms: int = Time.get_ticks_msec()
+		var picked: Array[Card] = await ui.ask_pick_cards(units, count)
+		telemetry.note_pick_card(units, count, picked, Time.get_ticks_msec() - started_ms)
+		return picked
 
 	# Flash_cards: reveal cards the game picked automatically (no prompt shown).
 	ctx.flash_cards = func(cards: Array[Card]) -> void:
@@ -1070,8 +1099,13 @@ func _try_advance_wave() -> bool:
 ## tick. It parks the loop, wipes the leftover turn state (pending enemy intents
 ## and every unit's Moxie gauge) so nothing on the board still claims a turn is
 ## coming, then hands the result to the UI for the Victory / Defeat cutscene.
-func _finish_battle(victory: bool) -> void:
+func _finish_battle(victory: bool, reason: String = "") -> void:
 	game_running = false
+
+	# Close the telemetry run first, while the board still holds the final state
+	# (intents were just cleared, Moxie is about to be wiped). `reason` names how
+	# the battle ended for the balance report.
+	telemetry.end_run(victory, reason, state)
 
 	# No enemy is acting anymore, so no intent preview (and no orb preview
 	# segment) may survive the hit that ended the fight.

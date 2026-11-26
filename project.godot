@@ -15,6 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Hololive: The Prophecy"
+config/version="0.1.0"
 run/main_scene="uid://cpq72wwlumlsu"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 run/max_fps=60
@@ -68,8 +69,8 @@ folder_colors={
 
 [gui]
 
-theme/custom="res://Scenes/HUD/HudTooltipTheme.tres"
 timers/tooltip_delay_sec=0.0
+theme/custom="res://Scenes/HUD/HudTooltipTheme.tres"
 
 [rendering]
 

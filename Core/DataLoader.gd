@@ -119,6 +119,7 @@ static func load_database() -> GameDatabase:
 	database.units.merge(database.enemies, true)
 	database.waves = _build_waves(_read_json_object(WAVES_PATH), database.units)
 	database.config = _build_config(_read_json_object(CONFIG_PATH), database.units)
+	database.balance_hash = _compute_balance_hash()
 	if database.skills.is_empty():
 		_errors.append("[DataLoader] skills.json produced no skills")
 	if database.units.is_empty():
@@ -168,6 +169,30 @@ static func _read_json_object(path: String) -> Dictionary:
 		return {}
 	var data: Dictionary = parsed
 	return data
+
+
+## Deterministic SHA-256 over the five JSON data files, in a fixed order, so the
+## same balance numbers always produce the same hash on every machine. The raw
+## file text is hashed: any edit to a number, key or order changes the hash.
+static func _compute_balance_hash() -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	for path: String in [SKILLS_PATH, ALLIES_PATH, ENEMIES_PATH, WAVES_PATH, CONFIG_PATH]:
+		parts.append(path)
+		parts.append(_read_text(path))
+	return ("\n".join(parts)).sha256_text()
+
+
+## Reads a file as UTF-8 text, or "" when it is missing/unreadable. Used by the
+## balance hash, which must tolerate the same missing files the loader reports.
+static func _read_text(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return ""
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return ""
+	var text: String = file.get_as_text()
+	file.close()
+	return text
 
 
 ## Coerces a JSON value into an int. JSON numbers always parse as float, so
@@ -261,6 +286,7 @@ static func _build_skills(skills_json: Dictionary) -> Dictionary:
 			continue
 		var entry: Dictionary = entry_raw
 		var skill: SkillData = SkillData.new()
+		skill.skill_id = skill_id
 		skill.skill_name = _get_string(entry, "display_name", skill_id)
 		skill.description = _get_string(entry, "description", "")
 		skill.merged_description = _get_string(entry, "merged_description", "")
@@ -382,6 +408,7 @@ static func _build_units(units_json: Dictionary, default_is_enemy: bool, skills:
 			continue
 		var entry: Dictionary = entry_raw
 		var unit: UnitData = UnitData.new()
+		unit.unit_id = unit_id
 		unit.display_name = _get_string(entry, "display_name", unit_id)
 		unit.max_hp = maxi(1, _get_int(entry, "max_hp", DEFAULT_MAX_HP))
 		unit.max_moxie = maxi(1, _get_int(entry, "max_moxie", DEFAULT_MAX_MOXIE))
@@ -445,6 +472,7 @@ static func _build_waves(waves_json: Dictionary, units: Dictionary) -> Array:
 ## Copies a UnitData template so wave overrides never mutate the base unit.
 static func _clone_unit(original: UnitData) -> UnitData:
 	var clone: UnitData = UnitData.new()
+	clone.unit_id = original.unit_id
 	clone.display_name = original.display_name
 	clone.max_hp = original.max_hp
 	clone.portrait = original.portrait

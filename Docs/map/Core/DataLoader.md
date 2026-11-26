@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/DataLoader.gd` — `class_name DataLoader` extends `RefCounted`
 
-`516` lines · [back to the map](../../CODEBASE_MAP.md)
+`544` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single source of truth; the workbook (res://Data/xlsx/game_data.xlsx)…
 
@@ -30,31 +30,33 @@ State:
 
 Public API:
 - L90-105 `static db() -> GameDatabase` — Returns the cached database, loading the JSON files on first use.
-- L111-128 `static load_database() -> GameDatabase` — Reads every JSON file and rebuilds a fresh GameDatabase. Problems are collected in get_errors() instead of aborting immediately so tooling can report them all a…
-- L132-133 `static get_errors() -> PackedStringArray` — Problems collected by the most recent db() or load_database() call.
-- L137-139 `static reload() -> void` — Drops the cached database so the next db() call re-reads the JSON files.
-- L143-149 `static quit_code(code: int) -> void` — Quits the running game with the given exit code (no-op inside the editor).
+- L111-129 `static load_database() -> GameDatabase` — Reads every JSON file and rebuilds a fresh GameDatabase. Problems are collected in get_errors() instead of aborting immediately so tooling can report them all a…
+- L133-134 `static get_errors() -> PackedStringArray` — Problems collected by the most recent db() or load_database() call.
+- L138-140 `static reload() -> void` — Drops the cached database so the next db() call re-reads the JSON files.
+- L144-150 `static quit_code(code: int) -> void` — Quits the running game with the given exit code (no-op inside the editor).
 
 Private:
-- L155-170 `_read_json_object`
-- L175-177 `_get_int`
-- L181-197 `_to_int`
-- L201-219 `_get_bool`
-- L223-230 `_get_string`
-- L234-244 `_get_string_array`
-- L248-253 `_get_array`
-- L255-277 `_build_skills`
-- L282-296 `_add_effects`
-- L301-323 `_sorted_effects`
-- L327-364 `_build_effect_block`
-- L369-373 `_resolve_enum`
-- L376-393 `_build_units`
-- L397-405 `_resolve_skill`
-- L409-442 `_build_waves`
-- L446-456 `_clone_unit`
-- L459-515 `_build_config`
+- L156-171 `_read_json_object`
+- L177-182 `_compute_balance_hash`
+- L187-195 `_read_text`
+- L200-202 `_get_int`
+- L206-222 `_to_int`
+- L226-244 `_get_bool`
+- L248-255 `_get_string`
+- L259-269 `_get_string_array`
+- L273-278 `_get_array`
+- L280-303 `_build_skills`
+- L308-322 `_add_effects`
+- L327-349 `_sorted_effects`
+- L353-390 `_build_effect_block`
+- L395-399 `_resolve_enum`
+- L402-420 `_build_units`
+- L424-432 `_resolve_skill`
+- L436-469 `_build_waves`
+- L473-484 `_clone_unit`
+- L487-543 `_build_config`
 
 Uses: EffectBlock, GameDatabase, GameState, SkillData, UnitData
-Used by: GDTest/AllyKitTest.gd, GDTest/EnemySkillBalanceTest.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
+Used by: GDTest/AllyKitTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryFoundationTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
 Loads: res://Data/json, res://Data/json/skills.json, res://Data/json/allies.json, res://Data/json/enemies.json, res://Data/json/waves.json, res://Data/json/config.json, res://Tools/export_xlsx_to_json.gd
 
