@@ -1,19 +1,19 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleScene/BattleScene.gd` — `class_name BattleScene` extends `GameUI`
 
-`562` lines · [back to the map](../../../CODEBASE_MAP.md)
+`574` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > extends GameUI, 2 signal(s), 8 export(s), 41 function(s)
 
 Sections: GameUI Overrides · Helpers & Interaction Handlers · Debug Menu · Battle Result
 
 Signals:
-- L48 `action_decided(action_dict: Dictionary)`
-- L49 `unit_selected_for_target(unit: Unit)`
+- L52 `action_decided(action_dict: Dictionary)`
+- L53 `unit_selected_for_target(unit: Unit)`
 
 Constants:
-- L52 `INTENT_STAGGER: float = 0.08` — seconds between each enemy's intent appearing
-- L56 `ICON_BUTTON_HOVER_TINT: Color = Color(1.25, 1.25, 1.25)` — The two top-bar action buttons draw no button chrome (see BattleScene.tscn), so hovering brightens their icon a little instead, the same cue the ultimate orbs g…
+- L56 `INTENT_STAGGER: float = 0.08` — seconds between each enemy's intent appearing
+- L60 `ICON_BUTTON_HOVER_TINT: Color = Color(1.25, 1.25, 1.25)` — The two top-bar action buttons draw no button chrome (see BattleScene.tscn), so hovering brightens their icon a little instead, the same cue the ultimate orbs g…
 
 Exports:
 - L5 `icon_catalog: CardIconCatalog`
@@ -47,53 +47,54 @@ State:
 - L39 `debug_menu: DebugMenuPopup` — Tester overlay, built in code and mounted on `debug_layer`.
 - L41 `result_overlay: BattleResultOverlay` — End-of-battle cutscene, built in code and mounted on its own top layer.
 - L42 `result_layer: CanvasLayer`
-- L45 `_awaiting_player_action: bool = false` — True only while GameManager awaits a player action: the one window in which a debug tool may be applied, because the turn loop is sitting on the action queue.
-- L46 `_intent_cache: Dictionary[Unit, Dictionary] = {}`
+- L46 `result_back_buffer: BackBufferCopy` — Copies the rendered battle into the back buffer, so the cutscene's backdrop shader can grade what is behind it (a CanvasItem screen texture needs a BackBufferCo…
+- L49 `_awaiting_player_action: bool = false` — True only while GameManager awaits a player action: the one window in which a debug tool may be applied, because the turn loop is sitting on the action queue.
+- L50 `_intent_cache: Dictionary[Unit, Dictionary] = {}`
 
 Public API:
-- L97-99 `on_card_played(card: Card, state: GameState) -> void`
-- L105-107 `on_cards_merged(source_a: Card, source_b: Card, result: Card, state: GameState) -> void` — Two cards in hand were fused into `result`: the hand plays the merge (the two cards drift into each other from where they were dropped, fold closed, and the mer…
-- L112-113 `flash_auto_selected_cards(cards: Array[Card], hostile: bool = false) -> void` — Cards the game selected without asking (auto_top_n / auto_highest) get a short highlight so the player can see what was picked for them. `hostile` is set when a…
-- L118-127 `show_battle_result(victory: bool) -> void` — End of battle: the turn loop is parked, so every player control is locked and the Victory / Defeat cutscene takes over the screen. Awaited by GameManager, so th…
-- L132-137 `play_unit_skill(unit: Unit, skill_index: int, rank: int = 0, lead: float = 1.0) -> void` — `lead` is the fraction of the skill animation to wait for: 1.0 for the player's own actions, lower for chained enemy turns that overlap their animations (see Ga…
-- L140-143 `play_unit_ultimate(unit: Unit) -> void`
-- L145-150 `show_message(msg: String) -> void`
-- L153-160 `show_game_state(state: GameState) -> void`
-- L163-167 `show_hand_and_resources(state: GameState) -> void`
-- L190-202 `show_enemy_intents(intents: Array[EnemyIntent]) -> void`
-- L205-209 `clear_unit_intent(unit: Unit) -> void`
-- L236-255 `get_player_action(state: GameState) -> Dictionary`
-- L258-281 `ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]`
-- L284-312 `ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]`
+- L101-103 `on_card_played(card: Card, state: GameState) -> void`
+- L109-111 `on_cards_merged(source_a: Card, source_b: Card, result: Card, state: GameState) -> void` — Two cards in hand were fused into `result`: the hand plays the merge (the two cards drift into each other from where they were dropped, fold closed, and the mer…
+- L116-117 `flash_auto_selected_cards(cards: Array[Card], hostile: bool = false) -> void` — Cards the game selected without asking (auto_top_n / auto_highest) get a short highlight so the player can see what was picked for them. `hostile` is set when a…
+- L122-134 `show_battle_result(victory: bool) -> void` — End of battle: the turn loop is parked, so every player control is locked and the Victory / Defeat cutscene takes over the screen. Awaited by GameManager, so th…
+- L139-144 `play_unit_skill(unit: Unit, skill_index: int, rank: int = 0, lead: float = 1.0) -> void` — `lead` is the fraction of the skill animation to wait for: 1.0 for the player's own actions, lower for chained enemy turns that overlap their animations (see Ga…
+- L147-150 `play_unit_ultimate(unit: Unit) -> void`
+- L152-157 `show_message(msg: String) -> void`
+- L160-167 `show_game_state(state: GameState) -> void`
+- L170-174 `show_hand_and_resources(state: GameState) -> void`
+- L197-209 `show_enemy_intents(intents: Array[EnemyIntent]) -> void`
+- L212-216 `clear_unit_intent(unit: Unit) -> void`
+- L243-262 `get_player_action(state: GameState) -> Dictionary`
+- L265-288 `ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]`
+- L291-319 `ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]`
 
 Private:
-- L58-92 `_ready`
-- L170-180 `_update_top_bar`
-- L185-187 `_setup_icon_button_hover`
-- L212-216 `_apply_cached_intents`
-- L219-231 `_apply_intent_to`
-- L317-322 `_on_merge_requested`
-- L325-330 `_on_card_dropped_on_unit`
-- L333-334 `_on_unit_clicked`
-- L340-341 `_on_ally_ultimate_requested`
-- L345-354 `_sync_overlay_units`
-- L357-361 `_highlight_target_candidates`
-- L364-371 `_get_unit_ui`
-- L374-405 `_sync_unit_row`
-- L419-420 `_debug_tools_allowed`
-- L423-432 `_unhandled_key_input`
-- L437-448 `_setup_debug_menu`
-- L451-456 `_on_debug_button_pressed`
-- L460-463 `_sync_debug_toggle`
-- L466-468 `_set_debug_interactive`
-- L473-476 `_on_debug_command_requested`
-- L479-485 `_refresh_debug_menu`
-- L488-491 `_debug_state`
-- L495-508 `_debug_snapshot`
-- L514-523 `_build_debug_targets`
-- L533-543 `_setup_result_overlay`
-- L549-551 `_on_restart_requested`
-- L555-560 `_debug_target_entry`
+- L62-96 `_ready`
+- L177-187 `_update_top_bar`
+- L192-194 `_setup_icon_button_hover`
+- L219-223 `_apply_cached_intents`
+- L226-238 `_apply_intent_to`
+- L324-329 `_on_merge_requested`
+- L332-337 `_on_card_dropped_on_unit`
+- L340-341 `_on_unit_clicked`
+- L347-348 `_on_ally_ultimate_requested`
+- L352-361 `_sync_overlay_units`
+- L364-368 `_highlight_target_candidates`
+- L371-378 `_get_unit_ui`
+- L381-412 `_sync_unit_row`
+- L426-427 `_debug_tools_allowed`
+- L430-439 `_unhandled_key_input`
+- L444-455 `_setup_debug_menu`
+- L458-463 `_on_debug_button_pressed`
+- L467-470 `_sync_debug_toggle`
+- L473-475 `_set_debug_interactive`
+- L480-483 `_on_debug_command_requested`
+- L486-492 `_refresh_debug_menu`
+- L495-498 `_debug_state`
+- L502-515 `_debug_snapshot`
+- L521-530 `_build_debug_targets`
+- L540-555 `_setup_result_overlay`
+- L561-563 `_on_restart_requested`
+- L567-572 `_debug_target_entry`
 
 Uses: BattleOverlayController, BattleResultOverlay, Card, CardIconCatalog, DataLoader, DebugMenuPopup, EnemyIntent, GameDatabase, GameManager, GameState, GameUI, HandBar, StatusIconCatalog, TooltipIconCatalog, Unit, UnitData, UnitUI
 Used by: GDTest/BattleEndTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/BattleUnit/SpinePortrait.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleResultOverlay.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Tools/check_navigation.gd

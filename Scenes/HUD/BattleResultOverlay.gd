@@ -1,21 +1,28 @@
 # res://Scenes/HUD/BattleResultOverlay.gd
 class_name BattleResultOverlay
 extends Control
-## End-of-battle cutscene: a flat, deliberately calm Victory / Defeat banner.
+## End-of-battle cutscene, staged like a big-budget result screen.
 ##
 ## The battle scene is the only scene, so the result screen is built in code and
-## mounted on its own CanvasLayer (like DebugMenuPopup and SkillTooltipPopup) -
-## no .tscn has to be hand-edited for it.
+## mounted on its own CanvasLayer (like DebugMenuPopup and SkillTooltipPopup) - no
+## .tscn has to be hand-edited for it.
 ##
-## The look is intentionally plain: no OutlineGlow, no HDR/neon bloom (the project
-## runs `viewport/hdr_2d=true`, so any channel above 1.0 would glow). Over the
-## matte backdrop sit the emblem and the title as one mark - the title lapped
-## slightly over the emblem - with a single "Play Again" button below. Neither the
-## title nor the emblem is boxed in: there is no slab around the title and no tile
-## around the icon, and the button draws no outline.
+## Composition, top to bottom:
+##   - a screen-space grade over the live battlefield: colour drained, softly
+##     vignetted, with a full-width feathered cinema band across the middle
+##     (see res://Scenes/HUD/BattleResultBackdrop.gdshader),
+##   - the emblem as a low-contrast etched seal with the title lapped over its
+##     lower edge (see res://Scenes/HUD/BattleResultEmblem.gdshader), plus a wider
+##     ghost imprint of the same word drifting behind it,
+##   - and one frameless action prompt below the band.
+##
+## No boxes: no slab around the title, no tile around the emblem, no border on the
+## button. No neon either - every colour stays in SDR range and nothing glows, so
+## the scene's own WorldEnvironment glow cannot flare it.
 ##
 ## Both emblems are placeholder art until the hand-drawn icons land, so they are
-## exported and can be swapped from the inspector.
+## exported and can be swapped from the inspector (set `raw_emblem_mode` to draw
+## finished art untouched).
 ##
 ## @author TheGreatJellyfish
 ## @version 11/25/2026
@@ -27,50 +34,60 @@ signal restart_requested()
 #endregion
 
 #region Constants
+const BACKDROP_SHADER: Shader = preload("res://Scenes/HUD/BattleResultBackdrop.gdshader")
+const EMBLEM_SHADER: Shader = preload("res://Scenes/HUD/BattleResultEmblem.gdshader")
+
 const PLACEHOLDER_VICTORY_ICON: Texture2D = preload("res://Scenes/BattleScene/Assets/icon2.png")
 const PLACEHOLDER_DEFEAT_ICON: Texture2D = preload("res://Scenes/BattleScene/Assets/icon.svg")
 
-## Square corners keep the button on the same surface as the debug menu and the
-## hover tooltip slabs.
-const CORNER_RADIUS: int = 0
-const ROW_SEPARATION: int = 12
+## Emblem size, and how far the title laps over its bottom edge. Negative, so the
+## two read as one mark instead of a stacked list.
+const EMBLEM_SIZE: float = 112.0
+const ICON_TITLE_OVERLAP: int = -30
 
-## Emblem (placeholder icon) size.
-const EMBLEM_SIZE: float = 72.0
+## Space between the mark and the action prompt below it.
+const ROW_SEPARATION: int = 16
 
-## How far the title laps over the emblem's bottom edge. Negative, so the two read
-## as one mark instead of a stacked list.
-const ICON_TITLE_OVERLAP: int = -26
+const TITLE_FONT_SIZE: int = 56
+## Tracking at the start of the reveal and where it locks. Condensing the letters
+## into place is what makes the title feel stamped rather than simply faded in.
+const TITLE_TRACK_FROM: int = 22
+const TITLE_TRACK_TO: int = 14
+const GHOST_FONT_TRACK: int = 16
 
-const TITLE_FONT_SIZE: int = 42
-
-const BUTTON_MIN_SIZE: Vector2 = Vector2(220.0, 44.0)
-const BUTTON_FONT_SIZE: int = 16
+## The ghost imprint: a wider, fainter copy of the same word that appears with the
+## title, then drifts outward and thins away behind it. Kept very low contrast and
+## short-lived on purpose - a louder or longer one reads as a misprint instead of
+## an afterimage.
+const GHOST_PEAK_ALPHA: float = 0.12
+const GHOST_SCALE: float = 1.04
+const GHOST_IN_TIME: float = 0.22
+const GHOST_DRIFT_TIME: float = 0.70
+const GHOST_FADE_TIME: float = 0.50
 
 ## Cutscene pacing. Short on purpose: it plays after the last hit, so it must not
-## make a finished battle feel slow.
-const BACKDROP_FADE_TIME: float = 0.25
-const CONTENT_IN_TIME: float = 0.32
-const BUTTON_IN_TIME: float = 0.18
-const CONTENT_SCALE_FROM: float = 0.96
+## make a finished battle feel slow. Three beats - the hush, the stamp, the prompt.
+const BACKDROP_FADE_TIME: float = 0.24
+const BAND_OPEN_TIME: float = 0.42
+const RULE_WIPE_TIME: float = 0.52
+const BEAT_GAP: float = 0.06
+const MARK_IN_TIME: float = 0.34
+const CONTENT_SCALE_FROM: float = 0.97
+const PROMPT_GAP: float = 0.34
+const PROMPT_IN_TIME: float = 0.24
 
 ## SDR-only palette. Every channel stays at or below 1.0 so nothing blooms.
-const BACKDROP_COLOR: Color = Color(0.04, 0.05, 0.07, 0.80)
-
-const VICTORY_TITLE: Color = Color(0.92, 0.80, 0.48, 1.0)
-const VICTORY_EMBLEM_TINT: Color = Color(0.96, 0.88, 0.66, 1.0)
-
-const DEFEAT_TITLE: Color = Color(0.86, 0.44, 0.44, 1.0)
-const DEFEAT_EMBLEM_TINT: Color = Color(0.80, 0.62, 0.62, 1.0)
+const VICTORY_TITLE: Color = Color(0.93, 0.83, 0.56, 1.0)
+const DEFEAT_TITLE: Color = Color(0.86, 0.42, 0.40, 1.0)
+## The seal's ink: burnished antique gold for a win, weathered iron for a loss.
+const VICTORY_SEAL: Color = Color(0.76, 0.64, 0.38, 1.0)
+const DEFEAT_SEAL: Color = Color(0.58, 0.27, 0.27, 1.0)
+## What the drained battlefield leans towards: warm parchment or cold ash.
+const VICTORY_GRADE: Color = Color(0.86, 0.80, 0.68, 1.0)
+const DEFEAT_GRADE: Color = Color(0.62, 0.66, 0.72, 1.0)
 
 const TITLE_TEXT_VICTORY: String = "VICTORY"
 const TITLE_TEXT_DEFEAT: String = "DEFEAT"
-
-const BUTTON_TEXT: String = "Play Again"
-const BUTTON_FONT_COLOR: Color = Color(0.90, 0.92, 0.96, 1.0)
-const BUTTON_BG_NORMAL: Color = Color(0.14, 0.16, 0.21, 1.0)
-const BUTTON_BG_HOVER: Color = Color(0.20, 0.23, 0.29, 1.0)
-const BUTTON_BG_PRESSED: Color = Color(0.11, 0.13, 0.17, 1.0)
 #endregion
 
 #region Exports
@@ -78,18 +95,27 @@ const BUTTON_BG_PRESSED: Color = Color(0.11, 0.13, 0.17, 1.0)
 @export var victory_icon: Texture2D = PLACEHOLDER_VICTORY_ICON
 ## Placeholder emblem for a lost battle (swapped for hand-drawn art later).
 @export var defeat_icon: Texture2D = PLACEHOLDER_DEFEAT_ICON
+## Draw the emblem as authored instead of etching it into a seal. Turn this on
+## once a bespoke crest replaces the placeholder icons.
+@export var raw_emblem_mode: bool = false
 #endregion
 
 #region Private Variables
 var _backdrop: ColorRect
+var _backdrop_mat: ShaderMaterial
 var _center: CenterContainer
 var _column: VBoxContainer
 var _mark: VBoxContainer
 var _emblem: TextureRect
+var _emblem_mat: ShaderMaterial
+var _title_stack: MarginContainer
 var _title: Label
-var _button_row: CenterContainer
-var _restart_button: Button
+var _title_ghost: Label
+var _title_variation: FontVariation
+var _ghost_variation: FontVariation
+var _prompt: BattleResultPrompt
 var _cutscene: Tween
+var _ghost_tween: Tween
 var _is_showing: bool = false
 #endregion
 
@@ -104,6 +130,7 @@ func _init() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
 	_column.resized.connect(_sync_column_pivot)
+	_title_stack.resized.connect(_sync_ghost_pivot)
 #endregion
 
 #region Public Methods
@@ -113,30 +140,47 @@ func play_cutscene(victory: bool) -> void:
 	_configure(victory)
 	_is_showing = true
 	visible = true
-	_restart_button.disabled = true
+	_prompt.set_interactive(false)
 
 	_kill_cutscene()
+	_reset_cutscene_pose()
+
+	# Beat 1 - the hush: the grade settles over the battlefield and the band
+	# unfurls out of the middle of the frame.
 	_cutscene = create_tween()
 	_cutscene.set_parallel(true)
-
-	_backdrop.modulate.a = 0.0
-	_column.modulate.a = 0.0
-	_column.scale = Vector2(CONTENT_SCALE_FROM, CONTENT_SCALE_FROM)
-	_restart_button.modulate.a = 0.0
-
 	_cutscene.tween_property(_backdrop, "modulate:a", 1.0, BACKDROP_FADE_TIME)
-	_cutscene.tween_property(_column, "modulate:a", 1.0, CONTENT_IN_TIME) \
+	_cutscene.tween_method(_set_band_open, 0.0, 1.0, BAND_OPEN_TIME) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_cutscene.tween_property(_column, "scale", Vector2.ONE, CONTENT_IN_TIME) \
+	_cutscene.tween_method(_set_rule_wipe, 0.0, 1.0, RULE_WIPE_TIME) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
+	# Beat 2 - the stamp: the mark settles and the title's tracking condenses into
+	# lock, while the ghost imprint drifts out behind it.
 	_cutscene.set_parallel(false)
-	_cutscene.tween_interval(CONTENT_IN_TIME * 0.5)
-	_cutscene.tween_property(_restart_button, "modulate:a", 1.0, BUTTON_IN_TIME) \
+	_cutscene.tween_interval(BEAT_GAP)
+	_cutscene.set_parallel(true)
+	_cutscene.tween_property(_column, "modulate:a", 1.0, MARK_IN_TIME) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_cutscene.tween_property(_column, "scale", Vector2.ONE, MARK_IN_TIME) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_cutscene.tween_method(
+		_set_title_tracking,
+		float(TITLE_TRACK_FROM),
+		float(TITLE_TRACK_TO),
+		MARK_IN_TIME
+	).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+
+	# Beat 3 - the prompt, once the banner has claimed the moment.
+	_cutscene.set_parallel(false)
+	_cutscene.tween_interval(PROMPT_GAP)
+	_cutscene.tween_property(_prompt, "modulate:a", 1.0, PROMPT_IN_TIME) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
+	_start_ghost_tween()
+
 	await _cutscene.finished
-	_restart_button.disabled = false
+	_prompt.set_interactive(true)
 
 
 ## True while the result banner owns the screen.
@@ -146,10 +190,12 @@ func is_showing() -> bool:
 
 #region Private Methods
 func _build_ui() -> void:
+	_backdrop_mat = ShaderMaterial.new()
+	_backdrop_mat.shader = BACKDROP_SHADER
 	_backdrop = ColorRect.new()
 	_backdrop.name = "Backdrop"
-	_backdrop.color = BACKDROP_COLOR
 	_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	_backdrop.material = _backdrop_mat
 	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_backdrop)
 
@@ -159,8 +205,7 @@ func _build_ui() -> void:
 	_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_center)
 
-	# No slab around the title: the mark and the button sit straight on the
-	# backdrop, so nothing boxes the title in.
+	# No slab around the title: the mark and the prompt sit straight on the band.
 	_column = VBoxContainer.new()
 	_column.name = "Column"
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -169,33 +214,27 @@ func _build_ui() -> void:
 
 	_column.add_child(_build_mark())
 
-	_button_row = CenterContainer.new()
-	_button_row.name = "ButtonRow"
-	_button_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_column.add_child(_button_row)
+	var prompt_row := CenterContainer.new()
+	prompt_row.name = "PromptRow"
+	prompt_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_column.add_child(prompt_row)
 
-	_restart_button = Button.new()
-	_restart_button.name = "PlayAgainButton"
-	_restart_button.text = BUTTON_TEXT
-	_restart_button.custom_minimum_size = BUTTON_MIN_SIZE
-	_restart_button.focus_mode = Control.FOCUS_NONE
-	_restart_button.add_theme_font_size_override("font_size", BUTTON_FONT_SIZE)
-	_restart_button.add_theme_color_override("font_color", BUTTON_FONT_COLOR)
-	_restart_button.add_theme_color_override("font_hover_color", Color.WHITE)
-	_restart_button.add_theme_color_override("font_pressed_color", BUTTON_FONT_COLOR)
-	_restart_button.pressed.connect(_on_restart_pressed)
-	_button_row.add_child(_restart_button)
+	_prompt = BattleResultPrompt.new()
+	_prompt.pressed.connect(_on_restart_pressed)
+	prompt_row.add_child(_prompt)
 
 
 ## The emblem with the title lapped over its bottom edge, as one mark. The emblem
-## gets no tile of its own and the title no slab, and the title is added last so it
-## draws on top of the emblem.
+## gets no tile of its own and the title no slab; the title is added last so it
+## draws on top, with the ghost imprint between the two.
 func _build_mark() -> Control:
 	_mark = VBoxContainer.new()
 	_mark.name = "Mark"
 	_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_mark.add_theme_constant_override("separation", ICON_TITLE_OVERLAP)
 
+	_emblem_mat = ShaderMaterial.new()
+	_emblem_mat.shader = EMBLEM_SHADER
 	_emblem = TextureRect.new()
 	_emblem.name = "Emblem"
 	_emblem.custom_minimum_size = Vector2(EMBLEM_SIZE, EMBLEM_SIZE)
@@ -203,66 +242,126 @@ func _build_mark() -> Control:
 	_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_emblem.material = _emblem_mat
 	_mark.add_child(_emblem)
 
-	_title = Label.new()
-	_title.name = "Title"
-	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	_title.add_theme_constant_override("outline_size", 0)
-	_mark.add_child(_title)
+	# Both labels fill the same rect, so the ghost sits exactly behind the title.
+	_title_stack = MarginContainer.new()
+	_title_stack.name = "TitleStack"
+	_title_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+	_ghost_variation = FontVariation.new()
+	_ghost_variation.spacing_glyph = GHOST_FONT_TRACK
+	_title_ghost = _build_title_label("TitleGhost", _ghost_variation)
+	_title_stack.add_child(_title_ghost)
+
+	_title_variation = FontVariation.new()
+	_title_variation.spacing_glyph = TITLE_TRACK_FROM
+	_title = _build_title_label("Title", _title_variation)
+	_title_stack.add_child(_title)
+
+	_mark.add_child(_title_stack)
 	return _mark
 
 
-## Applies the Victory or Defeat look: the emblem and the title.
+## A centred display label. The tracking comes from the FontVariation, which is
+## what turns the default font into cinema lettering.
+func _build_title_label(label_name: String, variation: FontVariation) -> Label:
+	var label := Label.new()
+	label.name = label_name
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", variation)
+	label.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
+	return label
+
+
+## Applies the Victory or Defeat look: the scene grade, the seal's ink and the
+## title's tone.
 func _configure(victory: bool) -> void:
+	var grade: Color = VICTORY_GRADE if victory else DEFEAT_GRADE
+	var seal: Color = VICTORY_SEAL if victory else DEFEAT_SEAL
 	var title_color: Color = VICTORY_TITLE if victory else DEFEAT_TITLE
 	var emblem_tex: Texture2D = victory_icon if victory else defeat_icon
-	var emblem_tint: Color = VICTORY_EMBLEM_TINT if victory else DEFEAT_EMBLEM_TINT
 
+	_backdrop_mat.set_shader_parameter("grade_tint", grade)
+	_emblem_mat.set_shader_parameter("seal_color", seal)
+	_emblem_mat.set_shader_parameter("raw_mode", raw_emblem_mode)
 	_emblem.texture = emblem_tex if emblem_tex != null else PLACEHOLDER_VICTORY_ICON
-	_emblem.self_modulate = emblem_tint
 
-	_title.text = TITLE_TEXT_VICTORY if victory else TITLE_TEXT_DEFEAT
+	var word: String = TITLE_TEXT_VICTORY if victory else TITLE_TEXT_DEFEAT
+	_title.text = word
+	_title_ghost.text = word
 	_title.add_theme_color_override("font_color", title_color)
-	_apply_button_style()
+	_title_ghost.add_theme_color_override("font_color", title_color)
 
 
-## Flat matte button states: a darker surface, with no outline, glow or gradient.
-func _apply_button_style() -> void:
-	_restart_button.add_theme_stylebox_override("normal", _button_style(BUTTON_BG_NORMAL))
-	_restart_button.add_theme_stylebox_override("hover", _button_style(BUTTON_BG_HOVER))
-	_restart_button.add_theme_stylebox_override("pressed", _button_style(BUTTON_BG_PRESSED))
-	_restart_button.add_theme_stylebox_override("disabled", _button_style(BUTTON_BG_NORMAL))
-	_restart_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+## Puts every animated value back to its pre-reveal pose, so a second cutscene in
+## the same scene always starts from the same place.
+func _reset_cutscene_pose() -> void:
+	_backdrop.modulate.a = 0.0
+	_set_band_open(0.0)
+	_set_rule_wipe(0.0)
+	_column.modulate.a = 0.0
+	_column.scale = Vector2(CONTENT_SCALE_FROM, CONTENT_SCALE_FROM)
+	_set_title_tracking(float(TITLE_TRACK_FROM))
+	_title_ghost.modulate.a = 0.0
+	_title_ghost.scale = Vector2.ONE
+	_prompt.modulate.a = 0.0
 
 
-func _button_style(bg: Color) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = bg
-	style.corner_radius_top_left = CORNER_RADIUS
-	style.corner_radius_top_right = CORNER_RADIUS
-	style.corner_radius_bottom_left = CORNER_RADIUS
-	style.corner_radius_bottom_right = CORNER_RADIUS
-	style.content_margin_left = 18.0
-	style.content_margin_right = 18.0
-	style.content_margin_top = 8.0
-	style.content_margin_bottom = 8.0
-	return style
+## The ghost imprint runs on its own tween: it appears with the mark, drifts
+## outward for much longer than the mark takes to settle, then thins away. Kept
+## apart from the main tween so the two never fight over the same property.
+func _start_ghost_tween() -> void:
+	_ghost_tween = create_tween()
+	_ghost_tween.set_parallel(true)
+	_ghost_tween.tween_property(_title_ghost, "modulate:a", GHOST_PEAK_ALPHA, GHOST_IN_TIME) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_ghost_tween.tween_property(
+		_title_ghost,
+		"scale",
+		Vector2(GHOST_SCALE, GHOST_SCALE),
+		GHOST_DRIFT_TIME
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_ghost_tween.set_parallel(false)
+	_ghost_tween.tween_interval(GHOST_DRIFT_TIME)
+	_ghost_tween.tween_property(_title_ghost, "modulate:a", 0.0, GHOST_FADE_TIME) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 
-## Keeps the settle-in scale centred on the mark and the button.
+func _set_band_open(value: float) -> void:
+	_backdrop_mat.set_shader_parameter("band_open", value)
+
+
+func _set_rule_wipe(value: float) -> void:
+	_backdrop_mat.set_shader_parameter("rule_wipe", value)
+
+
+func _set_title_tracking(value: float) -> void:
+	_title_variation.spacing_glyph = int(roundf(value))
+
+
+## Keeps the settle-in scale centred on the mark and the prompt.
 func _sync_column_pivot() -> void:
 	if _column != null:
 		_column.pivot_offset = _column.size * 0.5
+
+
+## Keeps the ghost imprint's drift centred on the title.
+func _sync_ghost_pivot() -> void:
+	if _title_ghost != null:
+		_title_ghost.pivot_offset = _title_ghost.size * 0.5
 
 
 func _kill_cutscene() -> void:
 	if _cutscene != null and _cutscene.is_valid():
 		_cutscene.kill()
 	_cutscene = null
+	if _ghost_tween != null and _ghost_tween.is_valid():
+		_ghost_tween.kill()
+	_ghost_tween = null
 #endregion
 
 

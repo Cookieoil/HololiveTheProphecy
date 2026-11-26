@@ -40,6 +40,10 @@ var debug_menu: DebugMenuPopup
 ## End-of-battle cutscene, built in code and mounted on its own top layer.
 var result_overlay: BattleResultOverlay
 var result_layer: CanvasLayer
+## Copies the rendered battle into the back buffer, so the cutscene's backdrop
+## shader can grade what is behind it (a CanvasItem screen texture needs a
+## BackBufferCopy drawn in front of the reader).
+var result_back_buffer: BackBufferCopy
 ## True only while GameManager awaits a player action: the one window in which a
 ## debug tool may be applied, because the turn loop is sitting on the action queue.
 var _awaiting_player_action: bool = false
@@ -124,6 +128,9 @@ func show_battle_result(victory: bool) -> void:
 		_sync_debug_toggle()
 	if result_overlay == null:
 		return
+	# Clear the stage first: the Moxie rails are combat chrome, so they step off
+	# before the cutscene takes the screen.
+	await battle_overlay.retreat_for_result()
 	await result_overlay.play_cutscene(victory)
 
 ## `lead` is the fraction of the skill animation to wait for: 1.0 for the
@@ -535,6 +542,11 @@ func _setup_result_overlay() -> void:
 	result_layer.name = "ResultLayer"
 	result_layer.layer = 30
 	add_child(result_layer)
+
+	result_back_buffer = BackBufferCopy.new()
+	result_back_buffer.name = "ResultBackBuffer"
+	result_back_buffer.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	result_layer.add_child(result_back_buffer)
 
 	result_overlay = BattleResultOverlay.new()
 	result_overlay.victory_icon = victory_icon
