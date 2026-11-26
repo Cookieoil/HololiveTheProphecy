@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (43)
+## 1. Game scripts at a glance (44)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -33,14 +33,14 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 23 | Static utility for dice rolls. Separated for easy mocking/seeding in tests. |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn loop, resolved at step 7. |
 | [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 485 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that return result The presentation layer can react to. |
-| [`Core/GameUI.gd`](map/Core/GameUI.md) | `GameUI` | 100 | Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameManager only talks to this interface. Every input methods are asyn… |
-| [`Core/Unit.gd`](map/Core/Unit.md) | `Unit` | 373 | Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data |
+| [`Core/GameUI.gd`](map/Core/GameUI.md) | `GameUI` | 106 | Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameManager only talks to this interface. Every input methods are asyn… |
+| [`Core/Unit.gd`](map/Core/Unit.md) | `Unit` | 387 | Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data |
 | [`Core/UnitData.gd`](map/Core/UnitData.md) | `UnitData` | 16 | Template definition for a unit type. |
 | [`Data/gameDatabase.gd`](map/Data/gameDatabase.md) | `GameDatabase` | 27 | Skill definitions keyed by skill_id (effects embedded). |
 | [`Managers/ColorUtils.gd`](map/Managers/ColorUtils.md) | — | 17 | Color definitions for BBCode |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks, not game logic. depend on these signals — they are fire-and-forg… |
-| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1084 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
-| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 511 | extends GameUI, 2 signal(s), 6 export(s), 38 function(s) |
+| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1149 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
+| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 562 | extends GameUI, 2 signal(s), 8 export(s), 41 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 632 | extends Control, 3 signal(s), 28 export(s), 36 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 331 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup and automatic inspection of Unit buff/debuff state. Two dictiona… |
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
@@ -49,10 +49,11 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Scenes/Cards/CardUI.gd`](map/Scenes/Cards/CardUI.md) | `CardUI` | 1381 | Visual representation of one Card in hand. Drag source (play / merge) and drop target (merge only). The card is rendered into an offscreen SubViewport and that… |
 | [`Scenes/Cards/ForgePlate.gd`](map/Scenes/Cards/ForgePlate.md) | `ForgePlate` | 140 | One of the two cards in a merge, drawn as a real fake-3D quad. A merge has to show two cards banking and folding into each other, so a flat copy of a card face… |
 | [`Scenes/Cards/HandBar.gd`](map/Scenes/Cards/HandBar.md) | `HandBar` | 430 | Bottom-edge hand of cards. View-only: it animates, GameManager validates. |
-| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 494 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges UnitUI hover & wave transitions without freed-instance errors. |
+| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 511 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges UnitUI hover & wave transitions without freed-instance errors. |
+| [`Scenes/HUD/BattleResultOverlay.gd`](map/Scenes/HUD/BattleResultOverlay.md) | `BattleResultOverlay` | 352 | End-of-battle cutscene: a flat, deliberately calm Victory / Defeat banner. The battle scene is the only scene, so the result screen is built in code and mounted… |
 | [`Scenes/HUD/DebugMenuPopup.gd`](map/Scenes/HUD/DebugMenuPopup.md) | `DebugMenuPopup` | 563 | Tester-only tool palette for the battle scene. Every button here is a *request*: it emits `debug_command_requested` upward and the turn loop performs the mutati… |
 | [`Scenes/HUD/HudTooltip.gd`](map/Scenes/HUD/HudTooltip.md) | `HudTooltip` | 91 | Content of the hover tooltip for one top-bar widget. Every icon in the top bar is the same placeholder logo, so the icon alone cannot say what the number beside… |
-| [`Scenes/HUD/MoxieOrbUI.gd`](map/Scenes/HUD/MoxieOrbUI.md) | `MoxieOrbUI` | 594 | extends Control, 3 signal(s), 1 export(s), 22 function(s) |
+| [`Scenes/HUD/MoxieOrbUI.gd`](map/Scenes/HUD/MoxieOrbUI.md) | `MoxieOrbUI` | 605 | extends Control, 3 signal(s), 1 export(s), 22 function(s) |
 | [`Scenes/HUD/OutlineGlow.gd`](map/Scenes/HUD/OutlineGlow.md) | `OutlineGlow` | 233 | outer light border with scrolling sub-surface energy texture. |
 | [`Scenes/HUD/SkillTooltipPopup.gd`](map/Scenes/HUD/SkillTooltipPopup.md) | `SkillTooltipPopup` | 272 | extends Control, 8 function(s) |
 | [`Scenes/HUD/TooltipIconCatalog.gd`](map/Scenes/HUD/TooltipIconCatalog.md) | `TooltipIconCatalog` | 334 | Inline icon registry for tooltip descriptions (SkillTooltipPopup bodies). Two authoring styles are supported, mirroring Legend of Runeterra (icon + colored keyw… |
@@ -72,11 +73,12 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single source of truth the game reads at runtime, while res://Data/xlsx/ga… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every cell is returned as a String; DataBuilder performs the typed conve… |
 
-## 2. Tests at a glance (15)
+## 2. Tests at a glance (16)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
 | [`GDTest/AllyKitTest.gd`](map/GDTest/AllyKitTest.md) | `AllyKitTest` | 288 | Tests for the MOBA-style pure-skill rework of all ally kits. Covers: shield-slam, hand-scaling, value-positive buff, self-shield cleave, and the corrected Skill… |
+| [`GDTest/BattleEndTest.gd`](map/GDTest/BattleEndTest.md) | `BattleEndTest` | 551 | Locks the end of a battle: - a unit that dies never keeps Moxie (or a "ULT READY" glow) on the board - the skill that kills the final boss does not charge the c… |
 | [`GDTest/CardDrawAnimationTest.gd`](map/GDTest/CardDrawAnimationTest.md) | `CardDrawAnimationTest` | 303 | Locks in the fake-3D card draw: - every CardUI owns its own warp material, so tilting one card can never tilt the rest of the hand - a dealt card leaves the dec… |
 | [`GDTest/CardFlashPolicyTest.gd`](map/GDTest/CardFlashPolicyTest.md) | `CardFlashPolicyTest` | 109 | Locks in *who caused it* when the game reveals hand cards it picked on its own: - an enemy acting on the player's hand flashes hostile (crimson) - the player's… |
 | [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 564 | Locks in the merge: the card the player was carrying is picked up from the exact point they released it, the two cards drift into each other and fold closed int… |
@@ -98,7 +100,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | --- | --- | --- | --- |
 | `turn_started` | turn_number: int | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
 | `wave_started` | wave_index: int | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
-| `game_over` | victory: bool | Managers/GameManager.gd | — |
+| `game_over` | victory: bool | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
 | `card_played` | card: Card, ally: Unit | Managers/GameManager.gd | Scenes/Cards/HandBar.gd |
 | `card_drawn` | card: Card | Skills/EffectBlock.gd | Scenes/Cards/HandBar.gd |
 | `card_discarded` | card: Card | Skills/EffectBlock.gd | Scenes/Cards/HandBar.gd |
@@ -143,4 +145,4 @@ Top-level keys:
 
 ---
 
-Indexed 58 script(s) (43 game, 15 test), 4 scene(s), 5 data file(s).
+Indexed 60 script(s) (44 game, 16 test), 4 scene(s), 5 data file(s).

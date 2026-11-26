@@ -207,11 +207,15 @@ func _run_game_loop() -> void:
 		# ── Step 5: Cleanup played cards ──
 		state.end_player_turn_cleanup()
 
-		# Check for wave clear before enemy turn
+		# Check for wave clear before enemy turn. A wave with no successor ends the
+		# battle right here: the player's own action just won it, so there is no
+		# enemy turn left to resolve and no next turn to start.
 		if state.all_enemies_dead():
 			if _try_advance_wave():
 				state.turn_number += 1
 				continue # loop to next turn (enemies skip this turn)
+			await _finish_battle(true)
+			break
 
 		# ── Step 6: Reset enemy shields & temp effects ──
 		for enemy: Unit in state.enemies:
@@ -223,16 +227,12 @@ func _run_game_loop() -> void:
 		
 		# Post-turn checks
 		if state.all_allies_dead():
-			ui.show_message(ColorUtils.colorize("\n══ DEFEAT ══", ColorUtils.COLOR_ENEMY))
-			EventBus.game_over.emit(false)
-			game_running = false
+			await _finish_battle(false)
 			break
 		
 		if state.all_enemies_dead():
 			if not _try_advance_wave():
-				ui.show_message(ColorUtils.colorize("\n══ VICTORY ══", ColorUtils.COLOR_ALLY))
-				EventBus.game_over.emit(true)
-				game_running = false
+				await _finish_battle(true)
 				break
 				
 		# ── Step 8: Clean up (statuses tick once per round) ──
@@ -240,18 +240,14 @@ func _run_game_loop() -> void:
 
 		# A status tick can finish off the last unit, so re-check the outcome.
 		if state.all_allies_dead():
-			ui.show_message(ColorUtils.colorize("\n══ DEFEAT ══", ColorUtils.COLOR_ENEMY))
-			EventBus.game_over.emit(false)
-			game_running = false
+			await _finish_battle(false)
 			break
 
 		if state.all_enemies_dead():
 			if _try_advance_wave():
 				state.turn_number += 1
 				continue
-			ui.show_message(ColorUtils.colorize("\n══ VICTORY ══", ColorUtils.COLOR_ALLY))
-			EventBus.game_over.emit(true)
-			game_running = false
+			await _finish_battle(true)
 			break
 
 		state.turn_number += 1
@@ -289,14 +285,8 @@ func _player_action_phase() -> void:
 				var play_card: Card = action["card"]
 				var target_ally: Unit = action["target_ally"]
 				await _handle_play(play_card, target_ally)
-				if state.all_enemies_dead():
-					if state.wave_transition_mode == GameState.WaveTransition.IMMEDIATE_SKIP \
-							and _try_advance_wave():
-						current_intents.clear() # New wave skips acting this turn
-						ui.show_game_state(state)
-						ui.show_enemy_intents(current_intents)
-					else:
-						break # FULL_TURN / FINAL_WAVE: exit player phase immediately
+				if _resolve_enemy_clear_after_action():
+					break # final wave cleared: the battle is won
 				
 			"merge":
 				var card_a: Card = action["card_a"]
@@ -309,6 +299,10 @@ func _player_action_phase() -> void:
 			"ultimate":
 				var caster: Unit = action["caster"]
 				await _handle_ally_ultimate(caster)
+				# An Ultimate can clear the board too, so it runs the same wave /
+				# victory check a played card does instead of leaving the phase open.
+				if _resolve_enemy_clear_after_action():
+					break
 				
 			"stats":
 				ui.show_game_state(state)
@@ -321,14 +315,8 @@ func _player_action_phase() -> void:
 				# A debug tool can clear a wave (or finish off the last enemy), so
 				# run the exact same wave check the "play" branch does instead of
 				# inventing a second path for it.
-				if state.all_enemies_dead():
-					if state.wave_transition_mode == GameState.WaveTransition.IMMEDIATE_SKIP \
-							and _try_advance_wave():
-						current_intents.clear() # New wave skips acting this turn
-						ui.show_game_state(state)
-						ui.show_enemy_intents(current_intents)
-					else:
-						break # FULL_TURN / FINAL_WAVE: exit player phase immediately
+				if _resolve_enemy_clear_after_action():
+					break
 				
 			"end_turn":
 				ui.show_message("Ending player turn.")
@@ -337,6 +325,27 @@ func _player_action_phase() -> void:
 				ui.show_message("Unknown action.")
 				
 		ui.show_hand_and_resources(state)
+
+
+## Shared post-action check for every action that can kill enemies (a played card,
+## an ally Ultimate, or a debug tool). Returns true when the player phase must end
+## because the board was cleared.
+##
+## A wave that still has a successor is advanced here in IMMEDIATE_SKIP mode (the
+## new enemies sit out the rest of the turn). A final-wave clear ends the phase,
+## which lets the game loop declare the battle over instead of leaving the player
+## parked on a won board until they press End Turn.
+func _resolve_enemy_clear_after_action() -> bool:
+	if not state.all_enemies_dead():
+		return false
+	if state.wave_transition_mode == GameState.WaveTransition.IMMEDIATE_SKIP \
+			and _try_advance_wave():
+		current_intents.clear() # New wave skips acting this turn
+		ui.show_game_state(state)
+		ui.show_enemy_intents(current_intents)
+		return false
+	return true # FULL_TURN / FINAL_WAVE: exit player phase immediately
+
 
 func _handle_play(card: Card, ally: Unit) -> void:
 	if ally.is_dead:
@@ -392,7 +401,13 @@ func _handle_play(card: Card, ally: Unit) -> void:
 		1 if card.is_odd() else 2,
 		rank
 	)
-	
+
+	# A skill that just won the battle does not charge the gauge: the fight is
+	# over, so no fresh Moxie (or "ULT READY" glow) may appear behind the result
+	# screen. Clearing a wave that still has a successor charges normally.
+	if _is_final_wave_cleared():
+		return
+
 	var moxie_gained: int = ally.gain_moxie(card.get_effective_value())
 	if moxie_gained > 0:
 		EventBus.moxie_changed.emit(ally, ally.moxie, ally.max_moxie)
@@ -1020,6 +1035,56 @@ func _try_advance_wave() -> bool:
 	
 	return true
 #endregion
+
+#region Battle End
+## Single exit for every way a battle can end - Victory or Defeat, whether the
+## last unit fell to a played card, an ally Ultimate, the enemy turn or a status
+## tick. It parks the loop, wipes the leftover turn state (pending enemy intents
+## and every unit's Moxie gauge) so nothing on the board still claims a turn is
+## coming, then hands the result to the UI for the Victory / Defeat cutscene.
+func _finish_battle(victory: bool) -> void:
+	game_running = false
+
+	# No enemy is acting anymore, so no intent preview (and no orb preview
+	# segment) may survive the hit that ended the fight.
+	current_intents.clear()
+	ui.show_enemy_intents(current_intents)
+
+	# A finished battle holds no Moxie: every survivor's gauge is emptied, so no
+	# orb is left glowing "ULT READY" or holding frozen crystals behind the
+	# result screen. Each clear emits the unit's own `moxie_changed`.
+	_clear_all_moxie()
+
+	# The player phase may have been cut short by the winning action, so the hand
+	# and counters are refreshed once more before the result is shown.
+	ui.show_hand_and_resources(state)
+
+	var banner: String = "\n══ VICTORY ══" if victory else "\n══ DEFEAT ══"
+	var color: String = ColorUtils.COLOR_ALLY if victory else ColorUtils.COLOR_ENEMY
+	ui.show_message(ColorUtils.colorize(banner, color))
+	EventBus.game_over.emit(victory)
+	await ui.show_battle_result(victory)
+
+
+## Empties every ally's and enemy's Moxie gauge.
+func _clear_all_moxie() -> void:
+	for ally: Unit in state.allies:
+		ally.clear_moxie()
+	for enemy: Unit in state.enemies:
+		enemy.clear_moxie()
+
+
+## True while a later wave still exists to spawn after the current one.
+func _has_remaining_waves() -> bool:
+	return state.current_wave + 1 < state.wave_definitions.size()
+
+
+## True when the final wave has been cleared, i.e. the battle is won: no enemy is
+## alive and there is no next wave to advance into.
+func _is_final_wave_cleared() -> bool:
+	return state.all_enemies_dead() and not _has_remaining_waves()
+#endregion
+
 
 #region Cleanup
 ## Step 8 of the round loop: every buff/debuff ticks exactly once per round.

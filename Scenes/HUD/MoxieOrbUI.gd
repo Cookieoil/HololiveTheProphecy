@@ -122,6 +122,7 @@ var _display_moxie: float = 0.0
 var _ready_blend: float = 0.0
 var _hover_blend: float = 0.0
 var _preview_gain: int = 0
+var _was_dead: bool = false
 var _is_hovered: bool = false
 var _is_pressed: bool = false
 var _burst_timer: float = 0.0
@@ -225,6 +226,7 @@ func bind_unit(p_unit: Unit, p_badge_code: String, p_portrait: Texture2D = null)
 	unit = p_unit
 	badge_code = p_badge_code
 	_preview_gain = 0
+	_was_dead = p_unit != null and p_unit.is_dead
 
 	if unit != null:
 		_display_moxie = float(unit.moxie)
@@ -439,6 +441,15 @@ func _process(delta: float) -> void:
 		return
 
 	_anim_time += delta
+
+	# A death (or a revival) changes the ring's dimming and must drop any pending
+	# preview right away, even when the gauge itself never moved: a unit that dies
+	# still holding crystals would otherwise keep them lit on a finished board.
+	var death_changed := unit.is_dead != _was_dead
+	if death_changed:
+		_was_dead = unit.is_dead
+		_preview_gain = 0
+
 	var target_moxie := float(unit.moxie)
 	var moxie_moving := absf(_display_moxie - target_moxie) > 0.01
 	if moxie_moving:
@@ -476,11 +487,11 @@ func _process(delta: float) -> void:
 	scale = scale.lerp(target_scale, clampf(delta * 14.0, 0.0, 1.0))
 
 	_sync_glow()
-	if moxie_moving or blend_moving:
+	if moxie_moving or blend_moving or death_changed:
 		_sync_ring_shader()
 
 	var enemy_threat := (not unit.is_ally) and (unit.moxie + _preview_gain >= unit.max_moxie) and not unit.is_dead
-	if unit.can_cast_ultimate or enemy_threat or _preview_gain > 0 or _burst_timer > 0.0 or moxie_moving:
+	if unit.can_cast_ultimate or enemy_threat or _preview_gain > 0 or _burst_timer > 0.0 or moxie_moving or death_changed:
 		queue_redraw()
 
 

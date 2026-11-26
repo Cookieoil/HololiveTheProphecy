@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/BattleOverlayController.gd` — `class_name BattleOverlayController` extends `Node`
 
-`494` lines · [back to the map](../../../CODEBASE_MAP.md)
+`511` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges UnitUI hover & wave transitions without freed-instance errors.
 
@@ -29,40 +29,41 @@ State:
 - L28 `_auto_sync_queued: bool = false`
 
 Public API:
-- L44-57 `setup(p_game_manager: Node, p_icon_catalog: CardIconCatalog, p_tooltip_icon_catalog: TooltipIconCatalog = null) -> void`
-- L61-113 `rebuild_for_units(ally_uis: Array[UnitUI], enemy_uis: Array[UnitUI]) -> void` — Call whenever allies or a new enemy wave spawns, passing active UnitUI nodes.
-- L117-124 `set_player_turn_interactive(enabled: bool) -> void` — Toggle whether ally Ultimate orbs can be clicked right now (true inside get_player_action).
-- L128-140 `sync_enemy_intent_previews() -> void` — Updates enemy orb preview segments from GameManager.current_intents & refreshes Enemy Ult warnings.
-- L143-154 `clear_enemy_intent_previews() -> void`
+- L45-58 `setup(p_game_manager: Node, p_icon_catalog: CardIconCatalog, p_tooltip_icon_catalog: TooltipIconCatalog = null) -> void`
+- L62-114 `rebuild_for_units(ally_uis: Array[UnitUI], enemy_uis: Array[UnitUI]) -> void` — Call whenever allies or a new enemy wave spawns, passing active UnitUI nodes.
+- L118-125 `set_player_turn_interactive(enabled: bool) -> void` — Toggle whether ally Ultimate orbs can be clicked right now (true inside get_player_action).
+- L129-141 `sync_enemy_intent_previews() -> void` — Updates enemy orb preview segments from GameManager.current_intents & refreshes Enemy Ult warnings.
+- L144-155 `clear_enemy_intent_previews() -> void`
 
 Private:
-- L31-41 `_ready`
-- L159-167 `_is_live_unit_ui`
-- L170-177 `_get_valid_orb`
-- L180-197 `_get_valid_unit_ui`
-- L200-208 `_same_units_and_valid_orbs`
-- L211-225 `_auto_bind_scene_rows`
-- L228-229 `_on_row_children_changed`
-- L232-233 `_on_wave_or_turn_changed`
-- L236-240 `_queue_auto_sync`
-- L243-256 `_run_auto_sync`
-- L259-264 `_clear_container`
-- L272-307 `_build_rails`
-- L310-318 `_build_tooltip`
-- L321-328 `_spawn_orb`
-- L331-349 `_extract_unit_portrait`
-- L352-389 `_find_character_texture_in_node`
-- L392-403 `_bind_unit_ui`
-- L406-412 `_get_state`
-- L415-426 `_find_intent_for_enemy`
-- L429-437 `_on_unit_card_hover_started`
-- L440-444 `_on_unit_card_hover_ended`
-- L447-454 `_on_unit_intent_hover_started`
-- L457-458 `_on_unit_intent_hover_ended`
-- L461-472 `_on_orb_hover_started`
-- L475-479 `_on_orb_hover_ended`
-- L482-485 `_on_orb_activated`
-- L488-491 `_on_ultimate_cast`
+- L31-42 `_ready`
+- L160-168 `_is_live_unit_ui`
+- L171-178 `_get_valid_orb`
+- L181-198 `_get_valid_unit_ui`
+- L201-209 `_same_units_and_valid_orbs`
+- L212-226 `_auto_bind_scene_rows`
+- L229-230 `_on_row_children_changed`
+- L233-234 `_on_wave_or_turn_changed`
+- L237-241 `_queue_auto_sync`
+- L244-257 `_run_auto_sync`
+- L260-265 `_clear_container`
+- L273-308 `_build_rails`
+- L311-319 `_build_tooltip`
+- L322-329 `_spawn_orb`
+- L332-350 `_extract_unit_portrait`
+- L353-390 `_find_character_texture_in_node`
+- L393-404 `_bind_unit_ui`
+- L407-413 `_get_state`
+- L416-427 `_find_intent_for_enemy`
+- L430-438 `_on_unit_card_hover_started`
+- L441-445 `_on_unit_card_hover_ended`
+- L448-455 `_on_unit_intent_hover_started`
+- L458-459 `_on_unit_intent_hover_ended`
+- L462-473 `_on_orb_hover_started`
+- L476-480 `_on_orb_hover_ended`
+- L483-486 `_on_orb_activated`
+- L489-492 `_on_ultimate_cast`
+- L498-508 `_on_game_over`
 
 Uses: Card, CardIconCatalog, EnemyIntent, GameManager, GameState, MoxieOrbUI, SkillPreviewFormatter, SkillTooltipPopup, TooltipIconCatalog, Unit, UnitUI
 Used by: Scenes/BattleScene/BattleScene.gd, Tools/check_navigation.gd
