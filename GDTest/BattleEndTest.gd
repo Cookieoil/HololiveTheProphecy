@@ -466,9 +466,8 @@ func test_the_victory_banner_uses_its_placeholder_emblem_and_flat_colours() -> v
 	assert_str(overlay._title.text).is_equal("VICTORY")
 	assert_bool(overlay.victory_icon == BattleResultOverlay.PLACEHOLDER_VICTORY_ICON).is_true()
 	assert_bool(overlay._emblem.texture == overlay.victory_icon).is_true()
-	assert_bool(_is_flat_sdr(overlay._backdrop.color)).is_true()
-	assert_bool(_is_flat_sdr(overlay._banner_style.border_color)).is_true()
 	assert_bool(_is_flat_sdr(overlay._title.get_theme_color("font_color"))).is_true()
+	assert_bool(_is_flat_sdr(overlay._emblem.self_modulate)).is_true()
 
 
 func test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void:
@@ -479,17 +478,48 @@ func test_the_defeat_banner_swaps_to_its_own_emblem_and_text() -> void:
 	assert_str(overlay._title.text).is_equal("DEFEAT")
 	assert_bool(overlay.defeat_icon == BattleResultOverlay.PLACEHOLDER_DEFEAT_ICON).is_true()
 	assert_bool(overlay._emblem.texture == overlay.defeat_icon).is_true()
-	assert_bool(_is_flat_sdr(overlay._banner_style.border_color)).is_true()
+	assert_bool(_is_flat_sdr(overlay._title.get_theme_color("font_color"))).is_true()
 
 
-func test_the_result_screen_blocks_clicks_to_the_board_behind_it() -> void:
+## The cutscene keeps no chrome at all: no backdrop rectangle, no panel slab, no
+## subtitle and no divider - only the emblem/title mark and the button.
+func test_the_cutscene_keeps_no_backdrop_panel_subtitle_or_divider() -> void:
 	var overlay: BattleResultOverlay = _make_overlay()
 
 	await overlay.play_cutscene(true)
 
+	assert_object(overlay.find_child("Backdrop", true, false)).is_null()
+	assert_object(overlay.find_child("Banner", true, false)).is_null()
+	assert_object(overlay.find_child("Subtitle", true, false)).is_null()
+	assert_object(overlay.find_child("Divider", true, false)).is_null()
+
+
+## The requested look: the title laps slightly over the emblem's bottom edge, and
+## the title is the mark's last child so it draws on top of it.
+func test_the_title_laps_over_the_emblem() -> void:
+	var overlay: BattleResultOverlay = _make_overlay()
+
+	await overlay.play_cutscene(true)
+
+	var separation: int = overlay._mark.get_theme_constant("separation")
+	assert_bool(separation < 0).is_true()
+	var last_child: Node = overlay._mark.get_child(overlay._mark.get_child_count() - 1)
+	assert_bool(last_child == overlay._title).is_true()
+
+
+func test_the_result_screen_blocks_clicks_and_keeps_a_borderless_button() -> void:
+	var overlay: BattleResultOverlay = _make_overlay()
+
+	await overlay.play_cutscene(true)
+
+	# No backdrop is drawn, so the root itself has to swallow the clicks.
 	assert_int(overlay.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
-	assert_int(overlay._backdrop.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
 	assert_bool(overlay._restart_button.disabled).is_false()
+	var style: StyleBox = overlay._restart_button.get_theme_stylebox("normal")
+	var flat: StyleBoxFlat = style as StyleBoxFlat
+	assert_object(flat).is_not_null()
+	assert_int(flat.border_width_left).is_equal(0)
+	assert_int(flat.border_width_top).is_equal(0)
 
 
 func test_play_again_asks_the_owner_to_restart() -> void:
