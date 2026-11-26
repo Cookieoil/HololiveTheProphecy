@@ -26,12 +26,6 @@ const GLYPH_SPACING: int = 6
 const PAD_X: int = 34
 const PAD_Y: int = 13
 
-const MARKER_HALF: float = 4.0
-const MARKER_REST: float = 15.0
-const MARKER_HOVER: float = 21.0
-const MARKER_ALPHA_REST: float = 0.45
-const MARKER_ALPHA_HOVER: float = 0.95
-
 ## The hover wash is painted as a coarse grid of rects, so both of its edges can
 ## fall off smoothly without a shader. Cheap, and only redrawn while the hover
 ## blend is moving.
@@ -47,7 +41,6 @@ const HOVER_TIME: float = 0.18
 const TEXT_REST: Color = Color(0.82, 0.85, 0.90, 0.90)
 const TEXT_HOVER: Color = Color(0.98, 0.95, 0.86, 1.0)
 const WASH_COLOR: Color = Color(0.02, 0.02, 0.03, 1.0)
-const MARKER_COLOR: Color = Color(0.94, 0.88, 0.72, 1.0)
 #endregion
 
 #region Public Variables
@@ -106,15 +99,6 @@ func set_interactive(enabled: bool) -> void:
 
 #region Private Methods
 func _draw() -> void:
-	var marker_alpha: float = lerpf(MARKER_ALPHA_REST, MARKER_ALPHA_HOVER, _hover_blend)
-	var marker_x: float = lerpf(MARKER_REST, MARKER_HOVER, _hover_blend)
-	if _is_pressed:
-		marker_x -= 2.0
-	var centre_y: float = size.y * 0.5
-	var tint: Color = Color(MARKER_COLOR.r, MARKER_COLOR.g, MARKER_COLOR.b, marker_alpha)
-	_draw_marker(Vector2(marker_x, centre_y), tint)
-	_draw_marker(Vector2(size.x - marker_x, centre_y), tint)
-
 	var wash: float = WASH_PEAK * _hover_blend * (WASH_PRESS_BOOST if _is_pressed else 1.0)
 	if wash > 0.002:
 		_draw_wash(wash)
@@ -141,16 +125,6 @@ func _draw_wash(peak: float) -> void:
 				Vector2(cell_w + 1.0, cell_h + 1.0)
 			)
 			draw_rect(cell, Color(WASH_COLOR.r, WASH_COLOR.g, WASH_COLOR.b, alpha), true)
-
-
-func _draw_marker(centre: Vector2, tint: Color) -> void:
-	var points := PackedVector2Array([
-		centre + Vector2(0.0, -MARKER_HALF),
-		centre + Vector2(MARKER_HALF, 0.0),
-		centre + Vector2(0.0, MARKER_HALF),
-		centre + Vector2(-MARKER_HALF, 0.0),
-	])
-	draw_colored_polygon(points, tint)
 
 
 func _set_hovered(hovered: bool) -> void:

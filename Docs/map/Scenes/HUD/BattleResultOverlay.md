@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/BattleResultOverlay.gd` — `class_name BattleResultOverlay` extends `Control`
 
-`375` lines · [back to the map](../../../CODEBASE_MAP.md)
+`383` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > End-of-battle cutscene, staged like a big-budget result screen. The battle scene is the only scene, so the result screen is built in code and mounted on its own…
 
@@ -68,24 +68,25 @@ State:
 - L119 `_is_showing: bool = false`
 
 Public API:
-- L139-183 `play_cutscene(victory: bool) -> void` — Plays the cutscene for a finished battle and keeps the banner on screen until the player presses "Play Again". Callers may `await` it.
-- L187-188 `is_showing() -> bool` — True while the result banner owns the screen.
+- L139-184 `play_cutscene(victory: bool) -> void` — Plays the cutscene for a finished battle and keeps the banner on screen until the player presses "Play Again". Callers may `await` it.
+- L188-189 `is_showing() -> bool` — True while the result banner owns the screen.
 
 Private:
 - L124-133 `_init`
-- L192-224 `_build_ui`
-- L230-264 `_build_mark`
-- L269-277 `_build_title_label`
-- L282-297 `_configure`
-- L302-311 `_reset_cutscene_pose`
-- L317-331 `_start_ghost_tween`
-- L334-335 `_set_band_open`
-- L338-339 `_set_rule_wipe`
-- L342-343 `_set_title_tracking`
-- L347-349 `_sync_column_pivot`
-- L353-355 `_sync_ghost_pivot`
-- L358-364 `_kill_cutscene`
-- L369-373 `_on_restart_pressed`
+- L193-225 `_build_ui`
+- L231-265 `_build_mark`
+- L270-278 `_build_title_label`
+- L283-298 `_configure`
+- L303-312 `_reset_cutscene_pose`
+- L318-332 `_start_ghost_tween`
+- L335-336 `_set_band_open`
+- L341-343 `_sync_screen_size`
+- L346-347 `_set_rule_wipe`
+- L350-351 `_set_title_tracking`
+- L355-357 `_sync_column_pivot`
+- L361-363 `_sync_ghost_pivot`
+- L366-372 `_kill_cutscene`
+- L377-381 `_on_restart_pressed`
 
 Uses: BattleResultPrompt, BattleScene
 Used by: GDTest/BattleEndTest.gd, Scenes/BattleScene/BattleScene.gd

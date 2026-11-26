@@ -25,7 +25,13 @@ uniform float desaturation : hint_range(0.0, 1.0) = 0.72;
 // Tint the drained scene leans towards: warm parchment for a win, cold ash for a loss.
 uniform vec4 grade_tint : source_color = vec4(0.86, 0.80, 0.68, 1.0);
 uniform float grade_mix : hint_range(0.0, 1.0) = 0.18;
-uniform float dim : hint_range(0.0, 1.0) = 0.22;
+uniform float dim : hint_range(0.0, 1.0) = 0.42;
+// How far the scene behind is blurred, in screen pixels. A soft dark blur is what
+// keeps the battlefield present without competing with the title.
+uniform float blur_radius : hint_range(0.0, 24.0) = 7.0;
+// The viewport size, so the blur step can be expressed in pixels. canvas_item
+// shaders have no SCREEN_PIXEL_SIZE, so the overlay feeds this in.
+uniform vec2 screen_size = vec2(1280.0, 720.0);
 uniform float vignette_strength : hint_range(0.0, 1.0) = 0.42;
 uniform float vignette_start : hint_range(0.0, 1.5) = 0.55;
 group_uniforms;
@@ -51,6 +57,30 @@ uniform float rule_alpha : hint_range(0.0, 1.0) = 0.20;
 uniform float rule_wipe : hint_range(0.0, 1.0) = 1.0;
 group_uniforms;
 
+// A soft 13-tap gaussian over the screen texture. One pass is enough for a static
+// backdrop, and it keeps the battlefield readable as shapes without any detail
+// fighting the title.
+vec3 blurred_scene(vec2 uv) {
+	if (blur_radius <= 0.01) {
+		return texture(screen_tex, uv).rgb;
+	}
+	vec2 texel = blur_radius / max(screen_size, vec2(1.0));
+	vec3 sum = texture(screen_tex, uv).rgb * 0.16;
+	sum += (texture(screen_tex, uv + vec2(texel.x, 0.0)).rgb
+		+ texture(screen_tex, uv - vec2(texel.x, 0.0)).rgb
+		+ texture(screen_tex, uv + vec2(0.0, texel.y)).rgb
+		+ texture(screen_tex, uv - vec2(0.0, texel.y)).rgb) * 0.10;
+	sum += (texture(screen_tex, uv + texel).rgb
+		+ texture(screen_tex, uv - texel).rgb
+		+ texture(screen_tex, uv + vec2(texel.x, -texel.y)).rgb
+		+ texture(screen_tex, uv + vec2(-texel.x, texel.y)).rgb) * 0.06;
+	sum += (texture(screen_tex, uv + vec2(texel.x * 2.0, 0.0)).rgb
+		+ texture(screen_tex, uv - vec2(texel.x * 2.0, 0.0)).rgb
+		+ texture(screen_tex, uv + vec2(0.0, texel.y * 2.0)).rgb
+		+ texture(screen_tex, uv - vec2(0.0, texel.y * 2.0)).rgb) * 0.05;
+	return sum;
+}
+
 // One soft rule: a thin horizontal line that fades out at the wipe's leading edge
 // and at both screen edges, so it grows outward instead of popping in.
 float horizon_rule(float y_uv, float dist, float wipe) {
@@ -65,7 +95,7 @@ float horizon_rule(float y_uv, float dist, float wipe) {
 }
 
 void fragment() {
-	vec3 col = texture(screen_tex, SCREEN_UV).rgb;
+	vec3 col = blurred_scene(SCREEN_UV);
 
 	// 1. Drain the scene and lean it towards this result's tone.
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));

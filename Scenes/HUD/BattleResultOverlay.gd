@@ -144,6 +144,7 @@ func play_cutscene(victory: bool) -> void:
 
 	_kill_cutscene()
 	_reset_cutscene_pose()
+	_sync_screen_size()
 
 	# Beat 1 - the hush: the grade settles over the battlefield and the band
 	# unfurls out of the middle of the frame.
@@ -333,6 +334,13 @@ func _start_ghost_tween() -> void:
 
 func _set_band_open(value: float) -> void:
 	_backdrop_mat.set_shader_parameter("band_open", value)
+
+
+## The backdrop blur is measured in pixels, so the shader needs the viewport size
+## (canvas_item shaders have no SCREEN_PIXEL_SIZE to read it from).
+func _sync_screen_size() -> void:
+	if _backdrop_mat != null:
+		_backdrop_mat.set_shader_parameter("screen_size", get_viewport_rect().size)
 
 
 func _set_rule_wipe(value: float) -> void:
