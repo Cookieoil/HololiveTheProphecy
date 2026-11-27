@@ -203,3 +203,58 @@ jobs:
           name: gdUnit4
           path: reports/*/results.xml
           reporter: java-junit
+
+  # Second-pass review: a diff-scoped report posted on the pull request, so the first
+  # look at a change is a summary plus a short list of review-worthy items instead of a
+  # raw diff. Advisory by design - the hard gates (`validate`, `Scripts and tests`) are
+  # the blockers - and it never fails a fork build, which only gets a read-only token.
+  review:
+    name: Second-pass review
+    if: github.event_name == 'pull_request'
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2
+        with:
+          version: ${{ needs.version.outputs.godot }}
+          use-dotnet: false
+
+      - name: Import project
+        timeout-minutes: 5
+        run: godot --headless --path . --import
+
+      # The exact base commit, so the diff is the pull request and nothing else.
+      - name: Review the diff
+        run: |
+          godot --headless --path . --script res://Tools/review_diff.gd -- \
+            --base ${{ github.event.pull_request.base.sha }} \
+            --format markdown --output review.md
+
+      - name: Upload the review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: second-pass-review
+          path: review.md
+          if-no-files-found: warn
+          retention-days: 7
+
+      # One sticky comment: edited in place on each push instead of spamming the thread.
+      - name: Comment on the pull request
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file review.md --edit-last --create-if-none

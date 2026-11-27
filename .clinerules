@@ -53,6 +53,17 @@ Before changing UI or scenes, look at the pixels (the headless gates cannot):
 `godot --audio-driver Dummy --position -4000,-4000 --path . res://Tools/snapshot_runner.tscn`
 renders `reports/ui-snapshots/` (seeded battle, real OpenGL, `manifest.json`).
 
+## Second-pass review (required before opening a PR)
+Run the diff reviewer and fix what it flags before you push — do not open a PR and let
+the human be the first reader of your own diff:
+
+`godot --headless --path . --script res://Tools/review_diff.gd -- --base origin/main --strict`
+
+`--strict` fails on `untested_change`, `undocumented_api` and `core_purity`; the other
+rules (`banned_pattern`, `todo_added`, `oversize_diff`, `large_file_change`) are advisory.
+CI runs the same reviewer without `--strict` and posts it as a sticky PR comment.
+`pwsh -File Tools/preflight.ps1 -Review` runs every gate plus this review.
+
 ## Context budget (explore without reading everything)
 - **Read `Docs/CODEBASE_MAP.md` first.** It is generated and deliberately small: section 1 lists
   every game script, section 2 every test, section 3 every `EventBus` signal with its emitters and
