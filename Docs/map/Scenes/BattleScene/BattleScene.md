@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleScene/BattleScene.gd` — `class_name BattleScene` extends `GameUI`
 
-`659` lines · [back to the map](../../../CODEBASE_MAP.md)
+`662` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > extends GameUI, 2 signal(s), 10 export(s), 46 function(s)
 
@@ -40,7 +40,7 @@ Onready:
 - L36 `discard_value_label: Label`
 - L37 `convert_button: Button`
 - L38 `end_turn_button: Button`
-- L39 `log_label: Label`
+- L39 `log_label: RichTextLabel`
 - L41 `debug_layer: CanvasLayer`
 - L42 `debug_button: Button`
 
@@ -63,50 +63,50 @@ Public API:
 - L144-156 `show_battle_result(victory: bool) -> void` — End of battle: the turn loop is parked, so every player control is locked and the Victory / Defeat cutscene takes over the screen. Awaited by GameManager, so th…
 - L161-166 `play_unit_skill(unit: Unit, skill_index: int, rank: int = 0, lead: float = 1.0) -> void` — `lead` is the fraction of the skill animation to wait for: 1.0 for the player's own actions, lower for chained enemy turns that overlap their animations (see Ga…
 - L169-172 `play_unit_ultimate(unit: Unit) -> void`
-- L174-179 `show_message(msg: String) -> void`
-- L182-189 `show_game_state(state: GameState) -> void`
-- L192-196 `show_hand_and_resources(state: GameState) -> void`
-- L219-231 `show_enemy_intents(intents: Array[EnemyIntent]) -> void`
-- L234-238 `clear_unit_intent(unit: Unit) -> void`
-- L265-284 `get_player_action(state: GameState) -> Dictionary`
-- L287-310 `ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]`
-- L313-341 `ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]`
+- L174-182 `show_message(msg: String) -> void`
+- L185-192 `show_game_state(state: GameState) -> void`
+- L195-199 `show_hand_and_resources(state: GameState) -> void`
+- L222-234 `show_enemy_intents(intents: Array[EnemyIntent]) -> void`
+- L237-241 `clear_unit_intent(unit: Unit) -> void`
+- L268-287 `get_player_action(state: GameState) -> Dictionary`
+- L290-313 `ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]`
+- L316-344 `ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]`
 
 Private:
 - L76-118 `_ready`
-- L199-209 `_update_top_bar`
-- L214-216 `_setup_icon_button_hover`
-- L241-245 `_apply_cached_intents`
-- L248-260 `_apply_intent_to`
-- L346-351 `_on_merge_requested`
-- L354-359 `_on_card_dropped_on_unit`
-- L362-363 `_on_unit_clicked`
-- L369-370 `_on_ally_ultimate_requested`
-- L374-383 `_sync_overlay_units`
-- L386-390 `_highlight_target_candidates`
-- L393-400 `_get_unit_ui`
-- L403-434 `_sync_unit_row`
-- L448-449 `_debug_tools_allowed`
-- L452-461 `_unhandled_key_input`
-- L466-477 `_setup_debug_menu`
-- L480-485 `_on_debug_button_pressed`
-- L489-492 `_sync_debug_toggle`
-- L495-497 `_set_debug_interactive`
-- L502-505 `_on_debug_command_requested`
-- L508-514 `_refresh_debug_menu`
-- L517-520 `_debug_state`
-- L524-537 `_debug_snapshot`
-- L543-552 `_build_debug_targets`
-- L562-577 `_setup_result_overlay`
-- L583-585 `_on_restart_requested`
-- L589-594 `_debug_target_entry`
-- L601-613 `_setup_consent_gate`
-- L619-627 `_run_consent_gate`
-- L632-638 `_setup_telemetry_uploader`
-- L643-645 `_on_game_over_drain`
-- L652-657 `_should_prompt_consent`
+- L202-212 `_update_top_bar`
+- L217-219 `_setup_icon_button_hover`
+- L244-248 `_apply_cached_intents`
+- L251-263 `_apply_intent_to`
+- L349-354 `_on_merge_requested`
+- L357-362 `_on_card_dropped_on_unit`
+- L365-366 `_on_unit_clicked`
+- L372-373 `_on_ally_ultimate_requested`
+- L377-386 `_sync_overlay_units`
+- L389-393 `_highlight_target_candidates`
+- L396-403 `_get_unit_ui`
+- L406-437 `_sync_unit_row`
+- L451-452 `_debug_tools_allowed`
+- L455-464 `_unhandled_key_input`
+- L469-480 `_setup_debug_menu`
+- L483-488 `_on_debug_button_pressed`
+- L492-495 `_sync_debug_toggle`
+- L498-500 `_set_debug_interactive`
+- L505-508 `_on_debug_command_requested`
+- L511-517 `_refresh_debug_menu`
+- L520-523 `_debug_state`
+- L527-540 `_debug_snapshot`
+- L546-555 `_build_debug_targets`
+- L565-580 `_setup_result_overlay`
+- L586-588 `_on_restart_requested`
+- L592-597 `_debug_target_entry`
+- L604-616 `_setup_consent_gate`
+- L622-630 `_run_consent_gate`
+- L635-641 `_setup_telemetry_uploader`
+- L646-648 `_on_game_over_drain`
+- L655-660 `_should_prompt_consent`
 
 Uses: BattleOverlayController, BattleResultOverlay, Card, CardIconCatalog, DataLoader, DebugMenuPopup, EnemyIntent, GameDatabase, GameManager, GameState, GameUI, HandBar, StatusIconCatalog, TelemetryConsent, TelemetryConsentPopup, TelemetryUploader, TooltipIconCatalog, Unit, UnitData, UnitUI
-Used by: GDTest/BattleEndTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, GDTest/UiSnapshotTest.gd, Scenes/BattleUnit/SpinePortrait.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleResultOverlay.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Tools/SnapshotRunner.gd, Tools/check_navigation.gd
+Used by: GDTest/BattleEndTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, GDTest/MessageLogTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, GDTest/UiSnapshotTest.gd, Scenes/BattleUnit/SpinePortrait.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleResultOverlay.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Tools/SnapshotRunner.gd, Tools/check_navigation.gd
 Loads: res://Scenes/BattleUnit/UnitUI.tscn, res://Scenes/BattleScene/Assets/icon2.png, res://Scenes/BattleScene/Assets/icon.svg
 

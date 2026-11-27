@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/check_scripts.gd` extends `SceneTree`
 
-`79` lines · [back to the map](../../CODEBASE_MAP.md)
+`85` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Headless compile gate: loads every project GDScript outside the excluded folders, so a type error, a stale `class_name` or a bad annotation fails CI instead of…
 
@@ -13,10 +13,10 @@ Constants:
 - L23 `ENV_GITHUB_ACTIONS: String = "GITHUB_ACTIONS"`
 
 Private:
-- L27-45 `_initialize`
-- L49-64 `_collect_scripts`
-- L67-71 `_is_excluded`
-- L74-77 `_repo_path`
+- L27-51 `_initialize`
+- L55-70 `_collect_scripts`
+- L73-77 `_is_excluded`
+- L80-83 `_repo_path`
 
 Uses: —
 Used by: —
