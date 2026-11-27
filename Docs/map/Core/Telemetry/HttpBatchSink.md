@@ -3,7 +3,7 @@
 
 `54` lines · [back to the map](../../../CODEBASE_MAP.md)
 
-> Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but the finished file is promoted into the upload outbox so Core/Telemetry/Tel…
+> Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but the finished file is promoted into the upload outbox so Managers/Telemetry…
 
 Sections: Constants · Public Variables · Lifecycle Methods · Public Methods
 

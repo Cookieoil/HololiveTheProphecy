@@ -2,7 +2,7 @@ class_name HttpBatchSink
 extends JsonlFileSink
 ## Stage 2 telemetry sink: the same crash-safe, per-event spooling as
 ## JsonlFileSink, but the finished file is promoted into the upload outbox so
-## Core/Telemetry/TelemetryUploader.gd can drain it to the metric server.
+## Managers/TelemetryUploader.gd can drain it to the metric server.
 ##
 ## The promotion happens in `close()`, on purpose: while a battle is still running
 ## the file stays in the local spool like any other run. The uploader therefore

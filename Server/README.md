@@ -99,7 +99,7 @@ supabase functions deploy telemetry-ingest --no-verify-jwt   # if you gate clien
 Point the client at it by setting the project settings `telemetry/endpoint` and
 `telemetry/anon_key` (the `[telemetry]` section of `project.godot`). With an
 endpoint set, runs spool into `user://telemetry/outbox/` via
-`Core/Telemetry/HttpBatchSink.gd` and `Core/Telemetry/TelemetryUploader.gd` drains
+`Core/Telemetry/HttpBatchSink.gd` and `Managers/TelemetryUploader.gd` drains
 them in background batches; with no endpoint the game stays entirely local.
 Connect Metabase / Grafana / Supabase Studio straight to the views above.
 

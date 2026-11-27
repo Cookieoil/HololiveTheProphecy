@@ -38,6 +38,9 @@ const RETRY_DELAY: float = 60.0
 
 #region Private Variables
 var _http: HTTPRequest
+## One-shot retry clock. A Timer node (not SceneTreeTimer) so it pauses with the
+## scene and is freed with the uploader instead of firing into a dead node.
+var _retry_timer: Timer
 var _busy: bool = false
 var _pending_files: PackedStringArray = PackedStringArray()
 var _current_file: String = ""
@@ -54,6 +57,12 @@ func _ready() -> void:
 	_http.timeout = REQUEST_TIMEOUT
 	_http.request_completed.connect(_on_request_completed)
 	add_child(_http)
+	_retry_timer = Timer.new()
+	_retry_timer.name = "TelemetryRetry"
+	_retry_timer.one_shot = true
+	_retry_timer.wait_time = RETRY_DELAY
+	_retry_timer.timeout.connect(drain)
+	add_child(_retry_timer)
 	# No drain here on purpose: BattleScene drives it once the disclosure has been
 	# answered this launch, so a queued run is never uploaded before the player has
 	# had the chance to see (or change) their answer.
@@ -198,10 +207,9 @@ func _finish() -> void:
 
 ## Waits, then tries the whole outbox again (a dropped connection is temporary).
 func retry_later() -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or _retry_timer == null:
 		return
-	var timer: SceneTreeTimer = get_tree().create_timer(RETRY_DELAY)
-	timer.timeout.connect(drain)
+	_retry_timer.start()
 #endregion
 
 

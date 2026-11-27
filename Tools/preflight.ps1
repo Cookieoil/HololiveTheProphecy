@@ -84,6 +84,27 @@ foreach ($gate in $gates) {
     }
 }
 
+# Anti-slop lint: architectural rules and size ratchets for first-party scripts.
+# Same script the CI `validate` job runs; python is the only non-Godot gate.
+Write-Host ''
+Write-Host '=== Anti-slop lint ===' -ForegroundColor Cyan
+$python = Get-Command python -ErrorAction SilentlyContinue
+if (-not $python) { $python = Get-Command python3 -ErrorAction SilentlyContinue }
+if (-not $python) {
+    Write-Host 'FAILED: python not found (required by Tools/line_godot_slop.py)' -ForegroundColor Red
+    $failed += 'Anti-slop lint'
+}
+else {
+    $lint = Start-Process -FilePath $python.Source -ArgumentList 'Tools/line_godot_slop.py' -NoNewWindow -Wait -PassThru
+    if ($lint.ExitCode -ne 0) {
+        Write-Host ('FAILED (exit ' + $lint.ExitCode + '): Anti-slop lint') -ForegroundColor Red
+        $failed += 'Anti-slop lint'
+    }
+    else {
+        Write-Host 'PASSED: Anti-slop lint' -ForegroundColor Green
+    }
+}
+
 Write-Host ''
 if ($failed.Count -gt 0) {
     Write-Host ('PRE-FLIGHT FAILED: ' + ($failed -join ', ')) -ForegroundColor Red

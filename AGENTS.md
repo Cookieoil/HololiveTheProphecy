@@ -65,7 +65,7 @@
   - Validate: `godot --headless --path . "res://Tools/validator.tscn"` — checks the raw JSON schema/semantics, the `DataLoader` path and the workbook, then exits `1` on any error. Add `-- --json-only` to skip the workbook or `-- --strict` to also fail on warnings.
 - **CI gates** (`.github/workflows/validate_game_data.yml`) run on every pull request (deliberately no `paths:` filter — a required check that never runs would block every PR) and on every push to `main`, split into three jobs:
   - `version` — resolves the Godot version from `project.godot` once, for the other jobs.
-  - `validate` — the data gate: the validator with `--strict`, so any error **or warning** fails the build. Keep this job id and its missing `name:`; `main` requires the `validate` status check.
+  - `validate` — the data gate: the validator with `--strict`, so any error **or warning** fails the build, plus the anti-slop lint (`python3 Tools/line_godot_slop.py`). Keep this job id and its missing `name:`; `main` requires the `validate` status check.
   - `project` — compiles every script, verifies the generated symbol index in `Docs/` still matches the sources, and runs the gdUnit4 suite.
   Errors/warnings are annotated inline on the PR, summarised on the job page, and the JUnit/HTML report is kept as the `gdunit4-reports` artifact. A red job means bad game data or a broken script — never merge past it.
 - **Local pre-flight before pushing** (the same gates CI runs, all headless):
@@ -73,7 +73,8 @@
   - Compile every script: `godot --headless --path . --script res://Tools/check_scripts.gd`
   - Symbol index is current: `godot --headless --path . --script res://Tools/check_navigation.gd`
   - Unit tests: `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
-  - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all four gates and exits `1` on any red gate. Add `-FixIndex` to regenerate `Docs/` before the gates run, or `-SkipIndexCheck` to leave the generated index alone while iterating.
+  - Anti-slop lint: `python Tools/line_godot_slop.py` — bans `create_timer()`, frame pumps and upward tree walks, keeps `Core/` pure logic, and ratchets file/function size against `Tools/slop_baseline.json` (baseline entries may only shrink; split the class or extract a helper instead of raising one).
+  - One-shot on Windows: `pwsh -File Tools/preflight.ps1` runs `--import` plus all five gates and exits `1` on any red gate. Add `-FixIndex` to regenerate `Docs/` before the gates run, or `-SkipIndexCheck` to leave the generated index alone while iterating.
   - **Windows gotcha:** Steam's `godot.exe` is a GUI-subsystem binary, so PowerShell never waits for it and `$LASTEXITCODE` stays empty (a gate can look "failed" while it actually passed). Launch each gate with `Start-Process -Wait -PassThru` and judge `.ExitCode` — that is exactly what `Tools/preflight.ps1` does.
   - **Windows gotcha (detached runs):** a detached `pwsh -File Tools/preflight.ps1` inherits the *session* PATH, so after prepending the user-space toolchain (which drops Steam's entry) it exits at once with `Godot executable not found: godot` — pass `-Godot` explicitly. And `Start-Process -ArgumentList` joins array elements with spaces **without quoting them**, so that same path silently truncates at the space (`Godot executable not found: C:\Program`); give the path element its own quotes, e.g. `$g = '"C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.exe"'; Start-Process pwsh -ArgumentList '-NoProfile','-File','Tools/preflight.ps1','-Godot',$g`.
 - **Never commit `reports/`** (gdUnit4 output) or Godot's `~*` atomic-write temp files; both are gitignored.

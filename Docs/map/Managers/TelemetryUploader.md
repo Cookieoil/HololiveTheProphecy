@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
-# `Core/Telemetry/TelemetryUploader.gd` — `class_name TelemetryUploader` extends `Node`
+# `Managers/TelemetryUploader.gd` — `class_name TelemetryUploader` extends `Node`
 
-`230` lines · [back to the map](../../../CODEBASE_MAP.md)
+`238` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSONL files HttpBatchSink leaves in user://telemetry/outbox/, POSTs…
 
@@ -24,31 +24,32 @@ Exports:
 
 State:
 - L40 `_http: HTTPRequest`
-- L41 `_busy: bool = false`
-- L42 `_pending_files: PackedStringArray = PackedStringArray()`
-- L43 `_current_file: String = ""`
-- L44 `_current_batches: Array = []`
-- L45 `_current_index: int = 0`
-- L46 `_sent: int = 0`
-- L47 `_failed: int = 0`
+- L43 `_retry_timer: Timer` — One-shot retry clock. A Timer node (not SceneTreeTimer) so it pauses with the scene and is freed with the uploader instead of firing into a dead node.
+- L44 `_busy: bool = false`
+- L45 `_pending_files: PackedStringArray = PackedStringArray()`
+- L46 `_current_file: String = ""`
+- L47 `_current_batches: Array = []`
+- L48 `_current_index: int = 0`
+- L49 `_sent: int = 0`
+- L50 `_failed: int = 0`
 
 Public API:
-- L64-71 `is_enabled() -> bool` — True when an endpoint is configured and the player agreed to telemetry during this launch (a stored answer from an earlier session is not enough).
-- L74-77 `endpoint() -> String`
-- L80-81 `anon_key() -> String`
-- L87-94 `drain() -> void` — Starts one drain pass. Safe to call often: a second call while a pass is in flight is ignored, and a disabled uploader does nothing.
-- L200-204 `retry_later() -> void` — Waits, then tries the whole outbox again (a dropped connection is temporary).
+- L73-80 `is_enabled() -> bool` — True when an endpoint is configured and the player agreed to telemetry during this launch (a stored answer from an earlier session is not enough).
+- L83-86 `endpoint() -> String`
+- L89-90 `anon_key() -> String`
+- L96-103 `drain() -> void` — Starts one drain pass. Safe to call often: a second call while a pass is in flight is ignored, and a disabled uploader does nothing.
+- L209-212 `retry_later() -> void` — Waits, then tries the whole outbox again (a dropped connection is temporary).
 
 Private:
-- L51-59 `_ready`
-- L99-107 `_list_outbox`
-- L111-126 `_next_file`
-- L129-154 `_read_batches`
-- L157-169 `_post_current`
-- L174-181 `_archive`
-- L185-189 `_fail_current`
-- L192-196 `_finish`
-- L209-227 `_on_request_completed`
+- L54-68 `_ready`
+- L108-116 `_list_outbox`
+- L120-135 `_next_file`
+- L138-163 `_read_batches`
+- L166-178 `_post_current`
+- L183-190 `_archive`
+- L194-198 `_fail_current`
+- L201-205 `_finish`
+- L217-235 `_on_request_completed`
 
 Uses: JsonlFileSink, TelemetryConsent
 Used by: GDTest/TelemetryTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd
