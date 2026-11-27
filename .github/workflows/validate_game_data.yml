@@ -237,11 +237,13 @@ jobs:
         run: godot --headless --path . --import
 
       # The exact base commit, so the diff is the pull request and nothing else.
+      # `--adversarial` appends the context-isolated brief; the formatter wraps it in
+      # <details> for markdown, so it is one click away instead of lengthening the comment.
       - name: Review the diff
         run: |
           godot --headless --path . --script res://Tools/review_diff.gd -- \
             --base ${{ github.event.pull_request.base.sha }} \
-            --format markdown --output review.md
+            --format markdown --adversarial --output review.md
 
       - name: Upload the review
         if: always()

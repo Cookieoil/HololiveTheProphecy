@@ -77,7 +77,10 @@ Commit first: the reviewer diffs the branch against the base, so it reads what i
 CI runs the same reviewer without `--strict` and posts it as a sticky PR comment.
 Add `--adversarial` to append the context-isolated brief — the invariants a *fresh* reviewer
 should attack plus the files whose map pages belong in its context; hand that, the diff and
-`AGENTS.md` to a reviewer that never saw the authoring conversation.
+`AGENTS.md` to a reviewer that never saw the authoring conversation. CI passes it too,
+collapsed inside `<details>` so the sticky comment stays one screenful. A change that touches
+`Scenes/` or `Shaders/` also carries a `Visual proof: required` line, because the headless
+gates rasterise nothing — the snapshot is the proof.
 `pwsh -File Tools/preflight.ps1 -Review` runs every gate plus this review.
 
 ## Forward pressure (task intake)
