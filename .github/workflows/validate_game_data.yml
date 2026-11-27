@@ -145,6 +145,42 @@ jobs:
           godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             -a res://GDTest -c --ignoreHeadlessMode
 
+      # The headless gates cannot see pixels. This renders the canonical UI screens
+      # with the real OpenGL renderer on a virtual framebuffer and sanity-checks
+      # the PNGs, so a layout or shader regression is visible on the pull request.
+      - name: UI snapshots (rendered)
+        timeout-minutes: 10
+        run: |
+          command -v xvfb-run >/dev/null 2>&1 \
+            || (sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri)
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --audio-driver Dummy \
+            --rendering-driver opengl3 --path . res://Tools/snapshot_runner.tscn
+
+      # The images leave the runner as an artifact; reports/ is gitignored.
+      - name: Upload UI snapshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ui-snapshots
+          path: reports/ui-snapshots/
+          if-no-files-found: warn
+          retention-days: 7
+
+      # A small table on the job page, so the shots are one click away.
+      - name: Summarise UI snapshots
+        if: always()
+        run: |
+          if [ -f reports/ui-snapshots/manifest.json ]; then
+            {
+              echo '### UI snapshots'
+              echo ''
+              echo '| shot | bytes | sha256 |'
+              echo '| --- | --- | --- |'
+              jq -r '.shots[] | "| \(.file) | \(.bytes) | `\(.sha256[0:12])` |"' \
+                reports/ui-snapshots/manifest.json
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       # reports/ is gitignored, so the HTML/XML report only ever leaves the
       # runner as a build artifact.
       - name: Upload test reports

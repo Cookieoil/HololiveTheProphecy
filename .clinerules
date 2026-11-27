@@ -49,6 +49,10 @@ If gate 3 fails because the index is stale, regenerate it (`Docs/` is generated 
 hand-edit it); on Windows `pwsh -File Tools/preflight.ps1 -FixIndex` regenerates it and then
 runs every gate.
 
+Before changing UI or scenes, look at the pixels (the headless gates cannot):
+`godot --audio-driver Dummy --position -4000,-4000 --path . res://Tools/snapshot_runner.tscn`
+renders `reports/ui-snapshots/` (seeded battle, real OpenGL, `manifest.json`).
+
 ## Context budget (explore without reading everything)
 - **Read `Docs/CODEBASE_MAP.md` first.** It is generated and deliberately small: section 1 lists
   every game script, section 2 every test, section 3 every `EventBus` signal with its emitters and
