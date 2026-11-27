@@ -214,8 +214,10 @@ func compute_value_from_inputs(
 		ValueSource.CARD_VALUE:
 			base = card_val
 		ValueSource.CARD_VALUE_HALF:
-			@warning_ignore("integer_division")
-			base = maxi(1, card_val / 2) if card_val > 0 else 0
+			# Halved the long way round: dividing two ints would raise the
+			# `integer_division` warning, and this repo fixes warnings instead of
+			# suppressing them.
+			base = maxi(1, int(float(card_val) / 2.0)) if card_val > 0 else 0
 		ValueSource.CARD_VALUE_DOUBLE:
 			base = card_val * 2
 		ValueSource.FIXED:
@@ -241,8 +243,7 @@ func compute_value_from_inputs(
 	
 	## Method: (base x multiplier / divisor) + offset, capped
 	var divisor := maxi(1, value_divisor)
-	@warning_ignore("integer_division")
-	var result := (base * value_multiplier) / divisor
+	var result := int(float(base * value_multiplier) / float(divisor))
 	if base > 0:
 		result = maxi(1, result)
 	result += value_offset

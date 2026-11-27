@@ -252,6 +252,9 @@ static func _estimate_post_blocks_value(blocks: Array[SkillEffect], start_val: i
 	return v
 
 
+## The description with every token resolved: the value phrases, the bracket arithmetic,
+## the "highest card" family, and finally the inline icons. One handler per family, so a
+## new token shape is a new function rather than another branch in here.
 static func _substitute_tokens(
 	text: String,
 	val: int,
@@ -265,66 +268,103 @@ static func _substitute_tokens(
 	if text == "":
 		return ""
 
-	var result := text
+	var primary_computed: int = _compute_primary_value(val, state, blocks, caster)
+	var result: String = text
+	# Compound bracketed expressions run before the generic single-operator pattern: they
+	# use words ("Shield", "Highest Card in Hand") or chained operators, and only the
+	# resolved total is printed with the rule as a short hint, so the tooltip never reads
+	# like an algebra quiz.
+	result = _substitute_shield_token(result, val, caster)
+	result = _substitute_half_card_token(result, val, state, exclude_card)
+	result = _substitute_arithmetic_tokens(result, val)
+	result = _substitute_bracket_tokens(result, val)
+	result = _substitute_highest_card_token(result, state, exclude_card)
+	result = _substitute_value_phrases(result, val, primary_computed, blocks)
+	# Keywords/tokens become their inline icons (icon left of the keyword, or a pure
+	# glyph, depending on the TooltipIconCatalog entry).
+	if tooltip_catalog != null:
+		result = tooltip_catalog.format_description(result, icon_size)
+	return result
 
-	# 1. If the skill has a primary EffectBlock, compute its exact value for single-number prose
-	var primary_computed := val
-	if not blocks.is_empty():
-		var first_eb := blocks[0] as EffectBlock
-		if first_eb != null and first_eb.has_method("compute_value_from_inputs"):
-			var sample_target := _pick_sample_target(caster, state)
-			primary_computed = first_eb.compute_value_from_inputs(val, 0, state, sample_target, caster)
 
-	# 1b. Handle compound bracketed expressions before the generic single-operator pattern.
-	#     These use words ("Shield", "Highest Card in Hand") or chained operators.
-	#     Only the resolved total is printed; the rule is shown as a plain hint so the
-	#     tooltip never reads like an algebra quiz.
-	if caster != null:
-		var shield_rx := RegEx.new()
-		shield_rx.compile("\\[Value\\s*\\+\\s*(?:Caster's\\s+)?Shield\\]")
-		for shield_match: RegExMatch in shield_rx.search_all(result):
-			var shield_val: int = caster.shield
-			var total: int = val + shield_val
-			var shield_hint: String = "(+%d from Shield)" % shield_val if shield_val > 0 else "(+Shield)"
-			result = _place_clause_hint(result, shield_match.get_string(0), _num_bb(total), shield_hint)
+## The value the skill's first effect computes for single-number prose, or `val` when
+## there is no effect to ask.
+static func _compute_primary_value(val: int, state: GameState, blocks: Array[SkillEffect], caster: Unit) -> int:
+	if blocks.is_empty():
+		return val
+	var first_eb := blocks[0] as EffectBlock
+	if first_eb == null or not first_eb.has_method("compute_value_from_inputs"):
+		return val
+	var sample_target := _pick_sample_target(caster, state)
+	return first_eb.compute_value_from_inputs(val, 0, state, sample_target, caster)
 
-	var hand_rx := RegEx.new()
-	hand_rx.compile("\\[Value\\s*\\+\\s*Highest\\s+Card(?:\\s+in\\s+Hand)?\\s*/\\s*(\\d+)\\]")
-	for hand_match: RegExMatch in hand_rx.search_all(result):
+
+## "[Value + Shield]" / "[Value + Caster's Shield]": the resolved total, with the shield
+## contribution kept as a hint.
+static func _substitute_shield_token(text: String, val: int, caster: Unit) -> String:
+	if caster == null:
+		return text
+	var rx := RegEx.new()
+	rx.compile("\\[Value\\s*\\+\\s*(?:Caster's\\s+)?Shield\\]")
+	var result: String = text
+	for shield_match: RegExMatch in rx.search_all(text):
+		var shield_val: int = caster.shield
+		var total: int = val + shield_val
+		var shield_hint: String = "(+%d from Shield)" % shield_val if shield_val > 0 else "(+Shield)"
+		result = _place_clause_hint(result, shield_match.get_string(0), _num_bb(total), shield_hint)
+	return result
+
+
+## "[Value + Highest Card in Hand / N]": the total sits right before the word it modifies
+## (Style A, Slay the Spire: "Deal 7 damage") and the short rule is tucked at the end of
+## the sentence. The division is written as an explicit float division: two ints would
+## raise the `integer_division` warning, and this repo fixes warnings rather than
+## suppressing them.
+static func _substitute_half_card_token(text: String, val: int, state: GameState, exclude_card: Card) -> String:
+	var rx := RegEx.new()
+	rx.compile("\\[Value\\s*\\+\\s*Highest\\s+Card(?:\\s+in\\s+Hand)?\\s*/\\s*(\\d+)\\]")
+	var result: String = text
+	for hand_match: RegExMatch in rx.search_all(text):
 		var divisor: int = int(hand_match.get_string(1))
 		var hand_val: int = 0
 		if state != null:
 			var hi_card: Card = state.get_highest_card_in_hand(exclude_card)
 			if hi_card != null:
 				hand_val = hi_card.get_effective_value()
-		var bonus: int = maxi(1, hand_val / maxi(1, divisor)) if hand_val > 0 else 0
-		var total: int = val + bonus
-		# Style A (Slay the Spire): the total sits right before the word it modifies
-		# ("Deal 7 damage"), and the short rule is tucked at the end of the sentence.
+		var bonus: int = maxi(1, int(float(hand_val) / float(maxi(1, divisor)))) if hand_val > 0 else 0
 		var hand_hint: String = "(+half of highest card in hand)" if divisor == 2 \
 			else "(+1/%d of highest card in hand)" % divisor
-		result = _place_clause_hint(result, hand_match.get_string(0), _num_bb(total), hand_hint)
+		result = _place_clause_hint(result, hand_match.get_string(0), _num_bb(val + bonus), hand_hint)
+	return result
 
+## "[Value / N + M]" and "[Value x N]" / "[Value * N]": plain arithmetic on the resolved
+## value, in place.
+static func _substitute_arithmetic_tokens(text: String, val: int) -> String:
+	var result: String = text
 	var div_add_rx := RegEx.new()
 	div_add_rx.compile("\\[Value\\s*/\\s*(\\d+)\\s*\\+\\s*(\\d+)\\]")
-	for div_add_match: RegExMatch in div_add_rx.search_all(result):
+	for div_add_match: RegExMatch in div_add_rx.search_all(text):
 		var divisor: int = int(div_add_match.get_string(1))
 		var add: int = int(div_add_match.get_string(2))
-		var divided: int = maxi(1, val / maxi(1, divisor)) if val > 0 else 0
-		var total: int = divided + add
-		result = result.replace(div_add_match.get_string(0), _num_bb(total))
+		var divided: int = maxi(1, int(float(val) / float(maxi(1, divisor)))) if val > 0 else 0
+		result = result.replace(div_add_match.get_string(0), _num_bb(divided + add))
 
 	var times_rx := RegEx.new()
 	times_rx.compile("\\[Value\\s*(?:x|\\*)\\s*(\\d+)\\]")
 	for times_match: RegExMatch in times_rx.search_all(result):
 		var mult: int = int(times_match.get_string(1))
 		result = result.replace(times_match.get_string(0), _num_bb(val * mult))
+	return result
 
-	# 2. Generic single-operator bracket expressions: [Value], [Value + N], [Value - N], [Value * N], [Value / N]
-	#    Note: the 'x' variant and compound expressions are handled above, so this only catches '*'.
-	var bracket_rx := RegEx.new()
-	bracket_rx.compile("\\[\\s*[Vv]alue\\s*(?:([+\\-*/])\\s*(\\d+))?\\s*\\]")
-	for m in bracket_rx.search_all(result):
+
+## The generic single-operator brackets: [Value], [Value + N], [Value - N], [Value * N],
+## [Value / N]. The 'x' form and the compound expressions are handled above, so this one
+## only ever sees a literal operator.
+static func _substitute_bracket_tokens(text: String, val: int) -> String:
+	var rx := RegEx.new()
+	rx.compile("\\[\\s*[Vv]alue\\s*(?:([+\\-*/])\\s*(\\d+))?\\s*\\]")
+	var result: String = text
+	for m: RegExMatch in rx.search_all(text):
 		var op := m.get_string(1)
 		var rhs := int(m.get_string(2)) if m.get_string(2) != "" else 0
 		var n := val
@@ -332,32 +372,37 @@ static func _substitute_tokens(
 			"+": n = val + rhs
 			"-": n = maxi(0, val - rhs)
 			"*": n = val * rhs
-			"/":
-				@warning_ignore("integer_division")
-				n = maxi(1, val / maxi(1, rhs))
+			"/": n = maxi(1, int(float(val) / float(maxi(1, rhs))))
 		result = result.replace(m.get_string(0), _num_bb(n))
+	return result
 
-	# 3. Replace Highest / Lowest card tokens (for Ultimates like Striker's "[8 + Highest Card in Hand]")
-	if state != null:
-		var hi_card := state.get_highest_card_in_hand(exclude_card)
-		var hi_val := hi_card.get_effective_value() if hi_card != null else 0
-		var hi_math_rx := RegEx.new()
-		# The outer [ ] are optional and consumed, so no stray brackets survive.
-		hi_math_rx.compile("\\[?(\\d+)\\s*\\+\\s*Highest Card(?:\\s+in\\s+Hand)?\\]?")
-		for hm: RegExMatch in hi_math_rx.search_all(result):
-			var total := int(hm.get_string(1)) + hi_val
-			result = _place_clause_hint(result, hm.get_string(0), _num_bb(total), "(+highest card in hand)")
+## The "[N + Highest Card in Hand]" family (Ultimates like Striker's): the resolved total
+## goes where the token was, with the rule kept as a short hint.
+static func _substitute_highest_card_token(text: String, state: GameState, exclude_card: Card) -> String:
+	if state == null:
+		return text
+	var hi_card := state.get_highest_card_in_hand(exclude_card)
+	var hi_val := hi_card.get_effective_value() if hi_card != null else 0
+	var rx := RegEx.new()
+	# The outer [ ] are optional and consumed, so no stray brackets survive.
+	rx.compile("\\[?(\\d+)\\s*\\+\\s*Highest Card(?:\\s+in\\s+Hand)?\\]?")
+	var result: String = text
+	for hm: RegExMatch in rx.search_all(text):
+		var total := int(hm.get_string(1)) + hi_val
+		result = _place_clause_hint(result, hm.get_string(0), _num_bb(total), "(+highest card in hand)")
+	return result
 
-	# 4. Replace common prose placeholders ({value}, card value, rolled value, standalone V)
-	var phrase_rx := RegEx.new()
-	phrase_rx.compile("(?i)(\\{value\\}|card's value|card value|dice value|rolled value)")
-	for pm in phrase_rx.search_all(result):
+
+## The prose placeholders: `{value}`, "card's value", "card value", "dice value",
+## "rolled value". A single-effect skill prints the value that effect computed; anything
+## longer falls back to the raw skill value, because one number cannot speak for several
+## effects.
+static func _substitute_value_phrases(text: String, val: int, primary_computed: int, blocks: Array[SkillEffect]) -> String:
+	var rx := RegEx.new()
+	rx.compile("(?i)(\\{value\\}|card's value|card value|dice value|rolled value)")
+	var result: String = text
+	for pm: RegExMatch in rx.search_all(text):
 		result = result.replace(pm.get_string(0), _num_bb(primary_computed if blocks.size() == 1 else val))
-
-	# 5. Swap keywords/tokens for their inline icons (icon left of the keyword,
-	#    or a pure glyph, depending on the TooltipIconCatalog entry).
-	if tooltip_catalog != null:
-		result = tooltip_catalog.format_description(result, icon_size)
 	return result
 
 
