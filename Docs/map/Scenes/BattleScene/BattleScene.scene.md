@@ -40,7 +40,7 @@ Root script: `Scenes/BattleScene/BattleScene.gd`
           - RightGroup `HBoxContainer`
             - ConvertButton `Button` — script `Scenes/HUD/HudTooltip.gd`
             - EndTurnButton `Button` — script `Scenes/HUD/HudTooltip.gd`
-    - MessageLog `Label`
+    - MessageLog `RichTextLabel`
     - HandBar `PanelContainer` — script `Scenes/Cards/HandBar.gd`
       - MarginContainer `MarginContainer`
         - VBox `VBoxContainer`

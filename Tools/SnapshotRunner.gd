@@ -32,8 +32,9 @@ const CONSENT_FILE_NAME: String = "_snapshot_consent.json"
 ## A fixed seed makes the dealt hand, the rolls and the enemy intents identical on
 ## every machine, so two captures of the same code are comparable.
 const SEED: int = 424242
-## Frames to wait after a state changes so layout and animations have settled.
-const SETTLE_FRAMES: int = 12
+## Frames to wait after a state changes so layout and the deal animation have
+## settled before the pixels are read.
+const SETTLE_FRAMES: int = 45
 ## Hard cap on waiting for a state, so a broken build cannot hang CI forever.
 const MAX_WAIT_FRAMES: int = 600
 ## The project window size the snapshots are taken at.

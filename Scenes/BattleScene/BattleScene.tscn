@@ -236,7 +236,7 @@ icon = ExtResource("4_phsvg")
 expand_icon = true
 script = ExtResource("8_hudtip")
 
-[node name="MessageLog" type="Label" parent="HUD" unique_id=1043898199]
+[node name="MessageLog" type="RichTextLabel" parent="HUD" unique_id=1043898199]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
@@ -245,8 +245,10 @@ offset_top = 68.0
 offset_right = 300.0
 offset_bottom = 100.0
 grow_horizontal = 2
-theme_override_font_sizes/font_size = 18
-horizontal_alignment = 1
+bbcode_enabled = true
+scroll_active = false
+autowrap_mode = 0
+theme_override_font_sizes/normal_font_size = 18
 
 [node name="HandBar" type="PanelContainer" parent="HUD" unique_id=632580964]
 self_modulate = Color(1, 1, 1, 0)

@@ -32,6 +32,12 @@ func _initialize() -> void:
 		var resource: Resource = load(path)
 		if resource == null:
 			failures.append(path)
+			continue
+		# A script with a parse error can still come back non-null, so `load()`
+		# alone is not enough: only a compiled script can be instantiated.
+		var script: GDScript = resource as GDScript
+		if script == null or not script.can_instantiate():
+			failures.append(path)
 	if failures.is_empty():
 		print("SCRIPT CHECK PASSED (%d script(s))" % scripts.size())
 		quit(0)

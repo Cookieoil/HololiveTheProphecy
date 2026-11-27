@@ -36,7 +36,7 @@ extends GameUI
 @onready var discard_value_label: Label = $HUD/TopBar/Margin/HBox/CenterGroup/DiscardStat/Value
 @onready var convert_button: Button = $HUD/TopBar/Margin/HBox/RightGroup/ConvertButton
 @onready var end_turn_button: Button = $HUD/TopBar/Margin/HBox/RightGroup/EndTurnButton
-@onready var log_label: Label = $HUD/MessageLog
+@onready var log_label: RichTextLabel = $HUD/MessageLog
 
 @onready var debug_layer: CanvasLayer = $DebugLayer
 @onready var debug_button: Button = $DebugLayer/DebugButton
@@ -172,7 +172,10 @@ func play_unit_ultimate(unit: Unit) -> void:
 		await uui.play_ultimate_animation()
 
 func show_message(msg: String) -> void:
-	log_label.text = msg
+	# The message log is authored in BBCode (ColorUtils.colorize and the help text),
+	# so it must be parsed as rich text and the line centred, which a Label could do
+	# with a property but a RichTextLabel cannot.
+	log_label.text = "[center]%s[/center]" % msg
 	var t := create_tween()
 	t.tween_property(log_label, "modulate:a", 1.0, 0.1)
 	t.tween_interval(1.8)
