@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/Cards/CardUI.gd` — `class_name CardUI` extends `PanelContainer`
 
-`1381` lines · [back to the map](../../../CODEBASE_MAP.md)
+`1377` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Visual representation of one Card in hand. Drag source (play / merge) and drop target (merge only). The card is rendered into an offscreen SubViewport and that…
 
@@ -175,8 +175,8 @@ Private:
 - L1286-1297 `_on_return_finished`
 - L1302-1321 `_can_drop_data`
 - L1324-1345 `_drop_data`
-- L1348-1359 `_find_hand_bar`
-- L1368-1379 `_on_card_value_changed`
+- L1352-1355 `_resolve_hand_bar`
+- L1364-1375 `_on_card_value_changed`
 
 Uses: BattleScene, Card, CardDrag, CardIconCatalog, ForgePlate, GameState, HandBar, OutlineGlow
 Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/CardUITest.gd, GDTest/CodeIndexTest.gd, Scenes/Cards/HandBar.gd, Tools/check_navigation.gd

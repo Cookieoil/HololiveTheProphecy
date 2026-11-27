@@ -371,30 +371,12 @@ func can_merge(card_a: Card, card_b: Card) -> bool:
 	return not card_a.is_double_merged and not card_b.is_double_merged
 
 
-## Falls back to walking the scene for the live GameState when the scene has not
-## pushed one down yet. Also used by CardUI to re-show a card it did not consume.
+## The live GameState, pushed down by BattleScene.show_game_state() (see `game_state`).
+## The scene is the only thing that can know it, so nothing here searches the tree for
+## it: a null return means no hand has been dealt yet, and no card exists to merge.
 func _get_game_state() -> GameState:
 	if game_state != null and is_instance_valid(game_state):
 		return game_state
-
-	var candidates: Array[Node] = []
-	if get_tree() != null and get_tree().current_scene != null:
-		candidates.append(get_tree().current_scene)
-	var curr: Node = get_parent()
-	while curr != null:
-		candidates.append(curr)
-		curr = curr.get_parent()
-
-	for node: Node in candidates:
-		var gm: Variant = node.get("game_manager")
-		if gm is Object and is_instance_valid(gm):
-			var gm_obj: Object = gm
-			var raw_state: Variant = gm_obj.get("state")
-			if raw_state is GameState:
-				var gs: GameState = raw_state
-				game_state = gs
-				return game_state
-
 	return null
 
 

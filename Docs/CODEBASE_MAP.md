@@ -54,21 +54,21 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
 | [`Scenes/Cards/CardDrag.gd`](map/Scenes/Cards/CardDrag.md) | `CardDrag` | 13 | Payload for all card drag operations. Consumed by: CardUI (merge), UnitDropZone (skill activatio… |
 | [`Scenes/Cards/CardIconCatalog.gd`](map/Scenes/Cards/CardIconCatalog.md) | `CardIconCatalog` | 15 | Central skill-type icon registry for cards / skill previews. One instance, set as project autolo… |
-| [`Scenes/Cards/CardUI.gd`](map/Scenes/Cards/CardUI.md) | `CardUI` | 1381 | Visual representation of one Card in hand. Drag source (play / merge) and drop target (merge onl… |
+| [`Scenes/Cards/CardUI.gd`](map/Scenes/Cards/CardUI.md) | `CardUI` | 1377 | Visual representation of one Card in hand. Drag source (play / merge) and drop target (merge onl… |
 | [`Scenes/Cards/ForgePlate.gd`](map/Scenes/Cards/ForgePlate.md) | `ForgePlate` | 140 | One of the two cards in a merge, drawn as a real fake-3D quad. A merge has to show two cards ban… |
-| [`Scenes/Cards/HandBar.gd`](map/Scenes/Cards/HandBar.md) | `HandBar` | 430 | Bottom-edge hand of cards. View-only: it animates, GameManager validates. |
-| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 548 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges Unit… |
+| [`Scenes/Cards/HandBar.gd`](map/Scenes/Cards/HandBar.md) | `HandBar` | 412 | Bottom-edge hand of cards. View-only: it animates, GameManager validates. |
+| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 555 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges Unit… |
 | [`Scenes/HUD/BattleResultOverlay.gd`](map/Scenes/HUD/BattleResultOverlay.md) | `BattleResultOverlay` | 384 | End-of-battle cutscene, staged like a big-budget result screen. The battle scene is the only sce… |
 | [`Scenes/HUD/BattleResultPrompt.gd`](map/Scenes/HUD/BattleResultPrompt.md) | `BattleResultPrompt` | 183 | The end screen's action prompt, drawn the way big-budget menus do it: no box, no border and no f… |
 | [`Scenes/HUD/DebugMenuPopup.gd`](map/Scenes/HUD/DebugMenuPopup.md) | `DebugMenuPopup` | 704 | Tester-only tool palette for the battle scene. Every button here is a *request*: it emits `debug… |
 | [`Scenes/HUD/HudTooltip.gd`](map/Scenes/HUD/HudTooltip.md) | `HudTooltip` | 91 | Content of the hover tooltip for one top-bar widget. Every icon in the top bar is the same place… |
 | [`Scenes/HUD/MoxieOrbUI.gd`](map/Scenes/HUD/MoxieOrbUI.md) | `MoxieOrbUI` | 605 | extends Control, 3 signal(s), 1 export(s), 22 function(s) |
-| [`Scenes/HUD/OutlineGlow.gd`](map/Scenes/HUD/OutlineGlow.md) | `OutlineGlow` | 233 | outer light border with scrolling sub-surface energy texture. |
+| [`Scenes/HUD/OutlineGlow.gd`](map/Scenes/HUD/OutlineGlow.md) | `OutlineGlow` | 236 | outer light border with scrolling sub-surface energy texture. |
 | [`Scenes/HUD/SkillTooltipPopup.gd`](map/Scenes/HUD/SkillTooltipPopup.md) | `SkillTooltipPopup` | 272 | extends Control, 8 function(s) |
 | [`Scenes/HUD/TelemetryConsentPopup.gd`](map/Scenes/HUD/TelemetryConsentPopup.md) | `TelemetryConsentPopup` | 339 | First-launch disclosure for gameplay telemetry: a full-screen modal that asks the player whether… |
 | [`Scenes/HUD/TooltipIconCatalog.gd`](map/Scenes/HUD/TooltipIconCatalog.md) | `TooltipIconCatalog` | 334 | Inline icon registry for tooltip descriptions (SkillTooltipPopup bodies). Two authoring styles a… |
 | [`Scenes/HUD/TooltipIconEntry.gd`](map/Scenes/HUD/TooltipIconEntry.md) | `TooltipIconEntry` | 133 | One tooltip keyword/icon rule, consumed by TooltipIconCatalog. DisplayMode decides how the keywo… |
-| [`Skills/EffectBlock.gd`](map/Skills/EffectBlock.md) | `EffectBlock` | 675 | The universal data skill effect component Use configureble resource for all effect scripts Execu… |
+| [`Skills/EffectBlock.gd`](map/Skills/EffectBlock.md) | `EffectBlock` | 668 | The universal data skill effect component Use configureble resource for all effect scripts Execu… |
 | [`Skills/SkillContext.gd`](map/Skills/SkillContext.md) | `SkillContext` | 48 | Runtime context passed to every EffectBlock.execute(). Three inter-block communication channels:… |
 | [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 54 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of effects for unmerged and m… |
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager al… |
@@ -88,7 +88,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
 
-## 2. Tests at a glance (25)
+## 2. Tests at a glance (26)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -96,13 +96,14 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/BattleEndTest.gd`](map/GDTest/BattleEndTest.md) | `BattleEndTest` | 687 | Locks the end of a battle: - a unit that dies never keeps Moxie (or a "ULT READY" glow) on the b… |
 | [`GDTest/CardDrawAnimationTest.gd`](map/GDTest/CardDrawAnimationTest.md) | `CardDrawAnimationTest` | 303 | Locks in the fake-3D card draw: - every CardUI owns its own warp material, so tilting one card c… |
 | [`GDTest/CardFlashPolicyTest.gd`](map/GDTest/CardFlashPolicyTest.md) | `CardFlashPolicyTest` | 109 | Locks in *who caused it* when the game reveals hand cards it picked on its own: - an enemy actin… |
-| [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 564 | Locks in the merge: the card the player was carrying is picked up from the exact point they rele… |
+| [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 612 | Locks in the merge: the card the player was carrying is picked up from the exact point they rele… |
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
-| [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 99 | Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/deb… |
+| [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 122 | Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/deb… |
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 302 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigati… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it renders one toggle per st… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 864 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is vie… |
 | [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 272 | Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd.… |
+| [`GDTest/EffectBlockMessageTest.gd`](map/GDTest/EffectBlockMessageTest.md) | `EffectBlockMessageTest` | 121 | Locks the colours of the battle-log lines EffectBlock writes. Every number in a message wears th… |
 | [`GDTest/EnemySkillBalanceTest.gd`](map/GDTest/EnemySkillBalanceTest.md) | `EnemySkillBalanceTest` | 269 | Locks the enemy-skill balance pass: - an enemy threshold matches the parity of the slot it sits… |
 | [`GDTest/EnemyTurnOverlapTest.gd`](map/GDTest/EnemyTurnOverlapTest.md) | `EnemyTurnOverlapTest` | 232 | Locks the enemy-turn overlap ("fast mode" pacing): - consecutive enemies hand control to the nex… |
 | [`GDTest/EnemyUltAuraTest.gd`](map/GDTest/EnemyUltAuraTest.md) | `EnemyUltAuraTest` | 139 | Locks in the enemy Ultimate warning lifecycle. The crimson character aura and the Moxie orb prev… |
@@ -172,4 +173,4 @@ Top-level keys:
 
 ---
 
-Indexed 84 script(s) (59 game, 25 test), 5 scene(s), 6 data file(s).
+Indexed 85 script(s) (59 game, 26 test), 5 scene(s), 6 data file(s).

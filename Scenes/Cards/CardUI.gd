@@ -318,7 +318,7 @@ func _gui_input(event: InputEvent) -> void:
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if _pick_selectable and mb != null \
 			and mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-		var hb := _find_hand_bar()
+		var hb := _resolve_hand_bar()
 		if hb != null:
 			hb.card_clicked.emit(card)
 		accept_event()
@@ -1058,7 +1058,7 @@ func _clear_merge_plates() -> void:
 
 func setup(p_card: Card, p_hand_bar: HandBar = null) -> void:
 	card = p_card
-	hand_bar = p_hand_bar if p_hand_bar != null else _find_hand_bar()
+	hand_bar = p_hand_bar if p_hand_bar != null else _resolve_hand_bar()
 	_refresh()
 
 
@@ -1108,7 +1108,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	if card == null or _is_consumed or _drag_in_progress or _pick_selectable:
 		return null
 
-	var hb := _find_hand_bar()
+	var hb := _resolve_hand_bar()
 	if hb == null:
 		return null
 
@@ -1211,7 +1211,7 @@ func _notification(what: int) -> void:
 	else:
 		_animate_return_to_hand()
 
-	var hb := _find_hand_bar()
+	var hb := _resolve_hand_bar()
 	if hb != null and card != null:
 		hb.drag_ended.emit(card)
 
@@ -1219,7 +1219,7 @@ func _notification(what: int) -> void:
 func _restore_if_unconsumed() -> void:
 	if _is_consumed or not is_inside_tree() or is_queued_for_deletion():
 		return
-	var hb := _find_hand_bar()
+	var hb := _resolve_hand_bar()
 	var st: GameState = hb._get_game_state() if hb != null else null
 	if st != null and st.hand.has(card):
 		modulate.a = 1.0
@@ -1307,7 +1307,7 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 		merge_glow.visible = false
 		return false
 
-	var hb := _find_hand_bar()
+	var hb := _resolve_hand_bar()
 	var valid: bool = false
 
 	if hb != null:
@@ -1330,7 +1330,7 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	if drag == null or drag.card == null:
 		return
 
-	var hb := _find_hand_bar()
+	var hb := _resolve_hand_bar()
 	if hb == null:
 		hb = drag.source
 
@@ -1345,17 +1345,13 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 		# from NOTIFICATION_DRAG_END for successful and cancelled drags.
 
 
-func _find_hand_bar() -> HandBar:
+## The HandBar this card was handed in `setup()`, or null for a card built without one
+## (tests, tooling). Only HandBar spawns cards and it always passes itself, so the
+## reference is the whole answer: there is no bar to search for, and a card sitting
+## under a HandBar it was never handed to does not claim it.
+func _resolve_hand_bar() -> HandBar:
 	if hand_bar != null and is_instance_valid(hand_bar):
 		return hand_bar
-
-	var curr: Node = get_parent()
-	while curr != null:
-		if curr is HandBar:
-			hand_bar = curr as HandBar
-			return hand_bar
-		curr = curr.get_parent()
-
 	return null
 #endregion
 

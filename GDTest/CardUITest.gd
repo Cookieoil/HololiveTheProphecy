@@ -96,3 +96,26 @@ func test_hostile_flash_uses_the_crimson_preset() -> void:
 	ui.set_flash_active(false)
 	assert_bool(ui._flash_hostile).is_false()
 	assert_bool(_glow_is_active(ui)).is_false()
+
+
+## The glow is hung on a frame and told to follow it: attaching is what knows the frame,
+## so the resize link is wired there and the glow never has to reach up for the thing it
+## was attached to. Resizing the frame moves the glow's shader rect with it.
+func test_glow_follows_the_frame_it_was_attached_to() -> void:
+	var frame: Control = Control.new()
+	add_child(frame)
+	frame.size = Vector2(120.0, 160.0)
+	var glow: OutlineGlow = OutlineGlow.attach_to(frame, 8.0)
+	assert_object(glow).is_not_null()
+	assert_bool(frame.resized.is_connected(glow._sync_size)).is_true()
+
+	frame.size = Vector2(240.0, 320.0)
+	await await_millis(80)
+
+	var mat: ShaderMaterial = glow._mat
+	assert_object(mat).is_not_null()
+	var rect: Variant = mat.get_shader_parameter("rect_size")
+	assert_bool(rect is Vector2).is_true()
+	var rect_size: Vector2 = rect
+	assert_bool(rect_size.is_equal_approx(glow.size)).is_true()
+	assert_bool(rect_size.x > frame.size.x).is_true()

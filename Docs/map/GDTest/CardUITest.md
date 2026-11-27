@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/CardUITest.gd` — `class_name CardUITest` extends `GdUnitTestSuite`
 
-`99` lines · [back to the map](../../CODEBASE_MAP.md)
+`122` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/debuff and the hostile (enemy-caused) red glow preset.
 
@@ -14,6 +14,7 @@ Public API:
 - L47-60 `test_value_label_refreshes_after_runtime_value_change() -> void`
 - L63-73 `test_unrelated_card_change_is_ignored() -> void`
 - L76-98 `test_hostile_flash_uses_the_crimson_preset() -> void`
+- L104-121 `test_glow_follows_the_frame_it_was_attached_to() -> void` — The glow is hung on a frame and told to follow it: attaching is what knows the frame, so the resize link is wired there and the glow never has to reach up for t…
 
 Private:
 - L19-25 `_make_card_ui`

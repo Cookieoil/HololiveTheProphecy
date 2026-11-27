@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/Cards/HandBar.gd` — `class_name HandBar` extends `PanelContainer`
 
-`430` lines · [back to the map](../../../CODEBASE_MAP.md)
+`412` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Bottom-edge hand of cards. View-only: it animates, GameManager validates.
 
@@ -60,11 +60,11 @@ Private:
 - L341-343 `_reset_deal_slots`
 - L349-352 `_deck_offset`
 - L356-362 `_live_card_uis`
-- L376-398 `_get_game_state`
-- L401-406 `_find_card_ui`
-- L414-415 `_on_event_card_played`
-- L420-421 `_on_event_card_drawn`
-- L426-427 `_on_event_card_discarded`
+- L377-380 `_get_game_state`
+- L383-388 `_find_card_ui`
+- L396-397 `_on_event_card_played`
+- L402-403 `_on_event_card_drawn`
+- L408-409 `_on_event_card_discarded`
 
 Uses: Card, CardUI, ForgePlate, GameState, Unit
 Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/CardUI.gd
