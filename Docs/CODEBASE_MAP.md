@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (57)
+## 1. Game scripts at a glance (59)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -76,6 +76,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 759 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 479 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
 | [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 250 | Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is… |
+| [`Tools/TriageParser.gd`](map/Tools/TriageParser.md) | `TriageParser` | 488 | Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns evidence into agent-rea… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifa… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 85 | Headless compile gate: loads every project GDScript outside the excluded folders, so a type erro… |
 | [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 142 | Headless link and compatibility gate for the spine-godot GDExtension. Proves three things: 1. th… |
@@ -83,10 +84,11 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/export_xlsx_to_json.gd`](map/Tools/export_xlsx_to_json.md) | — | 34 | Headless Excel -> JSON exporter for the game data pipeline. Usage: godot --headless --path . --s… |
 | [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 809 | Headless symbol-index generator for this repository. Parses every first-party GDScript source an… |
 | [`Tools/review_diff.gd`](map/Tools/review_diff.md) | — | 112 | Second-pass reviewer for a branch: summarises the diff and flags the things a reviewer (human or… |
+| [`Tools/triage.gd`](map/Tools/triage.md) | — | 222 | Forward pressure: turns evidence into agent-ready task issues. An agent (or a human) should neve… |
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
 
-## 2. Tests at a glance (24)
+## 2. Tests at a glance (25)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -113,6 +115,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its… |
 | [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 697 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wav… |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIconEntry). Covers: left-o… |
+| [`GDTest/TriageParserTest.gd`](map/GDTest/TriageParserTest.md) | `TriageParserTest` | 198 | Locks the task-intake rules (Tools/TriageParser.gd): every threshold, the ordering, the per-kind… |
 | [`GDTest/UiSnapshotTest.gd`](map/GDTest/UiSnapshotTest.md) | `UiSnapshotTest` | 82 | Locks the seams the UI snapshot pipeline (Tools/snapshot_runner.tscn) relies on: a fixed seed mu… |
 
 ## 3. Global signals (Managers/EventBus.gd)
@@ -169,4 +172,4 @@ Top-level keys:
 
 ---
 
-Indexed 81 script(s) (57 game, 24 test), 5 scene(s), 6 data file(s).
+Indexed 84 script(s) (59 game, 25 test), 5 scene(s), 6 data file(s).

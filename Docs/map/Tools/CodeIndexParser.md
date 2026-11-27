@@ -61,6 +61,6 @@ Public API:
 - L747-757 `static finalize_keys(keys: PackedStringArray) -> PackedStringArray`
 
 Uses: —
-Used by: GDTest/CodeIndexTest.gd, GDTest/DiffReviewTest.gd, Tools/DiffReviewParser.gd, Tools/check_navigation.gd, Tools/gen_code_index.gd, Tools/review_diff.gd
+Used by: GDTest/CodeIndexTest.gd, GDTest/DiffReviewTest.gd, GDTest/TriageParserTest.gd, Tools/DiffReviewParser.gd, Tools/TriageParser.gd, Tools/check_navigation.gd, Tools/gen_code_index.gd, Tools/review_diff.gd, Tools/triage.gd
 Loads: res://
 
