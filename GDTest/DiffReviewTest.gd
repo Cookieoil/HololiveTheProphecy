@@ -269,3 +269,200 @@ func test_test_suite_methods_are_not_treated_as_public_api() -> void:
 		"",
 	])
 	assert_bool(_rules(_review(fixture)).has("undocumented_api")).is_false()
+
+
+## A trunk-only change: Core/ is where a wrong line reaches every player.
+func _trunk_fixture() -> String:
+	return "\n".join([
+		"diff --git a/Core/GameState.gd b/Core/GameState.gd",
+		"--- a/Core/GameState.gd",
+		"+++ b/Core/GameState.gd",
+		"@@ -1,1 +1,2 @@",
+		" extends RefCounted",
+		"+\tvar extra: int = 1",
+		"",
+	])
+
+
+## Leaf game code: one isolated HUD widget.
+func _leaf_fixture() -> String:
+	return "\n".join([
+		"diff --git a/Scenes/HUD/HudTooltip.gd b/Scenes/HUD/HudTooltip.gd",
+		"--- a/Scenes/HUD/HudTooltip.gd",
+		"+++ b/Scenes/HUD/HudTooltip.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\tvar extra: int = 1",
+		"",
+	])
+
+
+## Neither trunk nor leaf game code: a tool and a generated docs page.
+func _tooling_fixture() -> String:
+	return "\n".join([
+		"diff --git a/Tools/Thing.gd b/Tools/Thing.gd",
+		"--- a/Tools/Thing.gd",
+		"+++ b/Tools/Thing.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\tvar extra: int = 1",
+		"",
+		"diff --git a/Docs/map/Tools/Thing.md b/Docs/map/Tools/Thing.md",
+		"--- a/Docs/map/Tools/Thing.md",
+		"+++ b/Docs/map/Tools/Thing.md",
+		"@@ -1,1 +1,2 @@",
+		" # Thing",
+		"+line",
+		"",
+	])
+
+
+## A features.json edit: a flag enabled at a full rollout, or staged behind a canary.
+func _feature_fixture(staged: bool) -> String:
+	var lines: Array[String] = [
+		"diff --git a/Data/json/features.json b/Data/json/features.json",
+		"--- a/Data/json/features.json",
+		"+++ b/Data/json/features.json",
+		"@@ -1,1 +1,6 @@",
+		" {",
+		"+\t\"flags\": {\"my_experiment\": {",
+		"+\t\t\"enabled\": true,",
+	]
+	if staged:
+		lines.append("+\t\t\"rollout_percent\": 25,")
+	lines.append_array([
+		"+\t\t\"description\": \"what is being tried\"",
+		"+\t}}",
+		" }",
+		"",
+	])
+	return "\n".join(lines)
+
+
+## A new test method in GDTest/, with or without an assertion in its body.
+func _test_fixture(with_assert: bool) -> String:
+	var lines: Array[String] = [
+		"diff --git a/GDTest/ThingTest.gd b/GDTest/ThingTest.gd",
+		"--- a/GDTest/ThingTest.gd",
+		"+++ b/GDTest/ThingTest.gd",
+		"@@ -1,1 +1,3 @@",
+		" pass",
+		"+func test_thing() -> void:",
+	]
+	lines.append("+\tassert_bool(true).is_true()" if with_assert else "+\tpass")
+	return "\n".join(lines)
+
+
+func test_review_tier_covers_folders_files_and_measured_fan_in() -> void:
+	assert_str(DiffReviewParser.review_tier("Core/GameState.gd")).is_equal("trunk")
+	assert_str(DiffReviewParser.review_tier("Managers/GameManager.gd")).is_equal("trunk")
+	assert_str(DiffReviewParser.review_tier(".github/workflows/x.yml")).is_equal("trunk")
+	assert_str(DiffReviewParser.review_tier("project.godot")).is_equal("trunk")
+	assert_str(DiffReviewParser.review_tier("Scenes/HUD/HudTooltip.gd")).is_equal("leaf")
+	assert_str(DiffReviewParser.review_tier(".github/PULL_REQUEST_TEMPLATE.md")).is_equal("leaf")
+	var measured: PackedStringArray = PackedStringArray(["Scenes/Cards/CardUI.gd"])
+	assert_str(DiffReviewParser.review_tier("Scenes/Cards/CardUI.gd", measured)).is_equal("trunk")
+	assert_str(DiffReviewParser.review_tier("Scenes/Cards/HandBar.gd", measured)).is_equal("leaf")
+
+
+## A diff that adds `count` plain lines to one file, for the size rule.
+func _bulk_fixture(path_value: String, count: int) -> String:
+	var lines: Array[String] = [
+		"diff --git a/%s b/%s" % [path_value, path_value],
+		"--- a/%s" % path_value,
+		"+++ b/%s" % path_value,
+		"@@ -1,1 +1,%d @@" % (count + 1),
+		" pass",
+	]
+	for index: int in range(count):
+		lines.append("+line %d" % index)
+	return "\n".join(lines)
+
+
+func test_oversize_counts_source_churn_but_not_regenerated_docs() -> void:
+	var docs: Dictionary = _review(_bulk_fixture("Docs/map/Tools/Thing.md", 500))
+	assert_bool(_rules(docs).has("oversize_diff")).is_false()
+	var source: Dictionary = _review(_bulk_fixture("Scenes/HUD/HudTooltip.gd", 500))
+	assert_bool(_rules(source).has("oversize_diff")).is_true()
+
+
+func test_a_docs_mention_of_the_flag_registry_is_not_a_feature_gate() -> void:
+	var docs: String = "\n".join([
+		"diff --git a/Docs/map/Tools/Thing.md b/Docs/map/Tools/Thing.md",
+		"--- a/Docs/map/Tools/Thing.md",
+		"+++ b/Docs/map/Tools/Thing.md",
+		"@@ -1,1 +1,2 @@",
+		" # Thing",
+		"+- add an entry to Data/json/features.json",
+		"",
+	])
+	assert_bool(CodeIndexParser.dict_bool(_review(docs), "feature_gated")).is_false()
+	var gate_call: String = "\n".join([
+		"diff --git a/Scenes/HUD/HudTooltip.gd b/Scenes/HUD/HudTooltip.gd",
+		"--- a/Scenes/HUD/HudTooltip.gd",
+		"+++ b/Scenes/HUD/HudTooltip.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\tif FeatureFlags.is_active(state.flags, \"my_experiment\"):",
+		"",
+	])
+	assert_bool(CodeIndexParser.dict_bool(_review(gate_call), "feature_gated")).is_true()
+	var quoted: String = "\n".join([
+		"diff --git a/Tools/Thing.gd b/Tools/Thing.gd",
+		"--- a/Tools/Thing.gd",
+		"+++ b/Tools/Thing.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\tconst MARKER: String = \"FeatureFlags.is_active\"",
+		"",
+	])
+	assert_bool(CodeIndexParser.dict_bool(_review(quoted), "feature_gated")).is_false()
+	assert_bool(CodeIndexParser.dict_bool(_review(gate_call.replace("Scenes/HUD/HudTooltip.gd", "GDTest/ThingTest.gd")), "feature_gated")).is_false()
+
+
+func test_fan_in_from_map_reads_the_used_by_line() -> void:
+	var page: String = "# `Core/GameState.gd`\n\nUsed by: A.gd, B.gd, C.gd\nLoads: —\n"
+	assert_int(DiffReviewParser.fan_in_from_map(page)).is_equal(3)
+	assert_int(DiffReviewParser.fan_in_from_map("Used by: —\n")).is_equal(0)
+	assert_int(DiffReviewParser.fan_in_from_map("# nothing here\n")).is_equal(0)
+
+
+func test_blast_radius_follows_the_trunk_rule() -> void:
+	assert_str(CodeIndexParser.dict_string(_review(_trunk_fixture()), "blast_radius")).is_equal("high")
+	assert_str(CodeIndexParser.dict_string(_review(_leaf_fixture()), "blast_radius")).is_equal("medium")
+	assert_str(CodeIndexParser.dict_string(_review(_tooling_fixture()), "blast_radius")).is_equal("low")
+
+
+func test_markdown_report_leads_with_the_blast_radius() -> void:
+	var report: String = DiffReviewParser.format_markdown(_review(_trunk_fixture()))
+	assert_bool(report.contains("Blast radius: HIGH")).is_true()
+	assert_bool(report.contains("Core/GameState.gd")).is_true()
+
+
+func test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged() -> void:
+	var gated: Dictionary = _review(_feature_fixture(false))
+	assert_bool(CodeIndexParser.dict_bool(gated, "feature_gated")).is_true()
+	assert_bool(_rules(gated).has("unstaged_rollout")).is_true()
+	var staged: Dictionary = _review(_feature_fixture(true))
+	assert_bool(CodeIndexParser.dict_bool(staged, "feature_gated")).is_true()
+	assert_bool(_rules(staged).has("unstaged_rollout")).is_false()
+
+
+func test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict() -> void:
+	var advisory: Dictionary = _review(_test_fixture(false))
+	assert_bool(_rules(advisory).has("assertionless_test")).is_true()
+	assert_int(DiffReviewParser.exit_code(advisory)).is_equal(0)
+	var strict: Dictionary = _review(_test_fixture(false), true)
+	assert_int(DiffReviewParser.blocking_count(strict)).is_equal(1)
+	assert_bool(_rules(strict).has("assertionless_test")).is_true()
+	var covered: Dictionary = _review(_test_fixture(true))
+	assert_bool(_rules(covered).has("assertionless_test")).is_false()
+
+
+func test_adversarial_section_names_the_deep_context_and_the_invariants() -> void:
+	var section: String = DiffReviewParser.adversarial_section(_review(_trunk_fixture()))
+	assert_bool(section.contains("Adversarial review (context-isolated)")).is_true()
+	assert_bool(section.contains("Core/GameState.gd")).is_true()
+	assert_bool(section.contains("feature flag OFF")).is_true()
+	var leaf: String = DiffReviewParser.adversarial_section(_review(_tooling_fixture()))
+	assert_bool(leaf.contains("leaf-only change")).is_true()

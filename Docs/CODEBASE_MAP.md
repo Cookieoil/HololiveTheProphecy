@@ -74,7 +74,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager al… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 445 | extends RefCounted, 16 function(s) |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 759 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns… |
-| [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 479 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
+| [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 831 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
 | [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 250 | Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is… |
 | [`Tools/TriageParser.gd`](map/Tools/TriageParser.md) | `TriageParser` | 490 | Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns evidence into agent-rea… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifa… |
@@ -83,7 +83,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/dataBuilder.gd`](map/Tools/dataBuilder.md) | `DataBuilder` | 779 | Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into the JSON files stored in… |
 | [`Tools/export_xlsx_to_json.gd`](map/Tools/export_xlsx_to_json.md) | — | 34 | Headless Excel -> JSON exporter for the game data pipeline. Usage: godot --headless --path . --s… |
 | [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 809 | Headless symbol-index generator for this repository. Parses every first-party GDScript source an… |
-| [`Tools/review_diff.gd`](map/Tools/review_diff.md) | — | 112 | Second-pass reviewer for a branch: summarises the diff and flags the things a reviewer (human or… |
+| [`Tools/review_diff.gd`](map/Tools/review_diff.md) | — | 150 | Second-pass reviewer for a branch: summarises the diff and flags the things a reviewer (human or… |
 | [`Tools/triage.gd`](map/Tools/triage.md) | — | 222 | Forward pressure: turns evidence into agent-ready task issues. An agent (or a human) should neve… |
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
@@ -103,7 +103,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 302 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigati… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it renders one toggle per st… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 864 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is vie… |
-| [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 272 | Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd.… |
+| [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 469 | Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd.… |
 | [`GDTest/EffectBlockMessageTest.gd`](map/GDTest/EffectBlockMessageTest.md) | `EffectBlockMessageTest` | 121 | Locks the colours of the battle-log lines EffectBlock writes. Every number in a message wears th… |
 | [`GDTest/EnemySkillBalanceTest.gd`](map/GDTest/EnemySkillBalanceTest.md) | `EnemySkillBalanceTest` | 269 | Locks the enemy-skill balance pass: - an enemy threshold matches the parity of the slot it sits… |
 | [`GDTest/EnemyTurnOverlapTest.gd`](map/GDTest/EnemyTurnOverlapTest.md) | `EnemyTurnOverlapTest` | 232 | Locks the enemy-turn overlap ("fast mode" pacing): - consecutive enemies hand control to the nex… |

@@ -88,5 +88,14 @@
 
 - **JSON numbers parse as `float`.** Always coerce with the typed helpers (`_to_int` / `_get_int`, `int(float_value)`) instead of `int(dict["key"])`, which is a compile error under `unsafe_call_argument`.
 
+## Review posture (depth follows blast radius, not habit)
+Agent-written code arrives faster than anyone can read it line by line, so review depth follows *blast radius* instead of being uniform:
+- **Trunk** — `Core/`, `Managers/`, the EventBus, `Data/json/config.json`, `project.godot`, CI, and any script the generated map shows many others depend on. A wrong line here reaches every player: read it line by line and check the callers listed under `Used by`.
+- **Leaf** — an isolated scene/component, one skill or data entry. Skim it once the gates are green and the proof below exists.
+`Tools/review_diff.gd` reports the tier for a branch (and the fan-in behind it, measured from `Docs/map/<path>.md`), so the decision is stated rather than guessed.
+- **Plan new behaviour behind a feature flag.** A gameplay/UI change goes in behind `FeatureFlags.is_active(...)` with an entry in `Data/json/features.json` *before* it is written: the control path stays untouched, rollback is one JSON edit, and a cohort comparison (`python Tools/analyze_telemetry.py`) decides the rollout. A flag enabled at 100 in the same diff that adds it is flagged `unstaged_rollout` — canary it first.
+- **Merge-Ready is not Launch-Ready.** Green gates plus a merge is roughly the first 80% of the work; the last 20% is the audit before the flag graduates to 100% (or is deleted): re-check performance and edge cases, replay the seeded run, look at the UI snapshots for taste, then remove the dead branch the flag guarded.
+- **Pull requests use `.github/PULL_REQUEST_TEMPLATE.md`.** Keep it to one screen and paste proof (gate result, the test and its assertion, the seed, the snapshot) instead of describing it; state the blast radius, the rollback and a confidence level with the one risk you are least sure of.
+
 ## Verification
 - After editing any `.gd` file, check VS Code workspace diagnostics (Godot LSP) and fix all compiler/type errors at the root cause before finishing. Never suppress warnings with `@warning_ignore`.
