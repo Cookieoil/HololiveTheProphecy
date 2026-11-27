@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/TriageParser.gd` — `class_name TriageParser` extends `RefCounted`
 
-`488` lines · [back to the map](../../CODEBASE_MAP.md)
+`490` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns evidence into agent-ready task specs. The point is that a coding agent (or a human) sho…
 
@@ -35,24 +35,24 @@ Public API:
 - L128-140 `static marker_in_line(rel: String, line_number: int, line: String) -> Dictionary` — The leftover marker on one source line, or `{}`. Only a comment counts, and only when the marker opens it: a comment that starts with the marker is a task, whil…
 
 Private:
-- L145-151 `_comment_index`
-- L154-168 `_inside_string`
-- L173-201 `_pick_rate_tasks`
-- L205-233 `_coverage_tasks`
-- L238-264 `_lift_tasks`
-- L269-294 `_abandon_task`
-- L298-327 `_flag_decision_tasks`
-- L332-347 `_marker_tasks`
-- L352-368 `_ratchet_tasks`
-- L371-372 `_sort_tasks`
-- L377-386 `_task_before`
-- L392-409 `_task`
-- L412-417 `_count_kind`
-- L422-442 `_report_repro`
-- L445-448 `_rate_text`
-- L451-455 `_dict`
-- L458-465 `_float_of`
-- L469-483 `_slug`
+- L148-154 `_comment_index`
+- L157-171 `_inside_string`
+- L175-203 `_pick_rate_tasks`
+- L207-235 `_coverage_tasks`
+- L240-266 `_lift_tasks`
+- L271-296 `_abandon_task`
+- L300-329 `_flag_decision_tasks`
+- L334-349 `_marker_tasks`
+- L354-370 `_ratchet_tasks`
+- L373-374 `_sort_tasks`
+- L379-388 `_task_before`
+- L394-411 `_task`
+- L414-419 `_count_kind`
+- L424-444 `_report_repro`
+- L447-450 `_rate_text`
+- L453-457 `_dict`
+- L460-467 `_float_of`
+- L471-485 `_slug`
 
 Uses: BattleScene, CodeIndexParser
 Used by: GDTest/TriageParserTest.gd, Tools/triage.gd

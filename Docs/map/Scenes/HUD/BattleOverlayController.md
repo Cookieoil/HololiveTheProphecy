@@ -73,6 +73,6 @@ Private:
 - L542-552 `_on_game_over`
 
 Uses: Card, CardIconCatalog, EnemyIntent, GameManager, GameState, MoxieOrbUI, SkillPreviewFormatter, SkillTooltipPopup, TooltipIconCatalog, Unit, UnitUI
-Used by: Scenes/BattleScene/BattleScene.gd, Tools/check_navigation.gd
+Used by: GDTest/BattleOverlayControllerTest.gd, Scenes/BattleScene/BattleScene.gd, Tools/check_navigation.gd
 Loads: —
 

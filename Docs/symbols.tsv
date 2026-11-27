@@ -76,6 +76,7 @@ BUTTON_MIN_SIZE	const	Scenes/HUD/DebugMenuPopup.gd:82-82	: Vector2 = Vector2(0.0
 BUTTON_SIZE	const	Scenes/HUD/TelemetryConsentPopup.gd:66-66	: Vector2 = Vector2(220.0, 58.0)
 BattleEndTest	class	GDTest/BattleEndTest.gd:1-1	extends GdUnitTestSuite
 BattleOverlayController	class	Scenes/HUD/BattleOverlayController.gd:2-2	extends Node
+BattleOverlayControllerTest	class	GDTest/BattleOverlayControllerTest.gd:1-1	extends GdUnitTestSuite
 BattleResultOverlay	class	Scenes/HUD/BattleResultOverlay.gd:2-2	extends Control
 BattleResultPrompt	class	Scenes/HUD/BattleResultPrompt.gd:2-2	extends MarginContainer
 BattleScene	class	Scenes/BattleScene/BattleScene.gd:2-2	extends GameUI
@@ -158,6 +159,7 @@ CONFIG_PATH	const	Core/DataLoader.gd:22-22	: String = "res://Data/json/config.js
 CONFIG_PATH	const	Tools/validate_gameData.gd:30-30	: String = JSON_DIR + "/config.json"
 CONSENT_FILE_NAME	const	Tools/SnapshotRunner.gd:31-31	: String = "_snapshot_consent.json"
 CONSENT_VERSION	const	Core/Telemetry/TelemetryConsent.gd:32-32	: int = 2
+CONTAINER_PROPS	const	Scenes/BattleUnit/StatusIconCatalog.gd:33-33	: Array[String] = [
 CONTENT_SCALE_FROM	const	Scenes/HUD/BattleResultOverlay.gd:75-75	: float = 0.97
 CORE_DIR	const	Tools/DiffReviewParser.gd:23-23	: String = "Core/"
 CORE_NODE_TYPES	const	Tools/DiffReviewParser.gd:48-48	: Array[String] = [
@@ -392,6 +394,7 @@ KEY_ENABLED	const	Core/FeatureFlags.gd:25-25	: String = "enabled"
 KEY_FLAGS	const	Core/FeatureFlags.gd:24-24	: String = "flags"
 KEY_ROLLOUT	const	Core/FeatureFlags.gd:26-26	: String = "rollout_percent"
 KINDS	const	Tools/check_navigation.gd:41-41	: PackedStringArray
+KNOWN_BUFF_PROPERTIES	const	Scenes/BattleUnit/StatusIconCatalog.gd:40-40	: Array[Dictionary] = [
 LABEL_TEXT	const	Scenes/HUD/BattleResultPrompt.gd:20-20	: String = "PLAY AGAIN"
 LAYOUT_SETTLE_MILLIS	const	GDTest/CardMergeAnimationTest.gd:34-34	: int = 60
 LETTER_OFFSET	const	Tools/xlsx_reader.gd:18-18	: int = 64
@@ -699,7 +702,7 @@ WORKBOOK_RELS_PATH	const	Tools/xlsx_reader.gd:15-15	: String = "xl/_rels/workboo
 WaveTransition	enum	Core/GameState.gd:42-45	FULL_TURN, IMMEDIATE_SKIP
 XlsxReader	class	Tools/xlsx_reader.gd:1-1	extends RefCounted
 _PICK_GROUPS	const	Tools/TriageParser.gd:51-51	: Array[String] = ["skills", "ultimates", "cards"]
-_abandon_task	func	Tools/TriageParser.gd:269-294	static (report: Dictionary) -> Array[Dictionary]
+_abandon_task	func	Tools/TriageParser.gd:271-296	static (report: Dictionary) -> Array[Dictionary]
 _accent_color	var	Scenes/HUD/SkillTooltipPopup.gd:16-16	: Color = Color(0.49, 0.83, 0.99)
 _accept_all	func	GDTest/CardFlashPolicyTest.gd:54-55	() -> Callable
 _accumulate	func	Managers/TelemetryManager.gd:561-563	(key: String, amount: int) -> void
@@ -750,6 +753,7 @@ _append_row	func	Tools/gen_code_index.gd:392-394	(rows: PackedStringArray, row: 
 _append_scene_table	func	Tools/gen_code_index.gd:761-782	(out: PackedStringArray, scenes: Array[Dictionary]) -> void
 _append_script_table	func	Tools/gen_code_index.gd:543-561	(out: PackedStringArray, title: String, infos: Array[Dictionary]) -> void
 _append_signal_table	func	Tools/gen_code_index.gd:742-758	(out: PackedStringArray, global_signals: Array[Dictionary]) -> void
+_append_status	func	Scenes/BattleUnit/StatusIconCatalog.gd:129-142	(result: Array[Dictionary], seen_ids: Dictionary[String, bool], status_id: String, count: int, is_debuff: bool) -> void
 _append_text	func	Tools/check_navigation.gd:580-581	(res_path: String, text: String) -> void
 _apply_cached_intents	func	Scenes/BattleScene/BattleScene.gd:251-255	() -> void
 _apply_card_mod	func	Skills/EffectBlock.gd:494-509	(ctx: SkillContext, card: Card, value: int) -> void
@@ -767,7 +771,7 @@ _apply_status	func	Skills/EffectBlock.gd:573-589	(ctx: SkillContext, targets: Ar
 _archive	func	Managers/TelemetryUploader.gd:183-190	(file_name: String) -> bool
 _area	func	Tools/DiffReviewParser.gd:436-447	static (path_value: String) -> String
 _arg_value	func	Tools/review_diff.gd:77-82	(name: String, fallback: String) -> String
-_arg_value	func	Tools/triage.gd:59-64	(name: String, fallback: String) -> String
+_arg_value	func	Tools/triage.gd:61-66	(name: String, fallback: String) -> String
 _array_field	func	Tools/validate_gameData.gd:370-380	(source: Dictionary, key: String, context: String, required: bool) -> Array
 _arrow_local_y	var	Scenes/HUD/SkillTooltipPopup.gd:18-18	: float = 40.0
 _arrow_on_left	var	Scenes/HUD/SkillTooltipPopup.gd:17-17	: bool = true
@@ -855,6 +859,7 @@ _card_ui	func	GDTest/CardMergeAnimationTest.gd:70-73	(bar: HandBar, card: Card) 
 _cell	func	Tools/gen_code_index.gd:412-413	(text: String) -> String
 _center	var	Scenes/HUD/BattleResultOverlay.gd:107-107	: CenterContainer
 _change_findings	func	Tools/DiffReviewParser.gd:383-394	static (changed: PackedStringArray, files: Array[Dictionary]) -> Array[Dictionary]
+_charges_count	func	Scenes/BattleUnit/StatusIconCatalog.gd:216-227	(unit: Object, charges_prop: String, fallback: int) -> int
 _check	func	Tools/check_navigation.gd:76-84	(condition: bool, message: String) -> bool
 _check_classes	func	Tools/check_spine_runtime.gd:75-80	(failures: PackedStringArray) -> void
 _check_committed_artifacts	func	Tools/check_navigation.gd:144-162	() -> void
@@ -898,6 +903,9 @@ _collect_allowlists	func	Tools/validate_gameData.gd:270-282	() -> void
 _collect_data_files	func	Tools/gen_code_index.gd:473-480	() -> Array[Dictionary]
 _collect_dirs	func	Tools/check_navigation.gd:610-622	(dir_path: String, result: PackedStringArray) -> void
 _collect_dirs	func	Tools/gen_code_index.gd:299-311	(dir_path: String, result: PackedStringArray) -> void
+_collect_from_containers	func	Scenes/BattleUnit/StatusIconCatalog.gd:148-169	(unit: Object, result: Array[Dictionary], seen_ids: Dictionary[String, bool]) -> void
+_collect_from_known_properties	func	Scenes/BattleUnit/StatusIconCatalog.gd:174-187	(unit: Object, result: Array[Dictionary], seen_ids: Dictionary[String, bool]) -> void
+_collect_from_script_variables	func	Scenes/BattleUnit/StatusIconCatalog.gd:231-247	(unit: Object, result: Array[Dictionary]) -> void
 _collect_global_signals	func	Tools/gen_code_index.gd:431-461	() -> Array[Dictionary]
 _collect_markers	func	Tools/triage.gd:84-92	() -> Array[Dictionary]
 _collect_rigs	func	Tools/check_spine_runtime.gd:83-96	(dir_path: String, result: PackedStringArray) -> void
@@ -906,7 +914,7 @@ _collect_scripts	func	Tools/check_scripts.gd:55-70	(dir_path: String, result: Pa
 _color_unit	func	Skills/EffectBlock.gd:115-116	(unit: Unit) -> String
 _column	var	Scenes/HUD/BattleResultOverlay.gd:108-108	: VBoxContainer
 _column_from_reference	func	Tools/xlsx_reader.gd:160-168	static (reference: String) -> int
-_comment_index	func	Tools/TriageParser.gd:145-151	static (line: String) -> int
+_comment_index	func	Tools/TriageParser.gd:148-154	static (line: String) -> int
 _commit_row	func	Tools/xlsx_reader.gd:172-180	static (rows: Array, row_index: int, cells: Dictionary, max_column: int) -> void
 _compact_regions	func	Tools/gen_code_index.gd:422-426	(regions: PackedStringArray) -> String
 _compute_balance_hash	func	Core/DataLoader.gd:179-184	static () -> String
@@ -924,8 +932,8 @@ _consent_path	var	GDTest/TelemetryConsentTest.gd:35-35	: String = ""
 _consent_path	var	Managers/TelemetryManager.gd:73-73	: String = TelemetryConsent.DEFAULT_PATH
 _consume_card	func	Scenes/Cards/HandBar.gd:258-268	(card: Card) -> bool
 _core_fixture	func	GDTest/DiffReviewTest.gd:92-108	() -> String
-_count_kind	func	Tools/TriageParser.gd:412-417	static (tasks: Array[Dictionary], kind: String) -> int
-_coverage_tasks	func	Tools/TriageParser.gd:205-233	static (report: Dictionary) -> Array[Dictionary]
+_count_kind	func	Tools/TriageParser.gd:414-419	static (tasks: Array[Dictionary], kind: String) -> int
+_coverage_tasks	func	Tools/TriageParser.gd:207-235	static (report: Dictionary) -> Array[Dictionary]
 _create_e7_status_badge	func	Scenes/BattleUnit/UnitUI.gd:792-848	(tex: Texture2D, count: int, is_debuff: bool) -> Control
 _create_issue	func	Tools/triage.gd:202-220	(task: Dictionary, label: String) -> bool
 _create_material	func	Scenes/BattleUnit/SpinePortrait.gd:522-537	() -> void
@@ -989,7 +997,7 @@ _describe_value	func	Skills/EffectBlock.gd:649-666	() -> String
 _diagnostic_file	func	Tools/validate_gameData.gd:1024-1037	(message: String) -> String
 _diagnostic_line	func	Tools/validate_gameData.gd:1047-1069	(message: String) -> int
 _dict	func	Tools/DiffReviewParser.gd:215-219	static (raw: Variant) -> Dictionary
-_dict	func	Tools/TriageParser.gd:451-455	static (raw: Variant) -> Dictionary
+_dict	func	Tools/TriageParser.gd:453-457	static (raw: Variant) -> Dictionary
 _dict_bool	func	Tools/validate_gameData.gd:236-241	(source: Dictionary, key: String, fallback: bool) -> bool
 _dict_int	func	Tools/validate_gameData.gd:225-233	(source: Dictionary, key: String, fallback: int) -> int
 _diff_path	func	Tools/DiffReviewParser.gd:235-245	static (raw: String) -> String
@@ -1042,7 +1050,7 @@ _ensure_mipmapped_silhouette	func	Scenes/HUD/OutlineGlow.gd:202-221	static (tex:
 _ensure_shared_resources	func	Scenes/HUD/OutlineGlow.gd:183-199	static () -> void
 _entry_at	func	GDTest/CodeIndexTest.gd:74-79	(entries: Array, index: int) -> Dictionary
 _entry_count	func	Core/Unit.gd:361-365	(entry_raw: Variant) -> int
-_entry_is_debuff	func	Scenes/BattleUnit/StatusIconCatalog.gd:220-227	(entry_raw: Variant, status_id: String) -> bool
+_entry_is_debuff	func	Scenes/BattleUnit/StatusIconCatalog.gd:252-259	(entry_raw: Variant, status_id: String) -> bool
 _enum_contains	func	Tools/dataBuilder.gd:468-475	(enums: Dictionary, enum_name: String, value: String) -> bool
 _enum_field	func	Tools/validate_gameData.gd:355-367	(source: Dictionary, key: String, context: String, allowed: PackedStringArray, default_value: String, required: bool) -> String
 _errors	var	Core/DataLoader.gd:87-87	: PackedStringArray = PackedStringArray()
@@ -1057,9 +1065,9 @@ _exit_tree	func	Scenes/Cards/ForgePlate.gd:52-54	() -> void
 _exit_tree	func	Scenes/HUD/OutlineGlow.gd:95-98	() -> void
 _expect_generator	func	Tools/check_navigation.gd:551-564	(expected: int, extra_args: Array, label: String) -> void
 _extract_base_cards	func	Core/GameState.gd:186-194	(card: Card) -> Array[Card]
-_extract_count	func	Scenes/BattleUnit/StatusIconCatalog.gd:241-267	(raw: Variant) -> int
+_extract_count	func	Scenes/BattleUnit/StatusIconCatalog.gd:273-299	(raw: Variant) -> int
 _extract_links	func	Tools/check_navigation.gd:390-405	(text: String) -> PackedStringArray
-_extract_scalar_int	func	Scenes/BattleUnit/StatusIconCatalog.gd:270-280	(v: Variant) -> int
+_extract_scalar_int	func	Scenes/BattleUnit/StatusIconCatalog.gd:302-312	(v: Variant) -> int
 _extract_unit_portrait	func	Scenes/HUD/BattleOverlayController.gd:376-394	(uui: UnitUI, unit: Unit) -> Texture2D
 _facing_left	var	Scenes/BattleUnit/SpinePortrait.gd:61-61	: bool = false
 _fade_tween	var	Scenes/HUD/OutlineGlow.gd:27-27	: Tween
@@ -1097,7 +1105,7 @@ _first_of	func	GDTest/TriageParserTest.gd:16-20	(tasks: Array[Dictionary], kind:
 _first_page	func	Tools/check_navigation.gd:571-577	(dir_path: String) -> String
 _first_quoted	func	Tools/validate_gameData.gd:1116-1123	(message: String) -> String
 _fit_sprite	func	Scenes/BattleUnit/SpinePortrait.gd:540-552	() -> void
-_flag_decision_tasks	func	Tools/TriageParser.gd:298-327	static (report: Dictionary) -> Array[Dictionary]
+_flag_decision_tasks	func	Tools/TriageParser.gd:300-329	static (report: Dictionary) -> Array[Dictionary]
 _flag_definitions	var	Core/GameState.gd:72-72	: Dictionary = {}
 _flag_enabled	func	Scenes/HUD/DebugMenuPopup.gd:533-542	(flags: Dictionary, flag_name: String) -> bool
 _flag_labels	var	Scenes/HUD/DebugMenuPopup.gd:120-120	: PackedStringArray = PackedStringArray()
@@ -1109,7 +1117,7 @@ _flags_list	var	Scenes/HUD/DebugMenuPopup.gd:119-119	: VBoxContainer
 _flash_active	var	Scenes/Cards/CardUI.gd:156-156	: bool = false
 _flash_auto_selected	func	Skills/EffectBlock.gd:455-458	(ctx: SkillContext, cards: Array[Card]) -> void
 _flash_hostile	var	Scenes/Cards/CardUI.gd:158-158	: bool = false
-_float_of	func	Tools/TriageParser.gd:458-465	static (raw: Variant, fallback: float = 0.0) -> float
+_float_of	func	Tools/TriageParser.gd:460-467	static (raw: Variant, fallback: float = 0.0) -> float
 _fnv1a	func	Core/FeatureFlags.gd:232-237	static (text: String) -> int
 _fold_visibility	func	Scenes/Cards/CardUI.gd:949-950	static (yaw: float) -> float
 _font_variation	var	Scenes/HUD/BattleResultPrompt.gd:53-53	: FontVariation
@@ -1208,7 +1216,7 @@ _init	func	Core/Telemetry/JsonlFileSink.gd:30-33	(p_dir_path: String = DEFAULT_D
 _init	func	Core/Telemetry/TelemetryConsent.gd:59-61	(path: String = DEFAULT_PATH) -> void
 _init	func	Core/Unit.gd:81-89	(unit_data: UnitData, slot: int = 0) -> void
 _init	func	Managers/TelemetryManager.gd:103-115	(consent_path: String = TelemetryConsent.DEFAULT_PATH, spool_dir: String = DEFAULT_SPOOL_DIR, player_id_path: String = PLAYER_ID_PATH, p_sink_override: TelemetrySink = null) -> void
-_init	func	Scenes/BattleUnit/StatusIconCatalog.gd:42-43	() -> void
+_init	func	Scenes/BattleUnit/StatusIconCatalog.gd:66-67	() -> void
 _init	func	Scenes/Cards/CardDrag.gd:10-12	(p_card: Card, p_source: HandBar) -> void
 _init	func	Scenes/Cards/ForgePlate.gd:34-43	() -> void
 _init	func	Scenes/HUD/BattleResultOverlay.gd:125-134	() -> void
@@ -1227,7 +1235,7 @@ _initialize	func	Tools/export_xlsx_to_json.gd:16-33	() -> void
 _initialize	func	Tools/gen_code_index.gd:81-106	() -> void
 _initialize	func	Tools/review_diff.gd:34-54	() -> void
 _initialize	func	Tools/triage.gd:47-56	() -> void
-_inside_string	func	Tools/TriageParser.gd:154-168	static (line: String, index: int) -> bool
+_inside_string	func	Tools/TriageParser.gd:157-171	static (line: String, index: int) -> bool
 _instantiate_battle_scene	func	GDTest/HudTooltipTest.gd:53-61	() -> Node
 _int	func	Managers/TelemetryManager.gd:899-900	(value: Variant, fallback: int = 0) -> int
 _int_field	func	Tools/validate_gameData.gd:319-326	(source: Dictionary, key: String, context: String, default_value: int, required: bool) -> int
@@ -1280,7 +1288,7 @@ _last_closed_turn	var	Managers/TelemetryManager.gd:99-99	: int = -1
 _last_status_signature	var	Scenes/BattleUnit/UnitUI.gd:130-130	: String = ""
 _layout_subrects	func	Scenes/HUD/MoxieOrbUI.gd:206-219	() -> void
 _legal_merge_pairs	func	Managers/TelemetryManager.gd:674-695	(state: GameState) -> Array
-_lift_tasks	func	Tools/TriageParser.gd:238-264	static (report: Dictionary) -> Array[Dictionary]
+_lift_tasks	func	Tools/TriageParser.gd:240-266	static (report: Dictionary) -> Array[Dictionary]
 _line_findings	func	Tools/DiffReviewParser.gd:265-282	static (file: Dictionary) -> Array[Dictionary]
 _line_of	func	Tools/validate_gameData.gd:1099-1112	(path: String, needle: String, occurrence: int, from_line: int = 0) -> int
 _line_totals	func	Tools/DiffReviewParser.gd:408-414	static (files: Array[Dictionary]) -> Dictionary
@@ -1309,6 +1317,7 @@ _make_card_ui	func	GDTest/CardUITest.gd:19-25	(card: Card) -> CardUI
 _make_content	func	GDTest/HudTooltipTest.gd:44-47	(tooltip_text: String) -> Control
 _make_context	func	GDTest/AllyKitTest.gd:55-61	(caster: Unit, card_value: int = 5, state: GameState = null) -> SkillContext
 _make_context	func	GDTest/EffectBlockMessageTest.gd:42-46	(caster: Unit, target: Unit) -> SkillContext
+_make_controller	func	GDTest/BattleOverlayControllerTest.gd:33-36	() -> BattleOverlayController
 _make_custom_tooltip	func	Scenes/HUD/HudTooltip.gd:46-47	(for_text: String) -> Object
 _make_drag_preview	func	Scenes/Cards/CardUI.gd:1143-1156	() -> Control
 _make_effect_block	func	GDTest/AllyKitTest.gd:29-53	(action: String, value_source: String = "card_value", multiplier: int = 1, divisor: int = 1, offset: int = 0, cap: int = -1, fixed: int = 0, card_count: int = 1) -> EffectBlock
@@ -1335,6 +1344,7 @@ _make_orb	func	GDTest/EnemyUltAuraTest.gd:29-33	(enemy: Unit) -> MoxieOrbUI
 _make_overlay	func	GDTest/BattleEndTest.gd:507-510	() -> BattleResultOverlay
 _make_popup	func	GDTest/TelemetryConsentTest.gd:135-140	() -> TelemetryConsentPopup
 _make_row	func	Scenes/HUD/DebugMenuPopup.gd:586-591	() -> GridContainer
+_make_scene_root	func	GDTest/BattleOverlayControllerTest.gd:18-28	() -> Node
 _make_section	func	Scenes/HUD/DebugMenuPopup.gd:582-583	(text: String) -> Label
 _make_skill	func	GDTest/DebugMenuTest.gd:36-37	() -> SkillData
 _make_skill	func	GDTest/EnemyTurnOverlapTest.gd:34-35	() -> SkillData
@@ -1355,7 +1365,7 @@ _map_path	func	Tools/gen_code_index.gd:120-121	() -> String
 _margin	var	Scenes/HUD/SkillTooltipPopup.gd:21-21	: MarginContainer
 _mark	var	Scenes/HUD/BattleResultOverlay.gd:109-109	: VBoxContainer
 _markdown_section	func	Tools/DiffReviewParser.gd:196-212	static (title: String, findings: Array) -> PackedStringArray
-_marker_tasks	func	Tools/TriageParser.gd:332-347	static (markers: Array[Dictionary]) -> Array[Dictionary]
+_marker_tasks	func	Tools/TriageParser.gd:334-349	static (markers: Array[Dictionary]) -> Array[Dictionary]
 _mat	var	Scenes/HUD/OutlineGlow.gd:25-25	: ShaderMaterial
 _matches_artifact	func	Tools/gen_code_index.gd:199-202	(res_path: String, expected: String) -> bool
 _material	var	Scenes/BattleUnit/SpinePortrait.gd:59-59	: ShaderMaterial
@@ -1393,7 +1403,7 @@ _notification	func	Scenes/Cards/CardUI.gd:1194-1216	(what: int) -> void
 _notification	func	Scenes/HUD/MoxieOrbUI.gd:189-203	(what: int) -> void
 _nuke_skill	func	GDTest/TelemetryTest.gd:145-157	(skill_id: String, target_mode: int, amount: int) -> SkillData
 _num_bb	func	Skills/SkillPreviewFormatter.gd:398-399	static (n: int) -> String
-_object_bool	func	Scenes/BattleUnit/StatusIconCatalog.gd:231-238	(target: Object, prop_name: String, fallback: bool) -> bool
+_object_bool	func	Scenes/BattleUnit/StatusIconCatalog.gd:263-270	(target: Object, prop_name: String, fallback: bool) -> bool
 _on_action_pressed	func	Scenes/HUD/DebugMenuPopup.gd:681-682	(command: String, args: Dictionary) -> void
 _on_agree_pressed	func	Scenes/HUD/TelemetryConsentPopup.gd:332-333	() -> void
 _on_ally_ultimate_requested	func	Scenes/BattleScene/BattleScene.gd:379-380	(ally: Unit) -> void
@@ -1468,7 +1478,7 @@ _parse_config_value	func	Tools/dataBuilder.gd:692-709	(text: String) -> Variant
 _parse_location	func	Tools/check_navigation.gd:197-213	(text: String) -> Dictionary
 _parse_sheet	func	Tools/xlsx_reader.gd:113-156	static (zip: ZIPReader, target: String, shared: PackedStringArray) -> Array
 _parse_spec	func	Tools/dataBuilder.gd:281-297	(text: String) -> Dictionary
-_parse_status_object	func	Scenes/BattleUnit/StatusIconCatalog.gd:283-329	(item: Variant, force_debuff: bool) -> Dictionary
+_parse_status_object	func	Scenes/BattleUnit/StatusIconCatalog.gd:315-361	(item: Variant, force_debuff: bool) -> Dictionary
 _parse_symbol_rows	func	Tools/check_navigation.gd:166-193	() -> Array[Dictionary]
 _parse_table	func	Tools/dataBuilder.gd:352-401	(grid: Array, enums: Dictionary, sheet_name: String, check_duplicate_ids: bool = true) -> Array
 _pending_death_delay	var	Scenes/BattleUnit/SpinePortrait.gd:86-86	: float = -1.0
@@ -1480,7 +1490,7 @@ _pending_intent	var	Scenes/BattleUnit/UnitUI.gd:55-55	: Dictionary = {}
 _pending_status_timer	var	Scenes/BattleUnit/UnitUI.gd:135-135	: float = -1.0
 _pick_active	var	Scenes/Cards/HandBar.gd:37-37	: bool = false
 _pick_candidates	var	Scenes/Cards/HandBar.gd:38-38	: Array[Card] = []
-_pick_rate_tasks	func	Tools/TriageParser.gd:173-201	static (report: Dictionary) -> Array[Dictionary]
+_pick_rate_tasks	func	Tools/TriageParser.gd:175-203	static (report: Dictionary) -> Array[Dictionary]
 _pick_sample_target	func	Skills/SkillPreviewFormatter.gd:391-395	static (caster: Unit, state: GameState) -> Unit
 _pick_selectable	var	Scenes/Cards/CardUI.gd:155-155	: bool = false
 _place_clause_hint	func	Skills/SkillPreviewFormatter.gd:370-388	static (text: String, token: String, number_bb: String, hint: String) -> String
@@ -1525,9 +1535,9 @@ _queue_auto_sync	func	Scenes/HUD/BattleOverlayController.gd:281-285	() -> void
 _quoted_at	func	Tools/DiffReviewParser.gd:314-328	static (text: String, index: int) -> bool
 _rail_layer	var	Scenes/HUD/BattleOverlayController.gd:20-20	: CanvasLayer
 _raise_max_hp	func	Skills/EffectBlock.gd:592-601	(ctx: SkillContext, targets: Array[Unit], value: int) -> void
-_ratchet_tasks	func	Tools/TriageParser.gd:352-368	static (warnings: PackedStringArray) -> Array[Dictionary]
+_ratchet_tasks	func	Tools/TriageParser.gd:354-370	static (warnings: PackedStringArray) -> Array[Dictionary]
 _ratchet_warnings	func	Tools/triage.gd:119-128	() -> PackedStringArray
-_rate_text	func	Tools/TriageParser.gd:445-448	static (wins: int, total: int) -> String
+_rate_text	func	Tools/TriageParser.gd:447-450	static (wins: int, total: int) -> String
 _raw_text	var	Tools/validate_gameData.gd:115-115	: Dictionary = {}
 _read	func	Tools/check_navigation.gd:98-99	(res_path: String) -> String
 _read_batches	func	Managers/TelemetryUploader.gd:138-163	(path: String) -> Array
@@ -1593,7 +1603,7 @@ _repo_path	func	Tools/validate_gameData.gd:1040-1043	(res_path: String) -> Strin
 _report	func	GDTest/TriageParserTest.gd:24-45	() -> Dictionary
 _report	func	Tools/check_navigation.gd:87-95	() -> int
 _report	func	Tools/validate_gameData.gd:168-191	() -> void
-_report_repro	func	Tools/TriageParser.gd:422-442	static (report: Dictionary) -> String
+_report_repro	func	Tools/TriageParser.gd:424-444	static (report: Dictionary) -> String
 _report_staleness	func	Tools/gen_code_index.gd:218-239	(artifacts: Dictionary) -> int
 _require_effect_keys	func	Tools/validate_gameData.gd:383-386	(effect: Dictionary, context: String) -> void
 _reset_and_discard	func	Core/GameState.gd:199-208	(card: Card) -> void
@@ -1697,12 +1707,12 @@ _skill_meta	var	Tools/validate_gameData.gd:110-110	: Dictionary = {}
 _skills_json	var	Tools/validate_gameData.gd:117-117	: Dictionary = {}
 _skip_workbook	var	Tools/validate_gameData.gd:84-84	: bool = false
 _slide_tween	var	Scenes/Cards/CardUI.gd:147-147	: Tween
-_slug	func	Tools/TriageParser.gd:469-483	static (text: String) -> String
+_slug	func	Tools/TriageParser.gd:471-485	static (text: String) -> String
 _snap_int	func	Scenes/HUD/DebugMenuPopup.gd:645-660	(snapshot: Dictionary, key: String, fallback: int) -> int
 _snapshot	func	GDTest/DebugFlagsTest.gd:13-18	() -> Dictionary
 _snapshot	func	GDTest/DebugMenuTest.gd:85-98	(hand: int = 3, max_hand: int = 7) -> Dictionary
 _snapshot_slots	func	Scenes/Cards/HandBar.gd:272-276	() -> Dictionary[CardUI, Vector2]
-_sort_tasks	func	Tools/TriageParser.gd:371-372	static (tasks: Array[Dictionary]) -> void
+_sort_tasks	func	Tools/TriageParser.gd:373-374	static (tasks: Array[Dictionary]) -> void
 _sorted_effects	func	Core/DataLoader.gd:329-351	static (entry: Dictionary) -> Array
 _spawn_card	func	Scenes/Cards/HandBar.gd:306-327	(card: Card, animate: bool) -> CardUI
 _spawn_orb	func	Scenes/HUD/BattleOverlayController.gd:366-373	(parent: BoxContainer, unit: Unit, code: String, uui: UnitUI = null) -> MoxieOrbUI
@@ -1758,8 +1768,8 @@ _target_modes	var	Tools/validate_gameData.gd:89-89	: PackedStringArray = PackedS
 _target_selector	var	Scenes/HUD/DebugMenuPopup.gd:101-101	: OptionButton
 _target_shield	var	Scenes/BattleUnit/UnitUI.gd:108-108	: float = 0.0
 _targets	func	GDTest/DebugMenuTest.gd:101-108	() -> Array[Dictionary]
-_task	func	Tools/TriageParser.gd:392-409	static (kind: String, severity: String, subject: String, title: String, evidence: PackedStringArray, repro: String, acceptance: String) -> Dictionary
-_task_before	func	Tools/TriageParser.gd:377-386	static (a: Dictionary, b: Dictionary) -> bool
+_task	func	Tools/TriageParser.gd:394-411	static (kind: String, severity: String, subject: String, title: String, evidence: PackedStringArray, repro: String, acceptance: String) -> Dictionary
+_task_before	func	Tools/TriageParser.gd:379-388	static (a: Dictionary, b: Dictionary) -> bool
 _temp_dir	var	GDTest/TelemetryConsentTest.gd:34-34	: String = ""
 _temp_dir	var	GDTest/TelemetryTest.gd:14-14	: String = ""
 _test_infos	func	Tools/gen_code_index.gd:531-532	() -> Array[Dictionary]
@@ -1831,6 +1841,8 @@ _value_at	func	GDTest/GameStateMergeTest.gd:21-23	(state: GameState, index: int)
 _value_sources	var	Tools/validate_gameData.gd:90-90	: PackedStringArray = PackedStringArray()
 _value_spin	var	Scenes/HUD/DebugMenuPopup.gd:103-103	: SpinBox
 _value_tween	var	Scenes/Cards/CardUI.gd:166-166	: Tween
+_variant_active	func	Scenes/BattleUnit/StatusIconCatalog.gd:191-201	(value: Variant) -> bool
+_variant_count	func	Scenes/BattleUnit/StatusIconCatalog.gd:205-212	(value: Variant) -> int
 _vbox	var	Scenes/HUD/SkillTooltipPopup.gd:22-22	: VBoxContainer
 _visual_root	var	Scenes/Cards/CardUI.gd:186-186	: Control
 _wait_for_board	func	GDTest/UiSnapshotTest.gd:31-38	(scene: BattleScene) -> bool
@@ -1939,7 +1951,7 @@ bold_keyword	export	Scenes/HUD/TooltipIconEntry.gd:35-35	: bool = false
 bottom_padding	export	Scenes/BattleUnit/SpinePortrait.gd:40-40	: float = 2.0
 bounds	onready	Scenes/Cards/CardUI.gd:196-196	: Control
 bucket_for	func	Core/FeatureFlags.gd:95-96	static (rollout_key: String, flag_name: String) -> int
-buff_icons	export	Scenes/BattleUnit/StatusIconCatalog.gd:34-34	: Dictionary[String, Texture2D] = {}   # status_id (String) -> Texture2D
+buff_icons	export	Scenes/BattleUnit/StatusIconCatalog.gd:58-58	: Dictionary[String, Texture2D] = {}   # status_id (String) -> Texture2D
 build_card_on_ally_data	func	Skills/SkillPreviewFormatter.gd:14-75	static (ally: Unit, card: Card, state: GameState, tooltip_catalog: TooltipIconCatalog = null) -> Dictionary
 build_deck	func	Core/GameState.gd:123-141	(decklist: Array = CURRENT_DECKLIST) -> void
 build_enemy_intent_data	func	Skills/SkillPreviewFormatter.gd:79-129	static (intent: EnemyIntent, state: GameState, tooltip_catalog: TooltipIconCatalog = null) -> Dictionary
@@ -2022,7 +2034,7 @@ data	var	Core/Unit.gd:44-44	: UnitData
 db	func	Core/DataLoader.gd:91-106	static () -> GameDatabase
 deal_true_damage	func	Core/Unit.gd:189-191	(amount: int) -> int
 death_animation_delay	export	Scenes/BattleUnit/SpinePortrait.gd:54-54	: float = 0.35
-debuff_icons	export	Scenes/BattleUnit/StatusIconCatalog.gd:35-35	: Dictionary[String, Texture2D] = {} # status_id (String) -> Texture2D
+debuff_icons	export	Scenes/BattleUnit/StatusIconCatalog.gd:59-59	: Dictionary[String, Texture2D] = {} # status_id (String) -> Texture2D
 debug_build_override	var	Managers/GameManager.gd:475-475	: int = DEBUG_BUILD_ENGINE
 debug_button	onready	Scenes/BattleScene/BattleScene.gd:45-45	: Button
 debug_command_requested	signal	Scenes/HUD/DebugMenuPopup.gd:20-20	(command: String, args: Dictionary)
@@ -2040,7 +2052,7 @@ deck_value_label	onready	Scenes/BattleScene/BattleScene.gd:38-38	: Label
 declaration_detail	func	Tools/CodeIndexParser.gd:341-353	static (record: Dictionary, with_value: bool) -> String
 decline_button	var	Scenes/HUD/TelemetryConsentPopup.gd:75-75	: Button
 decompose	func	Core/Card.gd:53-61	() -> Array[Card]
-default_icon	export	Scenes/BattleUnit/StatusIconCatalog.gd:33-33	: Texture2D = PLACEHOLDER_ICON
+default_icon	export	Scenes/BattleUnit/StatusIconCatalog.gd:57-57	: Texture2D = PLACEHOLDER_ICON
 default_icon_size	export	Scenes/HUD/TooltipIconCatalog.gd:44-44	: int = DEFAULT_ICON_SIZE
 defeat_icon	export	Scenes/BattleScene/BattleScene.gd:16-16	: Texture2D
 defeat_icon	export	Scenes/HUD/BattleResultOverlay.gd:98-98	: Texture2D = PLACEHOLDER_DEFEAT_ICON
@@ -2091,7 +2103,7 @@ execute	func	Skills/SkillEffect.gd:13-15	(_ctx: SkillContext) -> void
 exit_code	func	Tools/DiffReviewParser.gd:149-150	static (result: Dictionary) -> int
 export_xlsx_to_json	func	Tools/dataBuilder.gd:160-177	(xlsx_path: String = DEFAULT_XLSX_PATH, out_dir: String = DEFAULT_JSON_DIR, overwrite_existing: bool = true) -> Error
 extract_between	func	Tools/CodeIndexParser.gd:533-541	static (text: String, prefix: String, suffix: String) -> String
-extract_unit_statuses	func	Scenes/BattleUnit/StatusIconCatalog.gd:82-211	(unit: Object) -> Array[Dictionary]
+extract_unit_statuses	func	Scenes/BattleUnit/StatusIconCatalog.gd:106-120	(unit: Object) -> Array[Dictionary]
 fallback_category_catalog	export	Scenes/HUD/TooltipIconCatalog.gd:49-49	: CardIconCatalog = null
 fallback_status_catalog	export	Scenes/HUD/TooltipIconCatalog.gd:52-52	: StatusIconCatalog = null
 file_path	var	Core/Telemetry/JsonlFileSink.gd:21-21	: String = ""
@@ -2147,7 +2159,7 @@ get_player_action	func	Scenes/BattleScene/BattleScene.gd:275-294	(state: GameSta
 get_skill	func	Data/gameDatabase.gd:31-35	(id: String) -> SkillData
 get_skill_tooltip	func	Scenes/HUD/BattleOverlayController.gd:182-183	() -> SkillTooltipPopup
 get_status_count	func	Core/Unit.gd:230-234	(status_id: String) -> int
-get_status_icon	func	Scenes/BattleUnit/StatusIconCatalog.gd:56-64	(status_id: String) -> Texture2D
+get_status_icon	func	Scenes/BattleUnit/StatusIconCatalog.gd:80-88	(status_id: String) -> Texture2D
 get_suffix	func	Core/Card.gd:32-38	() -> String
 get_top_n_cards	func	Core/GameState.gd:423-431	(n: int) -> Array[Card]
 get_unit	func	Data/gameDatabase.gd:24-28	(id: String) -> UnitData
@@ -2206,7 +2218,7 @@ is_active	func	Core/FeatureFlags.gd:140-141	static (flags: Dictionary, flag_name
 is_ally	var	Core/Unit.gd:53-53	: bool = true
 is_consumed	func	Scenes/Cards/CardUI.gd:313-314	() -> bool
 is_dead	var	Core/Unit.gd:67-67	: bool: #true if hp < = 0, false otherwise
-is_debuff_id	func	Scenes/BattleUnit/StatusIconCatalog.gd:68-77	(status_id: String) -> bool
+is_debuff_id	func	Scenes/BattleUnit/StatusIconCatalog.gd:92-101	(status_id: String) -> bool
 is_decided	func	Core/Telemetry/TelemetryConsent.gd:80-81	() -> bool
 is_double_merged	var	Core/Card.gd:17-17	: bool = false
 is_drawing	func	Scenes/Cards/CardUI.gd:633-634	() -> bool
@@ -2353,7 +2365,7 @@ reduce_shield	func	Core/Unit.gd:180-184	(amount: int) -> int
 refresh	func	Scenes/HUD/DebugMenuPopup.gd:146-168	(snapshot: Dictionary, targets: Array[Dictionary]) -> void
 refresh_flags	func	Core/GameState.gd:649-650	() -> void
 register_default_entries	func	Scenes/HUD/TooltipIconCatalog.gd:64-66	() -> void
-register_default_icons	func	Scenes/BattleUnit/StatusIconCatalog.gd:48-52	() -> void
+register_default_icons	func	Scenes/BattleUnit/StatusIconCatalog.gd:72-76	() -> void
 reload	func	Core/DataLoader.gd:140-142	static () -> void
 remove_card	func	Scenes/Cards/HandBar.gd:250-253	(card: Card) -> void
 repo_path	func	Tools/CodeIndexParser.gd:36-39	static (res_path: String) -> String
@@ -2551,6 +2563,7 @@ test_an_ultimate_that_clears_the_final_wave_ends_the_player_phase	func	GDTest/Ba
 test_an_undocumented_public_function_is_flagged_only_without_a_doc_line	func	GDTest/DiffReviewTest.gd:140-145	() -> void
 test_an_unknown_flag_is_off	func	GDTest/FeatureFlagsTest.gd:93-97	() -> void
 test_an_unknown_top_level_key_is_rejected	func	GDTest/FeatureFlagsTest.gd:240-247	() -> void
+test_an_unowned_parent_does_not_supply_the_rows	func	GDTest/BattleOverlayControllerTest.gd:53-61	() -> void
 test_an_unreadable_rollout_percent_fails_closed	func	GDTest/FeatureFlagsTest.gd:173-185	() -> void
 test_aura_drops_when_the_roll_lands_short	func	GDTest/EnemyUltAuraTest.gd:108-119	() -> void
 test_aura_warns_before_the_roll_then_releases_on_the_cast	func	GDTest/EnemyUltAuraTest.gd:87-105	() -> void
@@ -2577,6 +2590,8 @@ test_caster_shield_computes_shield_value	func	GDTest/AllyKitTest.gd:65-71	() -> 
 test_caster_shield_with_null_caster_returns_zero	func	GDTest/AllyKitTest.gd:81-86	() -> void
 test_caster_shield_zero_shield_returns_zero	func	GDTest/AllyKitTest.gd:73-79	() -> void
 test_catalog_extracts_buff_and_debuff	func	GDTest/StatusCatalogTest.gd:67-90	() -> void
+test_catalog_falls_back_to_properties_named_like_a_buff	func	GDTest/StatusCatalogTest.gd:129-140	() -> void
+test_catalog_reads_flat_buff_properties_and_their_charges	func	GDTest/StatusCatalogTest.gd:109-126	() -> void
 test_catalog_resolves_sample_icons	func	GDTest/StatusCatalogTest.gd:18-27	() -> void
 test_clear_moxie_emits_only_when_the_gauge_had_something	func	GDTest/BattleEndTest.gd:153-168	() -> void
 test_clear_moxie_releases_the_once_per_turn_ultimate_lock	func	GDTest/BattleEndTest.gd:171-180	() -> void
@@ -2659,6 +2674,7 @@ test_hover_scales_the_card_without_warping_it	func	GDTest/CardDrawAnimationTest.
 test_http_batch_sink_promotes_only_after_close	func	GDTest/TelemetryTest.gd:531-553	() -> void
 test_hunk_start_line_reads_the_new_file_side	func	GDTest/DiffReviewTest.gd:120-123	() -> void
 test_icon_only_mode_replaces_the_keyword_with_a_pure_glyph	func	GDTest/TooltipIconCatalogTest.gd:76-86	() -> void
+test_injected_scene_root_binds_both_entity_rows	func	GDTest/BattleOverlayControllerTest.gd:39-47	() -> void
 test_inner_class_is_listed_without_flattening_members	func	GDTest/CodeIndexTest.gd:191-209	() -> void
 test_keyword_matching_ignores_case_but_not_partial_words	func	GDTest/TooltipIconCatalogTest.gd:65-73	() -> void
 test_kill_defeats_only_the_targeted_slot	func	GDTest/DebugMenuTest.gd:634-641	() -> void

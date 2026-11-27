@@ -88,3 +88,53 @@ func test_catalog_extracts_buff_and_debuff() -> void:
 	# Dead units expose no badges.
 	unit.current_hp = 0
 	assert_int(catalog.extract_unit_statuses(unit).size()).is_equal(0)
+
+
+## A stand-in for a unit that carries flat buff properties instead of a status
+## dictionary, so the flat-property path can be driven directly.
+class FlatBuffUnit extends RefCounted:
+	var attack_buff: int = 3
+	var attack_buff_charges: int = 2
+	var vulnerable: bool = true
+
+
+## A stand-in for a unit whose custom properties are named like buffs, which is all the
+## last-resort scan has to go on.
+class SloppyBuffUnit extends RefCounted:
+	var berserk_buff: int = 5
+	var gloom_debuff: bool = true
+	var unrelated_stat: int = 9
+
+
+func test_catalog_reads_flat_buff_properties_and_their_charges() -> void:
+	var catalog: StatusIconCatalog = load(CATALOG_PATH) as StatusIconCatalog
+	var statuses: Array[Dictionary] = catalog.extract_unit_statuses(FlatBuffUnit.new())
+
+	var by_id: Dictionary = {}
+	for entry: Dictionary in statuses:
+		by_id[str(entry["id"])] = entry
+	assert_int(statuses.size()).is_equal(2)
+
+	# The charges companion wins over the one-shot "1" the flag alone would show.
+	var attack: Dictionary = by_id["attack_up"]
+	assert_int(attack["count"]).is_equal(2)
+	assert_bool(attack["is_debuff"]).is_false()
+
+	# A bare bool has no count of its own, and the id heuristics still mark it.
+	var vulnerable: Dictionary = by_id["vulnerable"]
+	assert_int(vulnerable["count"]).is_equal(1)
+	assert_bool(vulnerable["is_debuff"]).is_true()
+
+
+func test_catalog_falls_back_to_properties_named_like_a_buff() -> void:
+	var catalog: StatusIconCatalog = load(CATALOG_PATH) as StatusIconCatalog
+	var statuses: Array[Dictionary] = catalog.extract_unit_statuses(SloppyBuffUnit.new())
+
+	var by_id: Dictionary = {}
+	for entry: Dictionary in statuses:
+		by_id[str(entry["id"])] = entry
+	# The unrelated property is not a buff, so it stays out of the badges.
+	assert_int(statuses.size()).is_equal(2)
+	assert_int(by_id["berserk_buff"]["count"]).is_equal(1)
+	assert_bool(by_id["berserk_buff"]["is_debuff"]).is_false()
+	assert_bool(by_id["gloom_debuff"]["is_debuff"]).is_true()

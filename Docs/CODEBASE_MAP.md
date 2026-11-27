@@ -50,7 +50,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 238 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSO… |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 670 | extends GameUI, 2 signal(s), 11 export(s), 46 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 649 | extends Control, 3 signal(s), 28 export(s), 37 function(s) |
-| [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 331 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup… |
+| [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 363 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup… |
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
 | [`Scenes/Cards/CardDrag.gd`](map/Scenes/Cards/CardDrag.md) | `CardDrag` | 13 | Payload for all card drag operations. Consumed by: CardUI (merge), UnitDropZone (skill activatio… |
 | [`Scenes/Cards/CardIconCatalog.gd`](map/Scenes/Cards/CardIconCatalog.md) | `CardIconCatalog` | 15 | Central skill-type icon registry for cards / skill previews. One instance, set as project autolo… |
@@ -76,7 +76,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 759 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 479 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
 | [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 250 | Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is… |
-| [`Tools/TriageParser.gd`](map/Tools/TriageParser.md) | `TriageParser` | 488 | Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns evidence into agent-rea… |
+| [`Tools/TriageParser.gd`](map/Tools/TriageParser.md) | `TriageParser` | 490 | Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns evidence into agent-rea… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifa… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 85 | Headless compile gate: loads every project GDScript outside the excluded folders, so a type erro… |
 | [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 142 | Headless link and compatibility gate for the spine-godot GDExtension. Proves three things: 1. th… |
@@ -88,12 +88,13 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
 
-## 2. Tests at a glance (26)
+## 2. Tests at a glance (27)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
 | [`GDTest/AllyKitTest.gd`](map/GDTest/AllyKitTest.md) | `AllyKitTest` | 288 | Tests for the MOBA-style pure-skill rework of all ally kits. Covers: shield-slam, hand-scaling,… |
 | [`GDTest/BattleEndTest.gd`](map/GDTest/BattleEndTest.md) | `BattleEndTest` | 687 | Locks the end of a battle: - a unit that dies never keeps Moxie (or a "ULT READY" glow) on the b… |
+| [`GDTest/BattleOverlayControllerTest.gd`](map/GDTest/BattleOverlayControllerTest.md) | `BattleOverlayControllerTest` | 62 | Locks how the overlay finds the scene it belongs to. `BattleOverlay` is a node in BattleScene.ts… |
 | [`GDTest/CardDrawAnimationTest.gd`](map/GDTest/CardDrawAnimationTest.md) | `CardDrawAnimationTest` | 303 | Locks in the fake-3D card draw: - every CardUI owns its own warp material, so tilting one card c… |
 | [`GDTest/CardFlashPolicyTest.gd`](map/GDTest/CardFlashPolicyTest.md) | `CardFlashPolicyTest` | 109 | Locks in *who caused it* when the game reveals hand cards it picked on its own: - an enemy actin… |
 | [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 612 | Locks in the merge: the card the player was carrying is picked up from the exact point they rele… |
@@ -111,7 +112,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the card the player merged *int… |
 | [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 286 | Locks the top-bar hover tooltips (HudTooltip) and the slab they are drawn on (the tooltip theme… |
 | [`GDTest/MessageLogTest.gd`](map/GDTest/MessageLogTest.md) | `MessageLogTest` | 46 | Locks the battle message log: the game authors it in BBCode (`ColorUtils.colorize` and the HOW T… |
-| [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 91 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatalog. |
+| [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 141 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatalog. |
 | [`GDTest/TelemetryConsentTest.gd`](map/GDTest/TelemetryConsentTest.md) | `TelemetryConsentTest` | 362 | Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Ag… |
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its… |
 | [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 697 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wav… |
@@ -173,4 +174,4 @@ Top-level keys:
 
 ---
 
-Indexed 85 script(s) (59 game, 26 test), 5 scene(s), 6 data file(s).
+Indexed 86 script(s) (59 game, 27 test), 5 scene(s), 6 data file(s).

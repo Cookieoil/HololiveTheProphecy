@@ -140,6 +140,9 @@ static func marker_in_line(rel: String, line_number: int, line: String) -> Dicti
 	return {}
 
 
+#endregion
+
+#region Private Methods
 ## The comment introducer, or -1. A `#` inside a quoted literal is data (a fixture
 ## feeding this parser a comment), not the start of a comment.
 static func _comment_index(line: String) -> int:
@@ -166,9 +169,8 @@ static func _inside_string(line: String, index: int) -> bool:
 		elif character == "\"" or character == "'":
 			quote = character
 	return not quote.is_empty()
-#endregion
 
-#region Private Methods
+
 ## Skills / Ultimates / cards that are offered often and picked almost never.
 static func _pick_rate_tasks(report: Dictionary) -> Array[Dictionary]:
 	var tasks: Array[Dictionary] = []

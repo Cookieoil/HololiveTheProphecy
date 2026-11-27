@@ -27,6 +27,30 @@ const DEBUFF_KEYWORDS: PackedStringArray = [
 	"debuff", "weak", "vuln", "poison", "burn", "bleed", "stun", "slow",
 	"curse", "down", "gloom", "decay", "wither",
 ]
+
+## Status containers a unit may carry, scanned before any flat property: a dictionary
+## of entries or a list of them.
+const CONTAINER_PROPS: Array[String] = [
+	"statuses", "status_effects", "active_effects", "buffs", "debuffs",
+]
+
+## The known flat buff properties, each with the status id it maps to, the companion
+## property holding its remaining charges (empty for none) and whether the value is a
+## one-shot buff (badge shows 1) rather than a stack count.
+const KNOWN_BUFF_PROPERTIES: Array[Dictionary] = [
+	{"prop": "attack_buff", "id": "attack_up", "charges_prop": "attack_buff_charges", "one_shot": true},
+	{"prop": "damage_buff", "id": "attack_up", "charges_prop": "damage_buff_charges", "one_shot": true},
+	{"prop": "bonus_damage", "id": "attack_up", "charges_prop": "bonus_damage_charges", "one_shot": true},
+	{"prop": "next_attack_bonus", "id": "attack_up", "charges_prop": "", "one_shot": true},
+	{"prop": "next_attack_buff", "id": "attack_up", "charges_prop": "", "one_shot": true},
+	{"prop": "buff_amount", "id": "attack_up", "charges_prop": "buff_stacks", "one_shot": true},
+	{"prop": "buff_value", "id": "attack_up", "charges_prop": "buff_turns", "one_shot": true},
+	{"prop": "strength", "id": "strength", "charges_prop": "", "one_shot": false},
+	{"prop": "empowered", "id": "attack_up", "charges_prop": "", "one_shot": true},
+	{"prop": "is_buffed", "id": "attack_up", "charges_prop": "", "one_shot": true},
+	{"prop": "vulnerable", "id": "vulnerable", "charges_prop": "", "one_shot": false},
+	{"prop": "weak", "id": "weak", "charges_prop": "", "one_shot": false},
+]
 #endregion
 
 #region Exports
@@ -89,125 +113,10 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 		return result
 
 	var seen_ids: Dictionary[String, bool] = {}
-
-	# 1. Check common dictionary / array containers if present on Unit
-	for container_prop: String in ["statuses", "status_effects", "active_effects", "buffs", "debuffs"]:
-		if container_prop in unit:
-			var val: Variant = unit.get(container_prop)
-			var force_debuff: bool = (container_prop == "debuffs")
-			if val is Dictionary:
-				var dict_val: Dictionary = val
-				for k: Variant in dict_val.keys():
-					var raw_entry: Variant = dict_val[k]
-					var count: int = _extract_count(raw_entry)
-					if count > 0:
-						var id_str: String = str(k)
-						seen_ids[id_str] = true
-						result.append({
-							"id": id_str,
-							"count": count,
-							"is_debuff": force_debuff or _entry_is_debuff(raw_entry, id_str),
-							"icon": get_status_icon(id_str)
-						})
-			elif val is Array:
-				var arr_val: Array = val
-				for item: Variant in arr_val:
-					var info: Dictionary = _parse_status_object(item, force_debuff)
-					if not info.is_empty():
-						var info_id: String = info["id"]
-						seen_ids[info_id] = true
-						result.append(info)
-
-	# 2. Check flat numeric/boolean buff properties on Unit (e.g. Striker's next-attack buff)
-	var candidate_props: Array[Dictionary] = [
-		{"prop": "attack_buff", "id": "attack_up", "charges_prop": "attack_buff_charges", "one_shot": true},
-		{"prop": "damage_buff", "id": "attack_up", "charges_prop": "damage_buff_charges", "one_shot": true},
-		{"prop": "bonus_damage", "id": "attack_up", "charges_prop": "bonus_damage_charges", "one_shot": true},
-		{"prop": "next_attack_bonus", "id": "attack_up", "charges_prop": "", "one_shot": true},
-		{"prop": "next_attack_buff", "id": "attack_up", "charges_prop": "", "one_shot": true},
-		{"prop": "buff_amount", "id": "attack_up", "charges_prop": "buff_stacks", "one_shot": true},
-		{"prop": "buff_value", "id": "attack_up", "charges_prop": "buff_turns", "one_shot": true},
-		{"prop": "strength", "id": "strength", "charges_prop": "", "one_shot": false},
-		{"prop": "empowered", "id": "attack_up", "charges_prop": "", "one_shot": true},
-		{"prop": "is_buffed", "id": "attack_up", "charges_prop": "", "one_shot": true},
-		{"prop": "vulnerable", "id": "vulnerable", "charges_prop": "", "one_shot": false},
-		{"prop": "weak", "id": "weak", "charges_prop": "", "one_shot": false},
-	]
-
-	for entry: Dictionary in candidate_props:
-		var prop_name: String = entry["prop"]
-		var status_id: String = entry["id"]
-		if seen_ids.has(status_id) or not (prop_name in unit):
-			continue
-		var raw_val: Variant = unit.get(prop_name)
-		var is_active: bool = false
-		var display_count: int = 1
-		var one_shot: bool = entry["one_shot"]
-
-		if raw_val is bool:
-			var b_val: bool = raw_val
-			is_active = b_val
-			display_count = 1
-		elif raw_val is int:
-			var i_val: int = raw_val
-			is_active = i_val > 0
-			display_count = 1 if one_shot else i_val
-		elif raw_val is float:
-			var f_val: float = raw_val
-			is_active = f_val > 0.0
-			# Next-attack buffs display "1" at the top-left to indicate 1 use remaining
-			display_count = 1 if one_shot else int(f_val)
-
-		var charges_prop: String = entry["charges_prop"]
-		if charges_prop != "" and (charges_prop in unit):
-			var raw_charges: Variant = unit.get(charges_prop)
-			var c_val: int = 0
-			if raw_charges is int:
-				var ci: int = raw_charges
-				c_val = ci
-			elif raw_charges is float:
-				var cf: float = raw_charges
-				c_val = int(cf)
-			if c_val > 0:
-				display_count = c_val
-
-		if is_active:
-			seen_ids[status_id] = true
-			result.append({
-				"id": status_id,
-				"count": maxi(1, display_count),
-				"is_debuff": is_debuff_id(status_id),
-				"icon": get_status_icon(status_id)
-			})
-
-	# 3. Dynamic fallback: scan script variables for any custom *buff* or *debuff* property > 0
+	_collect_from_containers(unit, result, seen_ids)
+	_collect_from_known_properties(unit, result, seen_ids)
 	if result.is_empty():
-		for prop_dict: Dictionary in unit.get_property_list():
-			var usage_val: int = prop_dict["usage"]
-			if not (usage_val & PROPERTY_USAGE_SCRIPT_VARIABLE):
-				continue
-			var p_name: String = prop_dict["name"]
-			var lower: String = p_name.to_lower()
-			if lower.contains("buff") or lower.contains("debuff") or lower.contains("bonus"):
-				var v: Variant = unit.get(p_name)
-				var v_active: bool = false
-				if v is bool:
-					var vb: bool = v
-					v_active = vb
-				elif v is int:
-					var vi: int = v
-					v_active = vi > 0
-				elif v is float:
-					var vf: float = v
-					v_active = vf > 0.0
-				if v_active:
-					result.append({
-						"id": p_name,
-						"count": 1,
-						"is_debuff": lower.contains("debuff"),
-						"icon": get_status_icon(p_name)
-					})
-
+		_collect_from_script_variables(unit, result)
 	return result
 
 
@@ -215,6 +124,129 @@ func extract_unit_statuses(unit: Object) -> Array[Dictionary]:
 
 
 #region Private Methods
+## One badge: its id, how many stacks it shows and its icon. Registering the id here is
+## what keeps a later source from reporting the same status twice.
+func _append_status(
+	result: Array[Dictionary],
+	seen_ids: Dictionary[String, bool],
+	status_id: String,
+	count: int,
+	is_debuff: bool
+) -> void:
+	seen_ids[status_id] = true
+	result.append({
+		"id": status_id,
+		"count": maxi(1, count),
+		"is_debuff": is_debuff,
+		"icon": get_status_icon(status_id)
+	})
+
+
+## The status containers the unit carries (`statuses`, `debuffs`, ...), as a dictionary
+## of entries or as a list of them. `debuffs` marks everything it holds as a debuff,
+## whatever the id heuristics would say.
+func _collect_from_containers(unit: Object, result: Array[Dictionary], seen_ids: Dictionary[String, bool]) -> void:
+	for container_prop: String in CONTAINER_PROPS:
+		if not (container_prop in unit):
+			continue
+		var val: Variant = unit.get(container_prop)
+		var force_debuff: bool = container_prop == "debuffs"
+		if val is Dictionary:
+			var dict_val: Dictionary = val
+			for k: Variant in dict_val.keys():
+				var raw_entry: Variant = dict_val[k]
+				var count: int = _extract_count(raw_entry)
+				if count > 0:
+					var id_str: String = str(k)
+					_append_status(result, seen_ids, id_str, count, force_debuff or _entry_is_debuff(raw_entry, id_str))
+		elif val is Array:
+			var arr_val: Array = val
+			for item: Variant in arr_val:
+				var info: Dictionary = _parse_status_object(item, force_debuff)
+				if not info.is_empty():
+					var info_id: String = info["id"]
+					seen_ids[info_id] = true
+					result.append(info)
+
+## The known flat buff properties on the unit (e.g. Striker's next-attack buff): a
+## bool/int/float property that reads active, with its charges companion honoured when
+## it carries the remaining uses.
+func _collect_from_known_properties(unit: Object, result: Array[Dictionary], seen_ids: Dictionary[String, bool]) -> void:
+	for entry: Dictionary in KNOWN_BUFF_PROPERTIES:
+		var prop_name: String = entry["prop"]
+		var status_id: String = entry["id"]
+		if seen_ids.has(status_id) or not (prop_name in unit):
+			continue
+		var raw_val: Variant = unit.get(prop_name)
+		var one_shot: bool = entry["one_shot"]
+		var charges_prop: String = entry["charges_prop"]
+		# Next-attack buffs display "1" to mean one use left, not their value.
+		var display_count: int = 1 if one_shot else _variant_count(raw_val)
+		display_count = _charges_count(unit, charges_prop, display_count)
+		if _variant_active(raw_val):
+			_append_status(result, seen_ids, status_id, display_count, is_debuff_id(status_id))
+
+
+## Whether a flat buff property counts as active: a true bool, or a number above 0.
+func _variant_active(value: Variant) -> bool:
+	if value is bool:
+		var bool_value: bool = value
+		return bool_value
+	if value is int:
+		var int_value: int = value
+		return int_value > 0
+	if value is float:
+		var float_value: float = value
+		return float_value > 0.0
+	return false
+
+
+## The stack count a flat buff property carries; a bool (or anything else) shows one.
+func _variant_count(value: Variant) -> int:
+	if value is int:
+		var int_value: int = value
+		return int_value
+	if value is float:
+		var float_value: float = value
+		return int(float_value)
+	return 1
+
+
+## The charges companion property, when the unit has one and it is above 0.
+func _charges_count(unit: Object, charges_prop: String, fallback: int) -> int:
+	if charges_prop == "" or not (charges_prop in unit):
+		return fallback
+	var raw_charges: Variant = unit.get(charges_prop)
+	var charges: int = 0
+	if raw_charges is int:
+		var int_charges: int = raw_charges
+		charges = int_charges
+	elif raw_charges is float:
+		var float_charges: float = raw_charges
+		charges = int(float_charges)
+	return charges if charges > 0 else fallback
+
+## Last resort: any script variable whose name smells like a buff/debuff and reads as
+## active. Only consulted when nothing above produced a badge.
+func _collect_from_script_variables(unit: Object, result: Array[Dictionary]) -> void:
+	for prop_dict: Dictionary in unit.get_property_list():
+		var usage_val: int = prop_dict["usage"]
+		if not (usage_val & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var p_name: String = prop_dict["name"]
+		var lower: String = p_name.to_lower()
+		if not (lower.contains("buff") or lower.contains("debuff") or lower.contains("bonus")):
+			continue
+		if not _variant_active(unit.get(p_name)):
+			continue
+		result.append({
+			"id": p_name,
+			"count": 1,
+			"is_debuff": lower.contains("debuff"),
+			"icon": get_status_icon(p_name)
+		})
+
+
 ## Honors an explicit "is_debuff" flag on a status entry, otherwise falls back
 ## to the id heuristics.
 func _entry_is_debuff(entry_raw: Variant, status_id: String) -> bool:
