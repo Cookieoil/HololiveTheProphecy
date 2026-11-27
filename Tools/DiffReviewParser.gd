@@ -28,10 +28,11 @@ const SCENE_SUFFIX: String = ".tscn"
 const MAX_REPORTED_FINDINGS: int = 30
 ## A diff this large cannot be reviewed properly in one pass; split it.
 const MAX_CHANGED_LINES: int = 400
-## Rules that `--strict` turns into failures. The others stay advisory because they
-## need judgement (a Tools/ change or a data edit may not need a unit test).
+## Rules that `--strict` turns into failures. `untested_change` is deliberately not
+## here: this repo names suites by behaviour (GDTest/TelemetryTest.gd covers
+## GameManager, GDTest/UiSnapshotTest.gd covers BattleScene), so a filename match
+## would fail a change that is in fact covered. It stays advisory, for a human.
 const STRICT_RULES: Array[String] = [
-	"untested_change",
 	"undocumented_api",
 	"core_purity",
 ]

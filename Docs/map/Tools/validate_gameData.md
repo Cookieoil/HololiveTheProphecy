@@ -128,7 +128,7 @@ Private:
 - L1215-1240 `_validate_loaded_units`
 - L1244-1261 `_database_fingerprint`
 
-Uses: DataBuilder, DataLoader, EnemyIntent, GameDatabase, GameManager, GameState, SkillData, Unit, UnitData, XlsxReader
+Uses: DataBuilder, DataLoader, EnemyIntent, GameDatabase, GameState, SkillData, Unit, UnitData, XlsxReader
 Used by: —
 Loads: res://Data/json, res://Data/xlsx/game_data.xlsx, res://Tools/dataBuilder.gd, res://Tools/validator.tscn, res://
 

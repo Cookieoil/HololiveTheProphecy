@@ -257,6 +257,37 @@ static func living_count(units: Array[Unit]) -> int:
 		if not unit.is_dead:
 			living += 1
 	return living
+
+
+## The values a run opens with, stored on `run_started`. Built here for the same
+## reason every other event is: the recorder routes, this file decides what an event
+## contains. `flags` carries the staged experiments that were ON for this run, so a
+## report can split an outcome by experiment without a second collection pass.
+static func run_started_snapshot(
+	state: GameState,
+	game_version: String,
+	balance_hash: String,
+	player_run_number: int,
+	ally_lineup: Array
+) -> Dictionary:
+	return {
+		"game_version": game_version,
+		"balance_hash": balance_hash,
+		"is_debug_build": OS.is_debug_build(),
+		"run_seed": state.run_seed,
+		"player_run_number": player_run_number,
+		"flags": state.flags,
+		"config": {
+			"hand_size": state.max_hand_size,
+			"actions_per_turn": state.actions_per_turn,
+			"merges_per_turn": state.merges_per_turn,
+			"dice_progression": state.turn_dice_progression,
+			"wave_transition_mode": state.wave_transition_mode,
+		},
+		"decklist": state.CURRENT_DECKLIST,
+		"ally_lineup": ally_lineup,
+		"wave_count": state.wave_definitions.size(),
+	}
 #endregion
 
 #region Private Methods

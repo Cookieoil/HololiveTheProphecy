@@ -11,6 +11,11 @@ extends Resource
 @export var units: Dictionary = {}
 @export var waves: Array = []
 @export var config: Dictionary = {}
+## Staged feature flags from features.json, keyed by flag name:
+## `{name: {enabled, rollout_percent, description}}` (see Core/FeatureFlags.gd).
+## Deliberately not part of `balance_hash`: the flags a run used are recorded on
+## that run, so an experiment does not re-partition every earlier balance patch.
+@export var flags: Dictionary = {}
 ## Deterministic SHA-256 of the five JSON data files, computed when the database
 ## is loaded. Two builds with different balance numbers get different hashes, so
 ## telemetry can partition by balance patch without a manual version bump.

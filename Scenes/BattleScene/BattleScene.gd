@@ -21,6 +21,9 @@ extends GameUI
 ## `user://` answer. Set by the UI snapshot runner so a capture never overwrites the
 ## developer's stored consent. Empty keeps the normal path.
 @export var consent_path_override: String = ""
+## Tester/tooling seam: forces staged flags on or off for this battle, on top of the
+## rollout in features.json (see Core/FeatureFlags.gd). Empty in a normal run.
+@export var flag_overrides: Dictionary = {}
 
 @onready var hand_bar: HandBar = $HUD/HandBar
 @onready var allies_container: HBoxContainer = $EntityOverlay/AlliesRow
@@ -111,6 +114,10 @@ func _ready() -> void:
 	# Replay tooling can pin the deal and the rolls; 0 keeps the random seed.
 	if fixed_seed_override != 0:
 		config["seed"] = fixed_seed_override
+	# The state resolves its own flags from the registry plus any override, bucketed
+	# on the run seed, so a staged experiment is reproducible run to run.
+	config["flag_definitions"] = db.flags
+	config["flag_overrides"] = flag_overrides
 
 	# Ask for telemetry consent before the run starts, so a first-session "Agree"
 	# captures turn 1 and a "Decline" never buffers a single decision.

@@ -276,7 +276,7 @@ func _collect_allowlists() -> void:
 	_card_mod_types = _keys_of(DataLoader.CARD_MOD_MAP)
 	_merged_modes = _keys_of(DataLoader.MERGED_MODE_MAP)
 	_status_ids = _keys_of(Unit.STATUS_DEFS)
-	_wave_modes = _keys_of(GameManager.WAVE_MODE_MAP)
+	_wave_modes = _keys_of(GameState.WAVE_MODE_MAP)
 	_effect_keys = _keys_of(DataBuilder.EFFECT_DEFAULTS)
 	_skill_keys = _keys_of(DataBuilder.SKILL_DEFAULTS)
 	_unit_keys = _keys_of(DataBuilder.UNIT_DEFAULTS)

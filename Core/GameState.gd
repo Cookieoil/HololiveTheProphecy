@@ -44,6 +44,12 @@ enum WaveTransition {
 	IMMEDIATE_SKIP
 }
 
+## JSON/config string -> WaveTransition (config.json stores readable names).
+const WAVE_MODE_MAP: Dictionary = {
+	"full_turn": WaveTransition.FULL_TURN,
+	"immediate_skip": WaveTransition.IMMEDIATE_SKIP,
+}
+
 var wave_definitions: Array = []
 var wave_transition_mode: int = WaveTransition.FULL_TURN
 var actions_left: int = 0
@@ -57,6 +63,10 @@ var turn_number: int = 0
 ## cannot be reproduced after the fact).
 var run_seed: int = 0
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## The staged feature flags that are ON for this run (name -> true), resolved by
+## apply_config() from res://Data/json/features.json. Empty means no experiment is
+## active, and an unknown flag is never active. See Core/FeatureFlags.gd.
+var flags: Dictionary = {}
 
 
 ## Seeds the run's generator. Call before the deck is built.
@@ -512,3 +522,116 @@ func get_merge_error(a: Card, b: Card) -> String:
 	
 	return "Cannot merge these cards."  # fallback (should never be reached)
 #endregion
+
+
+## Applies a config.json-shaped dictionary to this run. The caller passes the flag
+## definitions and any tester overrides in the same dictionary (`flag_definitions`,
+## `flag_overrides`), so the state owns its own configuration and GameManager stays
+## a turn machine. Call after set_run_seed(): the flag rollout is keyed on the seed,
+## which makes an experiment reproducible instead of needing a player identifier.
+func apply_config(config: Dictionary) -> void:
+	if config.is_empty():
+		return
+	max_hand_size = maxi(1, _config_int(config, "hand_size", MAX_HAND_SIZE))
+	actions_per_turn = maxi(0, _config_int(config, "actions_per_turn", ACTIONS_PER_TURN))
+	merges_per_turn = maxi(0, _config_int(config, "merges_per_turn", MERGES_PER_TURN))
+
+	var decklist: Array = _config_decklist(config)
+	if not decklist.is_empty():
+		CURRENT_DECKLIST = decklist
+
+	var progression: Array[int] = _config_int_list(config, "dice_progression")
+	if not progression.is_empty():
+		set_dice_progression(progression)
+
+	if config.has("wave_transition_mode"):
+		var mode_key: String = str(config["wave_transition_mode"]).strip_edges().to_lower()
+		wave_transition_mode = WAVE_MODE_MAP.get(mode_key, WaveTransition.FULL_TURN)
+
+	flags = FeatureFlags.evaluate(_flag_definitions(config), _flag_overrides(config), str(run_seed))
+
+
+## The run seed: an explicit `seed` in the config (so a specific battle can be
+## replayed), otherwise a fresh random value.
+static func seed_from_config(config: Dictionary) -> int:
+	if config.has("seed"):
+		return _coerce_int(config.get("seed"), 0)
+	var generator: RandomNumberGenerator = RandomNumberGenerator.new()
+	generator.randomize()
+	return generator.randi()
+
+
+## Reads an int config entry. JSON always parses numbers as float, so the value is
+## coerced instead of assigned straight into a typed int field.
+func _config_int(config: Dictionary, key: String, fallback: int) -> int:
+	return _coerce_int(config.get(key, fallback), fallback)
+
+
+## Coerces any JSON scalar (float, int, bool, String) into an int.
+static func _coerce_int(value: Variant, fallback: int) -> int:
+	if value is int:
+		var int_value: int = value
+		return int_value
+	if value is float:
+		var float_value: float = value
+		return int(float_value)
+	if value is bool:
+		var bool_value: bool = value
+		return 1 if bool_value else 0
+	if value is String:
+		var text: String = value
+		if text.is_valid_int():
+			return text.to_int()
+		if text.is_valid_float():
+			return int(text.to_float())
+	return fallback
+
+
+## Coerces the JSON decklist ([[value, count], ...]) into typed int pairs.
+func _config_decklist(config: Dictionary) -> Array:
+	var parsed: Array = []
+	var raw_list: Variant = config.get("decklist", [])
+	if not (raw_list is Array):
+		return parsed
+	var entries: Array = raw_list
+	for entry: Variant in entries:
+		if not (entry is Array):
+			continue
+		var pair: Array = entry
+		if pair.size() < 2:
+			continue
+		var card_value: int = _coerce_int(pair[0], 0)
+		var card_count: int = _coerce_int(pair[1], 0)
+		if card_count <= 0:
+			continue
+		parsed.append([card_value, card_count])
+	return parsed
+
+
+## Coerces a JSON array of numbers into a typed int array.
+func _config_int_list(config: Dictionary, key: String) -> Array[int]:
+	var parsed: Array[int] = []
+	var raw_list: Variant = config.get(key, [])
+	if not (raw_list is Array):
+		return parsed
+	var entries: Array = raw_list
+	for entry: Variant in entries:
+		parsed.append(_coerce_int(entry, 0))
+	return parsed
+
+
+func _flag_definitions(config: Dictionary) -> Dictionary:
+	var raw: Variant = config.get("flag_definitions", {})
+	if raw is Dictionary:
+		var definitions: Dictionary = raw
+		return definitions
+	return {}
+
+
+func _flag_overrides(config: Dictionary) -> Dictionary:
+	var raw: Variant = config.get("flag_overrides", {})
+	if raw is Dictionary:
+		var overrides: Dictionary = raw
+		return overrides
+	return {}
+

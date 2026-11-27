@@ -115,6 +115,16 @@ func test_member_doc_is_not_the_file_summary() -> void:
 	assert_str(CodeIndexParser.script_role(info)).is_equal("extends Node, 2 export(s), 1 function(s)")
 
 
+## The overview table is the one artifact with a hard byte budget, so its role cell is
+## capped harder than a page header; the full sentence stays on the script's page.
+func test_the_overview_role_is_capped_without_touching_short_roles() -> void:
+	assert_str(CodeIndexParser.overview_role("Short role.")).is_equal("Short role.")
+	var long_role: String = "x".repeat(CodeIndexParser.OVERVIEW_ROLE_CHARS + 40)
+	var capped: String = CodeIndexParser.overview_role(long_role)
+	assert_int(capped.length()).is_equal(CodeIndexParser.OVERVIEW_ROLE_CHARS + 1)
+	assert_bool(capped.ends_with("…")).is_true()
+
+
 func test_declarations_are_classified_by_kind() -> void:
 	var info: Dictionary = CodeIndexParser.parse_script(SCRIPT_PATH, _script_fixture())
 	assert_int(CodeIndexParser.dict_array(info, "constants").size()).is_equal(1)
