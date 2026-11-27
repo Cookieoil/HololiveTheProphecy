@@ -67,6 +67,10 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## apply_config() from res://Data/json/features.json. Empty means no experiment is
 ## active, and an unknown flag is never active. See Core/FeatureFlags.gd.
 var flags: Dictionary = {}
+## The registry this run resolved from, and the overrides forced on it, kept so a
+## tester tool can re-resolve mid-run instead of only at setup.
+var _flag_definitions: Dictionary = {}
+var _flag_overrides: Dictionary = {}
 
 
 ## Seeds the run's generator. Call before the deck is built.
@@ -548,7 +552,11 @@ func apply_config(config: Dictionary) -> void:
 		var mode_key: String = str(config["wave_transition_mode"]).strip_edges().to_lower()
 		wave_transition_mode = WAVE_MODE_MAP.get(mode_key, WaveTransition.FULL_TURN)
 
-	flags = FeatureFlags.evaluate(_flag_definitions(config), _flag_overrides(config), str(run_seed))
+	# Keep the registry and the overrides so the tester tools can re-resolve mid-run
+	# through the same code path a setup-time resolve uses.
+	_flag_definitions = _definitions_from(config)
+	_flag_overrides = _overrides_from(config)
+	refresh_flags()
 
 
 ## The run seed: an explicit `seed` in the config (so a specific battle can be
@@ -620,7 +628,7 @@ func _config_int_list(config: Dictionary, key: String) -> Array[int]:
 	return parsed
 
 
-func _flag_definitions(config: Dictionary) -> Dictionary:
+func _definitions_from(config: Dictionary) -> Dictionary:
 	var raw: Variant = config.get("flag_definitions", {})
 	if raw is Dictionary:
 		var definitions: Dictionary = raw
@@ -628,10 +636,54 @@ func _flag_definitions(config: Dictionary) -> Dictionary:
 	return {}
 
 
-func _flag_overrides(config: Dictionary) -> Dictionary:
+func _overrides_from(config: Dictionary) -> Dictionary:
 	var raw: Variant = config.get("flag_overrides", {})
 	if raw is Dictionary:
 		var overrides: Dictionary = raw
 		return overrides
 	return {}
 
+
+## Re-resolves `flags` from the stored registry and overrides. `apply_config` calls it,
+## and so does the tester tool that flips a flag, so both paths agree by construction.
+func refresh_flags() -> void:
+	flags = FeatureFlags.evaluate(_flag_definitions, _flag_overrides, str(run_seed))
+
+
+## Forces one staged flag on or off for this run. Returns false for a name the run does
+## not know, so a stale panel cannot invent a flag.
+func set_flag_override(flag_name: String, enabled: bool) -> bool:
+	if not _flag_definitions.has(flag_name):
+		return false
+	_flag_overrides[flag_name] = enabled
+	refresh_flags()
+	return true
+
+
+## The flags this run knows about, with their current value and what they are trying to
+## find out, for the tester panel.
+func flag_report() -> Dictionary:
+	var report: Dictionary = {}
+	var names: Array = _flag_definitions.keys()
+	names.sort()
+	for key: Variant in names:
+		var flag_name: String = str(key)
+		var entry: Dictionary = _flag_definitions[flag_name]
+		report[flag_name] = {
+			"enabled": flags.has(flag_name),
+			"description": str(entry.get(FeatureFlags.KEY_DESCRIPTION, "")),
+		}
+	return report
+
+
+## Applies a tester tool's `set_flag` request and returns the line to log.
+##
+## The run is already flagged as debug-tainted by the debug action that carried this,
+## so an experiment flipped here never reaches a balance view - which matters, because
+## the flags written on `run_started` are the ones the run began with.
+func debug_set_flag(args: Dictionary) -> String:
+	var flag_name: String = str(args.get("name", ""))
+	var enabled: bool = _coerce_int(args.get("enabled", 1), 1) != 0
+	if not set_flag_override(flag_name, enabled):
+		return "Unknown flag '%s'." % flag_name
+	return "Flag %s -> %s" % [flag_name, "on" if enabled else "off"]

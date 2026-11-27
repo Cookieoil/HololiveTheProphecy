@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/SnapshotRunner.gd` extends `Node`
 
-`243` lines · [back to the map](../../CODEBASE_MAP.md)
+`250` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is headless, and Godot's headless display driver is the dummy rend…
 
@@ -26,20 +26,20 @@ State:
 
 Private:
 - L55-62 `_ready`
-- L66-101 `_capture`
-- L104-116 `_open_scene`
-- L119-121 `_wait_frames`
-- L124-125 `_settle`
-- L128-133 `_wait_for_consent`
-- L136-141 `_wait_for_board`
-- L144-147 `_board_is_ready`
-- L150-155 `_show_ultimate_callout`
-- L158-188 `_shot`
-- L193-202 `_distinct_colors`
-- L205-211 `_file_size`
-- L214-226 `_write_manifest`
-- L229-231 `_fail`
-- L234-241 `_finish`
+- L66-108 `_capture`
+- L111-123 `_open_scene`
+- L126-128 `_wait_frames`
+- L131-132 `_settle`
+- L135-140 `_wait_for_consent`
+- L143-148 `_wait_for_board`
+- L151-154 `_board_is_ready`
+- L157-162 `_show_ultimate_callout`
+- L165-195 `_shot`
+- L200-209 `_distinct_colors`
+- L212-218 `_file_size`
+- L221-233 `_write_manifest`
+- L236-238 `_fail`
+- L241-248 `_finish`
 
 Uses: BattleScene
 Used by: —

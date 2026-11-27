@@ -25,19 +25,6 @@ var telemetry: TelemetryManager = TelemetryManager.new()
 const ENEMY_SKILL_OVERLAP_LEAD: float = 0.6
 #endregion
 
-#region Helpers
-func _color_unit(unit: Unit) -> String:
-	var col: String = ColorUtils.COLOR_ALLY if unit.is_ally else ColorUtils.COLOR_ENEMY
-	return ColorUtils.colorize(unit.data.display_name, col)
-
-func _color_value(value: int, type: String = "hp") -> String:
-	var col: String = ColorUtils.COLOR_HP if type == "hp" else ColorUtils.COLOR_SHIELD
-	return ColorUtils.colorize(str(value), col)
-
-func _color_card_value(card: Card) -> String:
-	return ColorUtils.colorize(str(card.get_effective_value()), ColorUtils.COLOR_CARD)
-	
-#endregion
 
 #region Setup
 ## The game state initializer (kickoff): 
@@ -333,7 +320,7 @@ func _handle_play(card: Card, ally: Unit) -> void:
 	# Determine skill
 	var skill: SkillData = ally.data.skill_1 if card.is_odd() else ally.data.skill_2
 	var card_str: String = ColorUtils.colorize(str(card.get_effective_value()) + " V", ColorUtils.COLOR_CARD)
-	var ally_str: String = _color_unit(ally)
+	var ally_str: String = ColorUtils.unit_name(ally.data.display_name, ally.is_ally)
 	var skill_str: String = ColorUtils.colorize(skill.skill_name, ColorUtils.COLOR_HEADER)
 	var merged_str: String = ""
 	if card.is_double_merged:
@@ -387,7 +374,7 @@ func _handle_play(card: Card, ally: Unit) -> void:
 			"+%d Moxie (%d/%d)" % [moxie_gained, ally.moxie, ally.max_moxie],
 			ColorUtils.COLOR_CARD
 		)
-		ui.show_message("  %s → %s" % [_color_unit(ally), moxie_str])
+		ui.show_message("  %s → %s" % [ColorUtils.unit_name(ally.data.display_name, ally.is_ally), moxie_str])
 	_refresh_enemy_intents()
 
 func _handle_ally_ultimate(ally: Unit) -> void:
@@ -403,7 +390,7 @@ func _handle_ally_ultimate(ally: Unit) -> void:
 	EventBus.moxie_changed.emit(ally, ally.moxie, ally.max_moxie)
 	EventBus.ultimate_cast.emit(ally, ult.skill_name)
 
-	var ally_str: String = _color_unit(ally)
+	var ally_str: String = ColorUtils.unit_name(ally.data.display_name, ally.is_ally)
 	var ult_str: String = ColorUtils.colorize("★ ULTIMATE: %s ★" % ult.skill_name, ColorUtils.COLOR_CARD)
 	ui.show_message("%s unleashes %s!" % [ally_str, ult_str])
 	if ult.description != "":
@@ -444,7 +431,7 @@ func _handle_merge(a: Card, b: Card) -> void:
 	# Presentation first: the hand plays the merge, then the counters refresh. The
 	# merged card is reused by that refresh, so the merge is not interrupted by it.
 	ui.on_cards_merged(a, b, result, state)
-	var result_str: String = _color_card_value(result)
+	var result_str: String = ColorUtils.card_value(result.get_effective_value())
 	ui.show_message("Merged → %s" % result_str)
 
 
@@ -552,14 +539,7 @@ func _handle_debug_command(action: Dictionary) -> void:
 			state.next_skill_bonus += _coerce_int(args.get("amount", 1), 1)
 			_debug_log("Next skill bonus: +%d" % state.next_skill_bonus)
 		"step_dice":
-			state.dice_size_modifier += _coerce_int(args.get("delta", 1), 1)
-			_debug_log("Dice size modifier: %+d (next rolls use d%d)." % [
-				state.dice_size_modifier, state.get_dice_size(state.turn_number)
-			])
-			# Re-roll so the tester sees the new dice size immediately instead of
-			# waiting for the next turn.
-			_roll_enemy_intents()
-			ui.show_enemy_intents(current_intents)
+			_debug_step_dice(args)
 		"fill_moxie":
 			_debug_set_moxie(_debug_targets(args), true)
 		"drain_moxie":
@@ -604,13 +584,14 @@ func _handle_debug_command(action: Dictionary) -> void:
 		"show_defeat":
 			_debug_result_request = DEBUG_RESULT_DEFEAT
 			_debug_log("Previewing the Defeat cutscene.")
+		"set_flag":
+			_debug_log(state.debug_set_flag(args))
 		_:
 			_debug_log("Unknown debug command '%s'." % command)
 
 
-## Coerces a Variant into a Dictionary (payloads cross the UI boundary as Variant).
-## Coerces a debug-command argument into an int: the tester tools receive their
-## values from UI controls and dictionaries, either of which can hold a float.
+## Coerces a debug-command argument into an int: the tester tools receive their values
+## from UI controls and dictionaries, either of which can hold a float.
 func _coerce_int(value: Variant, fallback: int) -> int:
 	if value is int:
 		var int_value: int = value
@@ -630,6 +611,7 @@ func _coerce_int(value: Variant, fallback: int) -> int:
 	return fallback
 
 
+## Coerces a Variant into a Dictionary (payloads cross the UI boundary as Variant).
 func _coerce_dict(value: Variant) -> Dictionary:
 	if value is Dictionary:
 		var dict: Dictionary = value
@@ -660,6 +642,17 @@ func _debug_targets(args: Dictionary) -> Array[Unit]:
 
 
 ## One-line confirmation in the message log, so a tester can see what a tool did.
+## Steps the dice size and re-rolls straight away, so the tester sees the new size now
+## instead of having to wait for the next turn.
+func _debug_step_dice(args: Dictionary) -> void:
+	state.dice_size_modifier += _coerce_int(args.get("delta", 1), 1)
+	_debug_log("Dice size modifier: %+d (next rolls use d%d)." % [
+		state.dice_size_modifier, state.get_dice_size(state.turn_number)
+	])
+	_roll_enemy_intents()
+	ui.show_enemy_intents(current_intents)
+
+
 func _debug_log(message: String) -> void:
 	ui.show_message(ColorUtils.colorize("[debug] ", ColorUtils.COLOR_HEADER) + message)
 
@@ -962,7 +955,7 @@ func _resolve_enemy_turns() -> void:
 		if intent.enemy.is_dead:
 			continue
 			
-		var enemy_name: String = _color_unit(intent.enemy)
+		var enemy_name: String = ColorUtils.unit_name(intent.enemy.data.display_name, intent.enemy.is_ally)
 		var dice_value: String = ColorUtils.colorize(str(intent.effective_value) + " V", ColorUtils.COLOR_CARD)
 		var skill_name: String = ColorUtils.colorize(intent.skill.skill_name, ColorUtils.COLOR_HEADER)
 		var condition_met: String = ""
@@ -1017,7 +1010,7 @@ func _execute_enemy_ultimate(enemy: Unit) -> void:
 	EventBus.moxie_changed.emit(enemy, enemy.moxie, enemy.max_moxie)
 	EventBus.ultimate_cast.emit(enemy, ult.skill_name)
 	
-	var enemy_name: String = _color_unit(enemy)
+	var enemy_name: String = ColorUtils.unit_name(enemy.data.display_name, enemy.is_ally)
 	var ult_str: String = ColorUtils.colorize("ULTIMATE: %s" % ult.skill_name, ColorUtils.COLOR_ENEMY)
 	ui.show_message("\n%s unleashes %s!" % [enemy_name, ult_str])
 	if ult.description != "":
@@ -1046,7 +1039,6 @@ func _try_advance_wave() -> bool:
 	# Clear all shields
 	for ally: Unit in state.allies:
 		ally.reset_shield()
-	
 	match state.wave_transition_mode:
 		GameState.WaveTransition.FULL_TURN:
 			# Spawn next wave at the START of the next turn
@@ -1056,7 +1048,6 @@ func _try_advance_wave() -> bool:
 			# Spawn now, but they do nothing this turn
 			_spawn_wave(next_wave)
 			ui.show_message(ColorUtils.colorize("New enemies appear! They skip their first turn.", ColorUtils.COLOR_HEADER))
-	
 	return true
 #endregion
 
@@ -1145,20 +1136,20 @@ func _log_status_event(unit: Unit, event: Dictionary) -> void:
 	var kind: String = str(event.get("kind", ""))
 	var amount: int = _coerce_int(event.get("amount", 0), 0)
 	var count: int = _coerce_int(event.get("count", 0), 0)
-	var unit_name: String = _color_unit(unit)
+	var unit_name: String = ColorUtils.unit_name(unit.data.display_name, unit.is_ally)
 	var label: String = ColorUtils.colorize(status_id.capitalize(), ColorUtils.COLOR_HEADER)
 
 	match kind:
 		"heal":
-			var healed_str: String = _color_value(amount)
-			var hp_str: String = _color_value(unit.current_hp)
+			var healed_str: String = ColorUtils.stat_value(amount)
+			var hp_str: String = ColorUtils.stat_value(unit.current_hp)
 			ui.show_message("  %s: %s restores %s HP (HP: %s, %d round(s) left)" % [
 				label, unit_name, healed_str, hp_str, maxi(0, count - 1)
 			])
 			EventBus.unit_healed.emit(unit, amount)
 		"damage":
-			var lost_str: String = _color_value(amount)
-			var hurt_hp_str: String = _color_value(unit.current_hp)
+			var lost_str: String = ColorUtils.stat_value(amount)
+			var hurt_hp_str: String = ColorUtils.stat_value(unit.current_hp)
 			ui.show_message("  %s: %s loses %s HP (HP: %s, %d stack(s))" % [
 				label, unit_name, lost_str, hurt_hp_str, count
 			])

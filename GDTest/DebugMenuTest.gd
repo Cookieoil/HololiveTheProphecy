@@ -133,6 +133,15 @@ func _find_tab_container(root: Node) -> TabContainer:
 	return null
 
 
+## Index of a tab by title, or -1. Tests look tabs up by name so that adding one to
+## this tester panel does not break them.
+func _tab_index(tabs: TabContainer, title: String) -> int:
+	for index: int in range(tabs.get_tab_count()):
+		if tabs.get_tab_title(index) == title:
+			return index
+	return -1
+
+
 #region Panel (view-only) tests
 
 func test_menu_starts_closed_and_toggles() -> void:
@@ -292,14 +301,23 @@ func test_result_previews_live_in_their_own_tab() -> void:
 
 	var tabs: TabContainer = _find_tab_container(popup)
 	assert_object(tabs).is_not_null()
-	assert_int(tabs.get_tab_count()).is_equal(4)
-	assert_str(tabs.get_tab_title(3)).is_equal("Screen")
+	if tabs == null:
+		return
+	# Found by name on purpose: the palette is a tester tool and its tab list is
+	# expected to grow, which an index-and-count assertion would fight.
+	var screen_index: int = _tab_index(tabs, "Screen")
+	assert_int(screen_index).is_greater_equal(0)
+	if screen_index < 0:
+		return
 
-	var screen_page: Node = tabs.get_child(3)
+	var screen_page: Node = tabs.get_child(screen_index)
 	assert_object(_find_button(screen_page, "Preview victory")).is_not_null()
 	assert_object(_find_button(screen_page, "Preview defeat")).is_not_null()
 	# And they are gone from the Units tab they used to share.
-	assert_object(_find_button(tabs.get_child(2), "Preview victory")).is_null()
+	var units_index: int = _tab_index(tabs, "Units")
+	assert_int(units_index).is_greater_equal(0)
+	if units_index >= 0:
+		assert_object(_find_button(tabs.get_child(units_index), "Preview victory")).is_null()
 #endregion
 
 
