@@ -69,6 +69,18 @@ Commit first: the reviewer diffs the branch against the base, so it reads what i
 CI runs the same reviewer without `--strict` and posts it as a sticky PR comment.
 `pwsh -File Tools/preflight.ps1 -Review` runs every gate plus this review.
 
+## Forward pressure (task intake)
+Turn evidence into work instead of noticing it by hand. One command prints
+agent-ready task specs (title, evidence, repro, acceptance):
+
+`godot --headless --path . --script res://Tools/triage.gd`
+
+Add `--report report.json` (written by `python Tools/analyze_telemetry.py --json report.json`)
+for the telemetry signals, `--json tasks.json` to dump them, and `--create` to file
+them as `agent-task` issues. Filing is idempotent: every spec carries a stable marker.
+The weekly `Task Intake` workflow runs the repo-side sources only, and files nothing
+unless it is dispatched with `file_issues`.
+
 ## Context budget (explore without reading everything)
 - **Read `Docs/CODEBASE_MAP.md` first.** It is generated and deliberately small: section 1 lists
   every game script, section 2 every test, section 3 every `EventBus` signal with its emitters and

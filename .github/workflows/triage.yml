@@ -1,0 +1,105 @@
+# .github/workflows/triage.yml
+name: Task Intake
+
+# Forward pressure: the repository's own signals become work items instead of being
+# noticed by whoever happens to look. Weekly, plus on demand.
+#
+# It runs the repo-side sources (leftover TODO/FIXME markers, stale ratchet entries).
+# The telemetry source needs a player spool, which never leaves a machine, so that one
+# stays local:
+#   python Tools/analyze_telemetry.py --json report.json
+#   godot --headless --path . --script res://Tools/triage.gd -- --report report.json
+#
+# Nothing is filed unless `file_issues` is set: a scheduled job that opens issues on
+# its own is a reliable way to train everyone to ignore them.
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      file_issues:
+        description: "Create/refresh the issues (otherwise the run only reports)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  intake:
+    name: Task intake
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # used only when file_issues is set
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Same read as the main workflow: the version lives in project.godot.
+      - name: Resolve Godot version
+        id: read
+        run: |
+          set -euo pipefail
+          VERSION="$(grep -oE 'features=PackedStringArray\([^)]*\)' project.godot \
+                    | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1 || true)"
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read config/features from project.godot"
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="${VERSION}.0"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2
+        with:
+          version: ${{ steps.read.outputs.version }}
+          use-dotnet: false
+
+      - name: Import project
+        timeout-minutes: 5
+        run: godot --headless --path . --import
+
+      # Prints the specs and writes tasks.json. Exit code is always 0: intake reports,
+      # the five gates in Tools/preflight.ps1 are what block.
+      - name: Collect tasks
+        run: |
+          godot --headless --path . --script res://Tools/triage.gd -- \
+            --json tasks.json --python python3
+
+      - name: Summarise
+        if: always()
+        run: |
+          if [ -f tasks.json ]; then
+            {
+              echo '### Task intake'
+              echo ''
+              echo '| severity | kind | title |'
+              echo '| --- | --- | --- |'
+              jq -r '.tasks[] | "| \(.severity) | `\(.kind)` | \(.title) |"' tasks.json
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload the task list
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: task-intake
+          path: tasks.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      # Opt-in, and only from a manual run: the issue body is the prompt (evidence,
+      # repro command, acceptance), and the marker makes a second run a no-op.
+      - name: File the issues
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.file_issues == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          godot --headless --path . --script res://Tools/triage.gd -- \
+            --json tasks.json --python python3 --create
