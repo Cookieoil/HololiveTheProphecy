@@ -14,6 +14,12 @@ extends RefCounted
 ## agent) starts from a summary instead of a raw diff. `--strict` promotes the
 ## high-signal rules to blocking for a local pre-push run.
 ##
+## Review depth is a gradient, not a constant: `blast_radius` marks a change that moved
+## trunk code (shared state, the core loops, the gates) as needing a line-by-line read
+## and a leaf one as safe to skim behind green gates, `feature_gated` says whether a
+## kill switch bounds it, and `adversarial_section()` builds the context-isolated brief
+## for a fresh reviewer that never saw the authoring conversation.
+##
 ## @author TheGreatJellyfish
 ## @version 11/27/2026
 
@@ -35,6 +41,7 @@ const MAX_CHANGED_LINES: int = 400
 const STRICT_RULES: Array[String] = [
 	"undocumented_api",
 	"core_purity",
+	"assertionless_test",
 ]
 ## Banned patterns, mirrored from Tools/line_godot_slop.py but reported on the exact
 ## added line so the comment points at the spot. The lint gate remains the blocker.
@@ -50,6 +57,58 @@ const CORE_NODE_TYPES: Array[String] = [
 ]
 const MARKER_TODO: String = "TODO"
 const MARKER_FIXME: String = "FIXME"
+const ASSERT_PREFIX: String = "assert"
+const TEST_FUNCTION_PREFIX: String = "test_"
+const DOCS_DIR: String = "Docs/"
+const JSON_SUFFIX: String = ".json"
+const FEATURES_PATH: String = "Data/json/features.json"
+const ROLLOUT_KEY: String = "rollout_percent"
+const ENABLED_KEY: String = "\"enabled\""
+## A rollout of every bucket is not a canary: a newly enabled flag that lands already
+## at 100 (or with no `rollout_percent` at all, which means 100) skips the staged
+## rollout the 80/20 rule asks for.
+const ROLLOUT_FULL: int = 100
+## Areas whose change carries the most blast radius: shared state and the core loops,
+## the managers that own the turn machine, and the pipeline the gates themselves run.
+const TRUNK_PREFIXES: Array[String] = ["Core/", "Managers/", ".github/"]
+## Single-instance seams that are trunk wherever they sit: the runtime config, the
+## global signal bus, the shared effect interpreter and the one battle entry point.
+const TRUNK_FILES: Array[String] = [
+	"project.godot",
+	"Data/json/config.json",
+	"Managers/EventBus.gd",
+	"Skills/EffectBlock.gd",
+	"Scenes/BattleScene/BattleScene.gd",
+	"Scenes/BattleScene/BattleScene.tscn",
+]
+## A changed script this many others depend on is trunk by *measurement*, not by
+## folder. Tools/review_diff.gd reads the fan-in off the generated map's `Used by`
+## line and passes it in, so the folder rules only have to cover what the map cannot
+## say.
+const TRUNK_FAN_IN: int = 5
+const TIER_TRUNK: String = "trunk"
+const TIER_LEAF: String = "leaf"
+const RADIUS_HIGH: String = "high"
+const RADIUS_MEDIUM: String = "medium"
+const RADIUS_LOW: String = "low"
+## Markers that show a change is (or sits behind) a staged flag, which is what makes a
+## leaf change safe to skim: the control path is untouched and the kill switch is one
+## JSON edit.
+const FEATURE_GATE_MARKERS: Array[String] = [
+	"FeatureFlags.is_active",
+	"Data/json/features.json",
+]
+## The adversarial pass attacks invariants the linter cannot see. Style, naming and
+## typing are deliberately absent: the gates own them, so re-raising them only adds
+## noise and buries the one thing that matters.
+const ADVERSARIAL_QUESTIONS: Array[String] = [
+	"Does a new path mutate `GameState` / `Unit` outside a method whose result a UI reacts to?",
+	"Can the change make a run non-deterministic (a global RNG, `Time`, or an ordering a fixed `run_seed` no longer pins)?",
+	"With the feature flag OFF, is the previous behaviour unchanged — not merely 'still works'?",
+	"Can a signal be emitted twice, or after the node is freed, on the new path?",
+	"Does it move a turn / action / Moxie invariant without a test that would catch the regression?",
+	"Does it add a test that cannot fail (no assertion, or an assertion on a constant)?",
+]
 #endregion
 
 #region Public Methods
@@ -105,8 +164,10 @@ static func hunk_start_line(header: String) -> int:
 	return text.to_int()
 
 
-## Reviews a diff and returns `{files, changed_paths, blocking, advisory, stats}`.
-## `options` accepts `strict: bool` and `known_large_files: PackedStringArray`.
+## Reviews a diff and returns
+## `{files, changed_paths, blocking, advisory, stats, blast_radius, trunk_paths, feature_gated}`.
+## `options` accepts `strict: bool`, `known_large_files: PackedStringArray` and
+## `trunk_files: PackedStringArray` (measured fan-in, from Tools/review_diff.gd).
 static func review(diff_text: String, options: Dictionary = {}) -> Dictionary:
 	var files: Array[Dictionary] = parse_diff(diff_text)
 	var advisory: Array[Dictionary] = []
@@ -121,12 +182,18 @@ static func review(diff_text: String, options: Dictionary = {}) -> Dictionary:
 		if not risk.is_empty():
 			advisory.append(risk)
 	advisory.append_array(_change_findings(changed, files))
+	advisory.append_array(_assertionless_findings(files))
+	advisory.append_array(_rollout_findings(files))
+	var trunk: PackedStringArray = _trunk_paths(changed, options)
 	var result: Dictionary = {
 		"files": files,
 		"changed_paths": changed,
 		"blocking": [],
 		"advisory": advisory,
 		"stats": _stats(files, changed),
+		"blast_radius": _radius(changed, trunk),
+		"trunk_paths": trunk,
+		"feature_gated": _feature_gated(files),
 	}
 	if CodeIndexParser.dict_bool(options, "strict"):
 		_promote_strict(result)
@@ -150,8 +217,9 @@ static func exit_code(result: Dictionary) -> int:
 	return 1 if blocking_count(result) > 0 else 0
 
 
-## Compact markdown for a pull-request comment: a summary line, then one table row
-## per finding, so the whole review fits in a screenful.
+## Compact markdown for a pull-request comment: the blast radius first (how deep a
+## reader has to go), then a summary line and one table row per finding, so the whole
+## review fits in a screenful.
 static func format_markdown(result: Dictionary) -> String:
 	var stats: Dictionary = _dict(result.get("stats"))
 	var blocking: Array = CodeIndexParser.dict_array(result, "blocking")
@@ -159,6 +227,7 @@ static func format_markdown(result: Dictionary) -> String:
 	var out: PackedStringArray = PackedStringArray()
 	out.append("### Second-pass review")
 	out.append("")
+	out.append_array(_radius_section(result))
 	out.append("%d file(s) changed, +%d / -%d lines." % [
 		CodeIndexParser.dict_int(stats, "file_count"),
 		CodeIndexParser.dict_int(stats, "added"),
@@ -175,24 +244,268 @@ static func format_markdown(result: Dictionary) -> String:
 	return "\n".join(out).strip_edges() + "\n"
 
 
-## Plain text for a terminal run.
+## Plain text for a terminal run, led by the same blast-radius line so a local run and
+## the pull-request comment agree on how deep the review has to go.
 static func format_text(result: Dictionary) -> String:
 	var out: PackedStringArray = PackedStringArray()
+	out.append("blast_radius: %s  trunk: %d file(s)  feature_gate: %s" % [
+		CodeIndexParser.dict_string(result, "blast_radius"),
+		CodeIndexParser.dict_string_array(result, "trunk_paths").size(),
+		str(CodeIndexParser.dict_bool(result, "feature_gated")),
+	])
+	var findings: int = 0
 	for section: String in ["blocking", "advisory"]:
 		for raw: Variant in CodeIndexParser.dict_array(result, section):
 			var finding: Dictionary = _dict(raw)
+			findings += 1
 			out.append("[%s] %s  %s  %s" % [
 				section,
 				CodeIndexParser.dict_string(finding, "rule"),
 				CodeIndexParser.dict_string(finding, "where"),
 				CodeIndexParser.dict_string(finding, "detail"),
 			])
-	if out.is_empty():
-		return "No review-worthy findings.\n"
+	if findings == 0:
+		out.append("No review-worthy findings.")
 	return "\n".join(out) + "\n"
+
+
+## The review tier of one changed path. `trunk` code is where a wrong line reaches
+## every player (shared state, the core loops, the gates themselves); `leaf` code is
+## isolated enough that green gates plus proof can stand in for a line-by-line read.
+## `trunk_files` carries the fan-in that Tools/review_diff.gd measured off the
+## generated map, which is how a leaf-looking scene with many dependents is still
+## caught.
+static func review_tier(path_value: String, trunk_files: PackedStringArray = PackedStringArray()) -> String:
+	if trunk_files.has(path_value) or TRUNK_FILES.has(path_value):
+		return TIER_TRUNK
+	for prefix: String in TRUNK_PREFIXES:
+		if path_value.begins_with(prefix):
+			return TIER_TRUNK
+	return TIER_LEAF
+
+
+## The fan-in the generated map records for a script: the number of entries on the
+## `Used by:` line of `Docs/map/<path>.md`. Reading the committed map turns "blast
+## radius" into a measurement, and the map is itself a gate-checked artifact, so it
+## cannot drift from the sources unnoticed. Returns 0 for a missing or empty line.
+static func fan_in_from_map(page_text: String) -> int:
+	for raw: String in CodeIndexParser.normalized_text(page_text).split("\n"):
+		if not raw.begins_with("Used by:"):
+			continue
+		var names: String = raw.substr("Used by:".length()).strip_edges()
+		if names.is_empty() or names == "—":
+			return 0
+		return names.split(",").size()
+	return 0
+
+
+## The context-isolated brief for a *fresh* reviewer. An agent that wrote a change
+## carries its whole authoring conversation, so it defends the shortcuts it took; the
+## remedy is to hand a new reviewer only the diff, the touched scripts' public API and
+## the invariants below, and to ask it to break the change. Style is excluded on
+## purpose - the compiler and the linter already own it.
+static func adversarial_section(result: Dictionary) -> String:
+	var out: PackedStringArray = PackedStringArray()
+	out.append("#### Adversarial review (context-isolated)")
+	out.append("")
+	out.append("Feed a **fresh** reviewer only this report, the diff, those `Docs/map/` pages and `AGENTS.md`.")
+	out.append("It must not see the authoring conversation: ask it to break the change, not to defend it.")
+	out.append("")
+	var trunk: PackedStringArray = CodeIndexParser.dict_string_array(result, "trunk_paths")
+	if trunk.is_empty():
+		out.append("Deep context: none (leaf-only change).")
+	else:
+		out.append("Deep context (read these in full): " + ", ".join(trunk))
+	out.append("")
+	out.append("Attack these invariants:")
+	for question: String in ADVERSARIAL_QUESTIONS:
+		out.append("- " + question)
+	return "\n".join(out)
 #endregion
 
 #region Private Methods
+## Every changed path that is trunk: the folder rules plus the fan-in the caller
+## measured (Tools/review_diff.gd reads it off the generated map).
+static func _trunk_paths(changed: PackedStringArray, options: Dictionary) -> PackedStringArray:
+	var measured: PackedStringArray = CodeIndexParser.dict_string_array(options, "trunk_files")
+	var trunk: PackedStringArray = PackedStringArray()
+	for path_value: String in changed:
+		if review_tier(path_value, measured) == TIER_TRUNK:
+			trunk.append(path_value)
+	return trunk
+
+
+## How far a mistake can travel: HIGH once trunk code moved, MEDIUM when leaf game code
+## did, LOW when the diff only touched tests, tools or docs - which is exactly the
+## gradient the review depth follows.
+static func _radius(changed: PackedStringArray, trunk: PackedStringArray) -> String:
+	if not trunk.is_empty():
+		return RADIUS_HIGH
+	for path_value: String in changed:
+		if _is_leaf_game_code(path_value):
+			return RADIUS_MEDIUM
+	return RADIUS_LOW
+
+
+static func _is_leaf_game_code(path_value: String) -> bool:
+	if path_value.begins_with(TEST_DIR) or path_value.begins_with(TOOLS_DIR) or path_value.begins_with(DOCS_DIR):
+		return false
+	if path_value.begins_with(DATA_DIR) and path_value.ends_with(JSON_SUFFIX):
+		return true
+	return path_value.ends_with(SCRIPT_SUFFIX) or path_value.ends_with(SCENE_SUFFIX)
+
+
+## True when the diff adds a read of a staged flag, or edits the flag registry itself:
+## either way the control path is untouched and a rollback is one JSON edit.
+static func _feature_gated(files: Array[Dictionary]) -> bool:
+	for file: Dictionary in files:
+		if CodeIndexParser.dict_string(file, "path") == FEATURES_PATH:
+			return true
+		for text: String in _added_texts(file):
+			for marker: String in FEATURE_GATE_MARKERS:
+				if text.contains(marker):
+					return true
+	return false
+
+
+static func _added_texts(file: Dictionary) -> PackedStringArray:
+	var texts: PackedStringArray = PackedStringArray()
+	for raw: Variant in CodeIndexParser.dict_array(file, "entries"):
+		var entry: Dictionary = _dict(raw)
+		if CodeIndexParser.dict_string(entry, "kind") == "added":
+			texts.append(CodeIndexParser.dict_string(entry, "text"))
+	return texts
+
+
+## The blast-radius block: how deep a reader has to go, and whether a kill switch
+## already bounds the change.
+static func _radius_section(result: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	var radius: String = CodeIndexParser.dict_string(result, "blast_radius")
+	out.append("**Blast radius: %s** — %s" % [radius.to_upper(), _radius_hint(radius)])
+	var trunk: PackedStringArray = CodeIndexParser.dict_string_array(result, "trunk_paths")
+	if not trunk.is_empty():
+		out.append("")
+		out.append("Trunk (read line by line): " + ", ".join(trunk))
+	out.append("")
+	if CodeIndexParser.dict_bool(result, "feature_gated"):
+		out.append("Feature gate: present — the change is behind (or is) a staged flag, so a rollback is one JSON edit.")
+	else:
+		out.append("Feature gate: none — nothing to kill-switch; the change is live as soon as it merges.")
+	out.append("")
+	return out
+
+
+static func _radius_hint(radius: String) -> String:
+	match radius:
+		RADIUS_HIGH:
+			return "trunk or high fan-in code; a human reads every line and checks the callers below it"
+		RADIUS_MEDIUM:
+			return "leaf game code; skim once the gates are green and confirm the flag-off path"
+		_:
+			return "tests, tools or docs only; the gates are the reviewer"
+
+
+## A test that cannot fail is not proof, it is coverage theatre. Only *newly added*
+## `test_*` bodies are judged, and a body asserts if any of its own added lines mentions
+## `assert` (every gdUnit4 assertion is `assert_*`), so a helper that asserts inside
+## itself is not mistaken for an empty test.
+static func _assertionless_findings(files: Array[Dictionary]) -> Array[Dictionary]:
+	var findings: Array[Dictionary] = []
+	for file: Dictionary in files:
+		var path_value: String = CodeIndexParser.dict_string(file, "path")
+		if not path_value.begins_with(TEST_DIR) or not path_value.ends_with(SCRIPT_SUFFIX):
+			continue
+		findings.append_array(_file_assertionless(path_value, CodeIndexParser.dict_array(file, "entries")))
+	return findings
+
+
+static func _file_assertionless(path_value: String, entries: Array) -> Array[Dictionary]:
+	var findings: Array[Dictionary] = []
+	for index: int in range(entries.size()):
+		var entry: Dictionary = _dict(entries[index])
+		if CodeIndexParser.dict_string(entry, "kind") != "added":
+			continue
+		var name_value: String = _declared_function_name(CodeIndexParser.dict_string(entry, "text"))
+		if not name_value.begins_with(TEST_FUNCTION_PREFIX):
+			continue
+		if _body_asserts(entries, index):
+			continue
+		findings.append(_finding("assertionless_test", path_value, CodeIndexParser.dict_int(entry, "line"),
+			"new test has no assertion; a test that cannot fail only pads the coverage number"))
+	return findings
+
+
+## True when the added block that starts at `index` mentions an assertion. The walk
+## stops at the first line that is not part of the same added block, which is how the
+## function boundary is found without parsing the whole file.
+static func _body_asserts(entries: Array, index: int) -> bool:
+	var cursor: int = index
+	while cursor < entries.size():
+		var entry: Dictionary = _dict(entries[cursor])
+		var text: String = CodeIndexParser.dict_string(entry, "text")
+		if cursor > index:
+			if CodeIndexParser.dict_string(entry, "kind") != "added":
+				break
+			if not (text.begins_with("\t") or text.begins_with(" ")):
+				break
+		if text.contains(ASSERT_PREFIX):
+			return true
+		cursor += 1
+	return false
+
+
+## A newly enabled flag is the one place a mistake reaches every player at once, so
+## landing it at 100 in the same diff that adds it skips the canary the 80/20 rule asks
+## for. Advisory on purpose: a deliberate graduation is a legitimate reason to do it,
+## and the reviewer is the one who knows which it is.
+static func _rollout_findings(files: Array[Dictionary]) -> Array[Dictionary]:
+	var findings: Array[Dictionary] = []
+	for file: Dictionary in files:
+		if CodeIndexParser.dict_string(file, "path") != FEATURES_PATH:
+			continue
+		var added: PackedStringArray = _added_texts(file)
+		if not _enables_flag(added) or _rollout_is_staged(added):
+			continue
+		findings.append(_finding("unstaged_rollout", FEATURES_PATH, 0,
+			"flag enabled with no staged `rollout_percent`: canary it (e.g. 25) and read the cohort before 100"))
+	return findings
+
+
+static func _enables_flag(added: PackedStringArray) -> bool:
+	for text: String in added:
+		if text.contains(ENABLED_KEY) and text.contains("true"):
+			return true
+	return false
+
+
+static func _rollout_is_staged(added: PackedStringArray) -> bool:
+	for text: String in added:
+		var percent: int = _rollout_value(text)
+		if percent > 0 and percent < ROLLOUT_FULL:
+			return true
+	return false
+
+
+## The integer written after `rollout_percent` on this line, or -1 when the line does
+## not set one. The digits are read as text rather than trusting a parsed number's
+## type, because JSON numbers always arrive as floats.
+static func _rollout_value(text: String) -> int:
+	var key: int = text.find(ROLLOUT_KEY)
+	if key < 0:
+		return -1
+	var digits: String = ""
+	for index: int in range(key + ROLLOUT_KEY.length(), text.length()):
+		var character: String = text[index]
+		if character >= "0" and character <= "9":
+			digits += character
+		elif not digits.is_empty():
+			break
+	if digits.is_empty():
+		return -1
+	return digits.to_int()
+
+
 static func _markdown_section(title: String, findings: Array) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	if findings.is_empty():
@@ -359,15 +672,26 @@ static func _api_finding(path_value: String, line: int, text: String, previous: 
 		"public function added with no `##` doc comment above it")
 
 
-static func _is_public_function(text: String) -> bool:
+## The name a `func` line declares, or "" when the line does not declare one. Shared by
+## the public-API rule and the assertionless-test rule, so both agree on what counts as
+## a function.
+static func _declared_function_name(text: String) -> String:
 	var rest: String = text
 	if rest.begins_with("static func "):
 		rest = rest.substr("static func ".length())
 	elif rest.begins_with("func "):
 		rest = rest.substr("func ".length())
 	else:
-		return false
-	return not rest.begins_with("_")
+		return ""
+	var open_index: int = rest.find("(")
+	if open_index < 0:
+		return rest.strip_edges()
+	return rest.substr(0, open_index).strip_edges()
+
+
+static func _is_public_function(text: String) -> bool:
+	var name_value: String = _declared_function_name(text)
+	return not name_value.is_empty() and not name_value.begins_with("_")
 
 
 ## A change to a file already at its size ceiling is where new code should be

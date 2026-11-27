@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/DiffReviewTest.gd` — `class_name DiffReviewTest` extends `GdUnitTestSuite`
 
-`272` lines · [back to the map](../../CODEBASE_MAP.md)
+`413` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd. Each fixture is an inline unified diff, so the test never depend…
 
@@ -18,6 +18,13 @@ Public API:
 - L223-243 `test_a_banned_pattern_inside_a_string_literal_is_not_flagged() -> void` — A fixture that feeds the parser a banned-looking string is data, not a call.
 - L247-257 `test_a_banned_pattern_documented_in_markdown_is_not_flagged() -> void` — Documentation mentions the ban on purpose; only GDScript can call the API.
 - L261-271 `test_test_suite_methods_are_not_treated_as_public_api() -> void` — GDScript has no private tests, so a suite's method names are not "new API surface".
+- L356-364 `test_review_tier_covers_folders_files_and_measured_fan_in() -> void`
+- L367-371 `test_fan_in_from_map_reads_the_used_by_line() -> void`
+- L374-377 `test_blast_radius_follows_the_trunk_rule() -> void`
+- L380-383 `test_markdown_report_leads_with_the_blast_radius() -> void`
+- L386-392 `test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged() -> void`
+- L395-403 `test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict() -> void`
+- L406-412 `test_adversarial_section_names_the_deep_context_and_the_invariants() -> void`
 
 Private:
 - L12-20 `_rules`
@@ -27,8 +34,13 @@ Private:
 - L54-72 `_game_change_fixture`
 - L75-87 `_api_fixture`
 - L92-108 `_core_fixture`
+- L275-284 `_trunk_fixture`
+- L288-297 `_leaf_fixture`
+- L301-317 `_tooling_fixture`
+- L321-339 `_feature_fixture`
+- L343-353 `_test_fixture`
 
-Uses: CodeIndexParser, DiffReviewParser, GameManager
+Uses: CardUI, CodeIndexParser, DiffReviewParser, GameManager, GameState, HandBar, HudTooltip
 Used by: —
 Loads: —
 

@@ -7,11 +7,22 @@ extends SceneTree
 ## data validator). This is the *review* layer: no rule here fails the build unless
 ## `--strict` is passed, which promotes the high-signal rules for a pre-push run.
 ##
+## It also answers the two questions that decide how deep a review has to go: the
+## blast radius (trunk code needs a line-by-line read, leaf code can be skimmed once
+## the gates are green) and whether a staged feature flag already bounds the change.
+## The fan-in behind that tier comes from the generated map, so the measure is the
+## codebase's own dependency graph rather than a guess.
+##
 ## Usage:
 ##   godot --headless --path . --script res://Tools/review_diff.gd
 ##   godot --headless --path . --script res://Tools/review_diff.gd -- \
 ##     --base origin/main --format markdown --output review.md
 ##   godot --headless --path . --script res://Tools/review_diff.gd -- --strict
+##   godot --headless --path . --script res://Tools/review_diff.gd -- --adversarial
+##
+## `--adversarial` appends the context-isolated brief: the invariants a *fresh* reviewer
+## (one that never saw the authoring conversation) should attack, plus the files whose
+## map pages belong in its context.
 ##
 ## Exit code 0 = nothing blocking, 1 = a strict rule failed, 2 = git could not run.
 ##
@@ -24,10 +35,15 @@ const ARG_BASE: String = "--base"
 const ARG_FORMAT: String = "--format"
 const ARG_OUTPUT: String = "--output"
 const ARG_STRICT: String = "--strict"
+const ARG_ADVERSARIAL: String = "--adversarial"
 const DEFAULT_BASE: String = "origin/main"
 const FORMAT_MARKDOWN: String = "markdown"
 const FORMAT_TEXT: String = "text"
 const GIT_FAILED: int = 2
+## The generated map: its `Used by:` line is the measured fan-in that decides which
+## changed scripts are trunk, whatever folder they happen to sit in.
+const MAP_DIR: String = "Docs/map"
+const SCRIPT_SUFFIX: String = ".gd"
 #endregion
 
 #region Lifecycle Methods
@@ -41,12 +57,16 @@ func _initialize() -> void:
 		])
 		quit(GIT_FAILED)
 		return
+	var diff_text: String = CodeIndexParser.dict_string(diff, "text")
 	var options: Dictionary = {
 		"strict": ARG_STRICT in OS.get_cmdline_user_args(),
 		"known_large_files": _known_large_files(),
+		"trunk_files": _measure_trunk_files(DiffReviewParser.parse_diff(diff_text)),
 	}
-	var result: Dictionary = DiffReviewParser.review(CodeIndexParser.dict_string(diff, "text"), options)
+	var result: Dictionary = DiffReviewParser.review(diff_text, options)
 	var report: String = _format(result)
+	if ARG_ADVERSARIAL in OS.get_cmdline_user_args():
+		report = report.strip_edges() + "\n\n" + DiffReviewParser.adversarial_section(result) + "\n"
 	print(report)
 	var output_path: String = _arg_value(ARG_OUTPUT, "")
 	if not output_path.is_empty():
@@ -96,6 +116,24 @@ func _known_large_files() -> PackedStringArray:
 	for key: Variant in files.keys():
 		result.append(str(key))
 	return result
+
+
+## Trunk by *measurement*: a changed script that the generated map says `TRUNK_FAN_IN`
+## or more others depend on is shared state, so it gets the line-by-line treatment even
+## when its folder looks leaf-like. The map is a gate-checked artifact, so its fan-in
+## cannot drift from the sources; a missing page simply means "not measured".
+func _measure_trunk_files(files: Array[Dictionary]) -> PackedStringArray:
+	var trunk: PackedStringArray = PackedStringArray()
+	for file: Dictionary in files:
+		var path_value: String = CodeIndexParser.dict_string(file, "path")
+		if not path_value.ends_with(SCRIPT_SUFFIX):
+			continue
+		var page: String = "%s/%s.md" % [MAP_DIR, path_value.trim_suffix(SCRIPT_SUFFIX)]
+		if not FileAccess.file_exists(page):
+			continue
+		if DiffReviewParser.fan_in_from_map(FileAccess.get_file_as_string(page)) >= DiffReviewParser.TRUNK_FAN_IN:
+			trunk.append(path_value)
+	return trunk
 
 
 func _write(path: String, text: String) -> void:
