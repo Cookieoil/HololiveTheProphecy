@@ -59,6 +59,6 @@ Public API:
 - L734-744 `static finalize_keys(keys: PackedStringArray) -> PackedStringArray`
 
 Uses: —
-Used by: GDTest/CodeIndexTest.gd, Tools/check_navigation.gd, Tools/gen_code_index.gd
+Used by: GDTest/CodeIndexTest.gd, GDTest/DiffReviewTest.gd, Tools/DiffReviewParser.gd, Tools/check_navigation.gd, Tools/gen_code_index.gd, Tools/review_diff.gd
 Loads: res://
 

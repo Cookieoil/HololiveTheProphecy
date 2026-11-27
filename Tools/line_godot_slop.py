@@ -119,6 +119,39 @@ def _load_baseline(root: pathlib.Path) -> dict:
     return data
 
 
+def _inside_string(line: str, index: int) -> bool:
+    """True when `index` sits inside a quoted literal.
+
+    A banned pattern that only appears as *data* (the reviewer's own rule list, a
+    test fixture that feeds the parser a diff) is not a call, so it must not fail
+    the gate; the rule is about API usage, not about the text.
+    """
+    quote = ""
+    escaped = False
+    for char in line[:index]:
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif quote:
+            if char == quote:
+                quote = ""
+        elif char in "\"'":
+            quote = char
+    return bool(quote)
+
+
+def _banned_matches(line: str) -> list[str]:
+    """Messages for every banned pattern used as code (not quoted) on this line."""
+    messages: list[str] = []
+    for pattern, message in BANNED_PATTERNS:
+        for match in pattern.finditer(line):
+            if not _inside_string(line, match.start()):
+                messages.append(message)
+                break
+    return messages
+
+
 def lint(root: pathlib.Path, strict: bool) -> int:
     baseline = _load_baseline(root)
     defaults = baseline["defaults"]
@@ -141,11 +174,9 @@ def lint(root: pathlib.Path, strict: bool) -> int:
             stripped = line.strip()
             if stripped.startswith("#"):
                 continue
-            for pattern, message in BANNED_PATTERNS:
-                if not pattern.search(line):
-                    continue
+            for message in _banned_matches(line):
                 if (
-                    pattern.pattern.startswith("await")
+                    "process_frame" in message
                     and FRAME_PUMP_EXEMPT_PARTS.intersection(path.parts)
                 ):
                     continue

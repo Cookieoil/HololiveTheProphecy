@@ -7,13 +7,15 @@
 #   pwsh -File Tools/preflight.ps1 -FixIndex          # regenerate Docs/ first
 #   pwsh -File Tools/preflight.ps1 -SkipIndexCheck    # leave Docs/ alone
 #   pwsh -File Tools/preflight.ps1 -Snapshots         # also render UI snapshots
+#   pwsh -File Tools/preflight.ps1 -Review            # also review the branch vs origin/main
 #
 # Exits 0 when every gate is green, 1 otherwise.
 param(
     [string]$Godot = 'godot',
     [switch]$FixIndex,
     [switch]$SkipIndexCheck,
-    [switch]$Snapshots
+    [switch]$Snapshots,
+    [switch]$Review
 )
 
 $ErrorActionPreference = 'Continue'
@@ -121,6 +123,23 @@ if ($Snapshots) {
     }
     else {
         Write-Host 'PASSED: UI snapshots (reports/ui-snapshots/)' -ForegroundColor Green
+    }
+}
+
+# -Review is the optional second-pass diff review. It is deliberately not one of the
+# CI gates: CI posts the same report as a pull-request comment, while -Review (with
+# --strict) fails locally on the high-signal rules so a branch can be fixed first.
+if ($Review) {
+    Write-Host ''
+    Write-Host '=== Second-pass review (-Review) ===' -ForegroundColor Cyan
+    $reviewArgs = @('--headless', '--path', '.', '--script', 'res://Tools/review_diff.gd', '--', '--base', 'origin/main', '--strict')
+    $review = Start-Process -FilePath $godotExe -ArgumentList $reviewArgs -NoNewWindow -Wait -PassThru
+    if ($review.ExitCode -ne 0) {
+        Write-Host ('FAILED (exit ' + $review.ExitCode + '): Second-pass review') -ForegroundColor Red
+        $failed += 'Second-pass review'
+    }
+    else {
+        Write-Host 'PASSED: Second-pass review' -ForegroundColor Green
     }
 }
 
