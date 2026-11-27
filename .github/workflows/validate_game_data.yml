@@ -91,6 +91,13 @@ jobs:
         timeout-minutes: 5
         run: godot --headless --path . "res://Tools/validator.tscn" -- --strict
 
+      # Architectural back pressure: bans imperative timers, frame pumps and
+      # upward tree walks, keeps Node types out of Core/, and ratchets file and
+      # function size so a class can only shrink. Same script preflight.ps1 runs.
+      - name: Anti-slop lint
+        timeout-minutes: 2
+        run: python3 Tools/line_godot_slop.py
+
   project:
     name: Scripts and tests
     needs: version

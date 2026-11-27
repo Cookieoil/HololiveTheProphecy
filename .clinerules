@@ -28,7 +28,7 @@ work through a branch and a pull request:
 5. `git switch main; git pull --ff-only` and confirm `git status -sb` shows no ahead/behind
 
 ## Pre-flight gates (required before every commit)
-Run all four headless gates from the repo root — they are exactly the gates CI runs:
+Run all five gates from the repo root — they are exactly the gates CI runs:
 
 1. Validate game data (errors **and** warnings are fatal):
    `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
@@ -39,6 +39,10 @@ Run all four headless gates from the repo root — they are exactly the gates CI
    `godot --headless --path . --script res://Tools/check_navigation.gd`
 4. Unit tests:
    `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
+5. Anti-slop lint — bans `create_timer()`, frame pumps and upward tree walks,
+   keeps `Core/` pure logic, and ratchets file/function size against
+   `Tools/slop_baseline.json` (baseline entries may only shrink):
+   `python Tools/line_godot_slop.py`
 
 Never commit past a red gate. If a gate fails, fix the root cause — do not weaken the gate.
 If gate 3 fails because the index is stale, regenerate it (`Docs/` is generated — never

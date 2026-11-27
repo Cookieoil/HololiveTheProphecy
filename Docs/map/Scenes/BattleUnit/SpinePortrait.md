@@ -1,12 +1,12 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleUnit/SpinePortrait.gd` — `class_name SpinePortrait` extends `Control`
 
-`632` lines · [back to the map](../../../CODEBASE_MAP.md)
+`649` lines · [back to the map](../../../CODEBASE_MAP.md)
 
-> extends Control, 3 signal(s), 28 export(s), 36 function(s)
+> extends Control, 3 signal(s), 28 export(s), 37 function(s)
 
 Sections: Helper methods
-- L81-85 `enum ActionBeat` = REACTION, transformation, buff preparation, etc. ATTACK
+- L88-92 `enum ActionBeat` = REACTION, transformation, buff preparation, etc. ATTACK
 
 Signals:
 - L4 `action_finished(anim_name: StringName)`
@@ -67,46 +67,49 @@ State:
 - L72 `_action_lead: float = 0.0` — Seconds left until the running action reaches its overlap beat.
 - L76 `_action_lead_armed: bool = false` — True while an overlap wait is armed for the running action. Kept separate from the counter so "already elapsed" (negative time) can never be confused with "no l…
 - L79 `_hit_cancel_token: int = 0` — Cancels pending hit reactions when the queue is cleared (death/reload).
+- L83 `_pending_hit_delay: float = -1.0` — Seconds left before a delayed hit reaction fires. Negative means "not scheduled"; _clear_action_queue() cancels it.
+- L86 `_pending_death_delay: float = -1.0` — Seconds left before a delayed death animation fires. Negative means "not scheduled"; _clear_action_queue() cancels it.
 
 Public API:
-- L117-120 `set_skeleton_data(new_data: Resource) -> void` — Dynamically update the skeleton data (e.g., if assigned at runtime)
-- L131-133 `configure_from_unit(_display_name: String, is_enemy: bool) -> void`
-- L135-137 `set_hit_flash(strength: float) -> void`
-- L144-177 `request_action(anim_name: StringName, beat: ActionBeat = ActionBeat.ATTACK, lead_seconds: float = -1.0) -> bool` — Requests an animation without immediately interrupting another action. Lower beat values play first. Requests with the same beat remain FIFO. fires. -1 (default…
-- L180-185 `play_hit(delay: float = -1.0) -> void`
-- L214-215 `play_skill(skill_index: int, rank: int = 0) -> void`
-- L223-233 `play_skill_and_wait(skill_index: int, rank: int = 0, lead: float = 1.0) -> void` — Plays a skill action and waits for the caller's turn to continue. waits for the whole animation plus its blend back to idle, which is what the player's own turn…
-- L244-247 `static lead_wait_seconds(duration: float, lead_fraction: float) -> float` — Seconds the caller waits before the next actor may start, for an action that lasts `duration` and an overlap request of `lead_fraction`. -1.0 means "wait for th…
-- L255-261 `play_ultimate_and_wait() -> void`
-- L350-360 `has_animation(anim_name: StringName) -> bool` — Check if the current skeleton actually has the animation
-- L364-373 `play_animation(anim_name: StringName, loop: bool = false) -> void` — Plays a one-shot by default, then automatically returns to idle. Pass loop = true for persistent states such as sleep, freeze, or giddy.
-- L426-444 `set_dead(value: bool) -> void`
-- L606-611 `is_skill_animation(anim_name: StringName) -> bool` — True for animations where the character leaves its idle spot.
-- L613-616 `get_intro_duration() -> float` — How long the spawn animation lasts. UnitUI fades its HUD in after this.
-- L619-620 `get_canvas_group() -> CanvasGroup`
+- L128-131 `set_skeleton_data(new_data: Resource) -> void` — Dynamically update the skeleton data (e.g., if assigned at runtime)
+- L142-144 `configure_from_unit(_display_name: String, is_enemy: bool) -> void`
+- L146-148 `set_hit_flash(strength: float) -> void`
+- L155-188 `request_action(anim_name: StringName, beat: ActionBeat = ActionBeat.ATTACK, lead_seconds: float = -1.0) -> bool` — Requests an animation without immediately interrupting another action. Lower beat values play first. Requests with the same beat remain FIFO. fires. -1 (default…
+- L191-196 `play_hit(delay: float = -1.0) -> void`
+- L215-216 `play_skill(skill_index: int, rank: int = 0) -> void`
+- L224-234 `play_skill_and_wait(skill_index: int, rank: int = 0, lead: float = 1.0) -> void` — Plays a skill action and waits for the caller's turn to continue. waits for the whole animation plus its blend back to idle, which is what the player's own turn…
+- L245-248 `static lead_wait_seconds(duration: float, lead_fraction: float) -> float` — Seconds the caller waits before the next actor may start, for an action that lasts `duration` and an overlap request of `lead_fraction`. -1.0 means "wait for th…
+- L256-262 `play_ultimate_and_wait() -> void`
+- L353-363 `has_animation(anim_name: StringName) -> bool` — Check if the current skeleton actually has the animation
+- L367-376 `play_animation(anim_name: StringName, loop: bool = false) -> void` — Plays a one-shot by default, then automatically returns to idle. Pass loop = true for persistent states such as sleep, freeze, or giddy.
+- L429-447 `set_dead(value: bool) -> void`
+- L623-628 `is_skill_animation(anim_name: StringName) -> bool` — True for animations where the character leaves its idle spot.
+- L630-633 `get_intro_duration() -> float` — How long the spawn animation lasts. UnitUI fades its HUD in after this.
+- L636-637 `get_canvas_group() -> CanvasGroup`
 
 Private:
-- L87-91 `_ready`
-- L93-115 `_process`
-- L122-129 `_reload_spine`
-- L187-199 `_schedule_delayed_hit`
-- L202-213 `_get_skill_anim`
-- L249-253 `_get_ultimate_anim`
-- L262-267 `_schedule_action_pump`
-- L270-302 `_pump_action_queue`
-- L305-327 `_on_spine_animation_completed`
-- L330-348 `_clear_action_queue`
-- L376-410 `_play_base_animation`
-- L412-423 `_play_death_animation`
-- L446-455 `_schedule_delayed_death`
-- L457-502 `_create_spine_sprite`
-- L505-520 `_create_material`
-- L523-535 `_fit_sprite`
-- L540-556 `_show_fallback`
-- L557-577 `_get_animation_duration`
-- L580-593 `_finish_active_action`
-- L598-603 `_emit_action_lead`
-- L623-630 `_ensure_canvas_group`
+- L94-98 `_ready`
+- L100-126 `_process`
+- L133-140 `_reload_spine`
+- L198-200 `_schedule_delayed_hit`
+- L203-214 `_get_skill_anim`
+- L250-254 `_get_ultimate_anim`
+- L263-268 `_schedule_action_pump`
+- L271-303 `_pump_action_queue`
+- L306-328 `_on_spine_animation_completed`
+- L331-351 `_clear_action_queue`
+- L379-413 `_play_base_animation`
+- L415-426 `_play_death_animation`
+- L449-450 `_schedule_delayed_death`
+- L454-472 `_tick_pending_delays`
+- L474-519 `_create_spine_sprite`
+- L522-537 `_create_material`
+- L540-552 `_fit_sprite`
+- L557-573 `_show_fallback`
+- L574-594 `_get_animation_duration`
+- L597-610 `_finish_active_action`
+- L615-620 `_emit_action_lead`
+- L640-647 `_ensure_canvas_group`
 
 Uses: BattleScene
 Used by: GDTest/EnemyTurnOverlapTest.gd, Scenes/BattleUnit/UnitUI.gd

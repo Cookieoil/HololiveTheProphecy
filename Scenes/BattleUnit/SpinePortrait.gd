@@ -78,6 +78,13 @@ var _action_lead_armed: bool = false
 ## Cancels pending hit reactions when the queue is cleared (death/reload).
 var _hit_cancel_token: int = 0
 
+## Seconds left before a delayed hit reaction fires. Negative means "not
+## scheduled"; _clear_action_queue() cancels it.
+var _pending_hit_delay: float = -1.0
+## Seconds left before a delayed death animation fires. Negative means "not
+## scheduled"; _clear_action_queue() cancels it.
+var _pending_death_delay: float = -1.0
+
 enum ActionBeat {
 	REACTION = 0, # Hit reactions and other minor responses.
 	SETUP = 50,   # Posture, transformation, buff preparation, etc.
@@ -91,6 +98,10 @@ func _ready() -> void:
 	resized.connect(_fit_sprite)
 
 func _process(delta: float) -> void:
+	# Delayed hit/death cues are plain countdowns, not timers: they follow
+	# Engine.time_scale and are cancelled deterministically by a queue clear.
+	_tick_pending_delays(delta)
+
 	if not _action_running:
 		return
 
@@ -185,17 +196,7 @@ func play_hit(delay: float = -1.0) -> void:
 	_schedule_delayed_hit(d)
 
 func _schedule_delayed_hit(delay: float) -> void:
-	var token: int = _hit_cancel_token
-	get_tree().create_timer(delay).timeout.connect(func() -> void:
-		if not is_inside_tree():
-			return
-		# Superseded by a death, skeleton reload, or explicit queue clear.
-		if token != _hit_cancel_token:
-			return
-		if _dead or _animation_state == null:
-			return
-		request_action(anim_hit, ActionBeat.REACTION)
-	)
+	_pending_hit_delay = delay
 	
 ## skill_index: 1 or 2
 ## rank: 0 = normal, 1 = merged/condition met, 2 = double merged
@@ -341,6 +342,8 @@ func _clear_action_queue() -> void:
 	_action_lead = 0.0
 	_action_lead_armed = false
 	_hit_cancel_token += 1
+	_pending_hit_delay = -1.0
+	_pending_death_delay = -1.0
 	for anim: StringName in cancelled:
 		action_finished.emit(anim)
 		# Overlap waiters of a cancelled action must not be left hanging.
@@ -444,15 +447,29 @@ func set_dead(value: bool) -> void:
 		_play_base_animation(anim_idle, true)
 
 func _schedule_delayed_death(delay: float) -> void:
-	get_tree().create_timer(delay).timeout.connect(func() -> void:
-		if not is_inside_tree():
-			return
-		# Resurrection or skeleton reload cancelled it.
-		if not _dead:
-			return
-		_clear_action_queue()
-		_play_death_animation()
-	)
+	_pending_death_delay = delay
+
+
+## Advances the delayed hit/death countdowns; called once per frame from _process.
+func _tick_pending_delays(delta: float) -> void:
+	if _pending_hit_delay >= 0.0:
+		_pending_hit_delay -= delta
+		if _pending_hit_delay <= 0.0:
+			_pending_hit_delay = -1.0
+			# Superseded by a death or skeleton reload.
+			if _dead or _animation_state == null:
+				return
+			request_action(anim_hit, ActionBeat.REACTION)
+
+	if _pending_death_delay >= 0.0:
+		_pending_death_delay -= delta
+		if _pending_death_delay <= 0.0:
+			_pending_death_delay = -1.0
+			# Resurrection or skeleton reload cancelled it.
+			if not _dead:
+				return
+			_clear_action_queue()
+			_play_death_animation()
 
 func _create_spine_sprite() -> void:
 	if skeleton_data == null:
