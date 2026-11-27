@@ -41,6 +41,11 @@ const FNV_OFFSET: int = 2166136261
 const FNV_PRIME: int = 16777619
 const UINT32_MASK: int = 4294967295
 const NAME_PATTERN: String = "^[a-z][a-z0-9_]*$"
+## Keys the registry reads, and nothing else. An unknown key is a typo: with a
+## permissive parser `"rollout_pct": 5` would silently read as `rollout_percent`
+## unset, and unset means 100% - a canary shipping to every player by accident.
+const ALLOWED_ROOT_KEYS: Array[String] = [KEY_FLAGS]
+const ALLOWED_ENTRY_KEYS: Array[String] = [KEY_ENABLED, KEY_ROLLOUT, KEY_DESCRIPTION]
 #endregion
 
 #region Public Methods
@@ -54,6 +59,13 @@ static func normalize(root: Variant) -> Dictionary:
 		errors.append("features.json: the root must be an object")
 		return {"flags": flags, "errors": errors}
 	var root_object: Dictionary = root
+	for key: Variant in root_object.keys():
+		var top_key: String = str(key)
+		if not ALLOWED_ROOT_KEYS.has(top_key):
+			errors.append(
+				"features.json: unknown top-level key '%s' (only 'flags' is read)"
+				% top_key
+			)
 	if not root_object.has(KEY_FLAGS):
 		errors.append("features.json: missing the 'flags' object")
 		return {"flags": flags, "errors": errors}
@@ -134,6 +146,14 @@ static func is_active(flags: Dictionary, flag_name: String) -> bool:
 ## description is an error on purpose: an undocumented experiment is a decision
 ## nobody can revisit.
 static func _normalize_entry(flag_name: String, entry: Dictionary, errors: PackedStringArray) -> Dictionary:
+	for key: Variant in entry.keys():
+		var entry_key: String = str(key)
+		if not ALLOWED_ENTRY_KEYS.has(entry_key):
+			errors.append(
+				"features.json: '%s' has unknown key '%s' (allowed: %s) - a typo here would silently change the rollout"
+				% [flag_name, entry_key, ", ".join(ALLOWED_ENTRY_KEYS)]
+			)
+
 	var enabled: bool = false
 	if entry.has(KEY_ENABLED):
 		var raw_enabled: Variant = entry.get(KEY_ENABLED)
@@ -154,12 +174,20 @@ static func _normalize_entry(flag_name: String, entry: Dictionary, errors: Packe
 			percent = clampi(percent, 0, BUCKETS)
 
 	var description: String = ""
-	var raw_description: Variant = entry.get(KEY_DESCRIPTION, "")
-	if raw_description is String:
-		var text: String = raw_description
-		description = text.strip_edges()
-	if description.is_empty():
+	if not entry.has(KEY_DESCRIPTION):
 		errors.append("features.json: '%s' needs a 'description' saying what is being tried" % flag_name)
+	else:
+		var raw_description: Variant = entry.get(KEY_DESCRIPTION)
+		if not (raw_description is String):
+			errors.append("features.json: '%s.description' must be a string" % flag_name)
+		else:
+			var text: String = raw_description
+			description = text.strip_edges()
+			if description.is_empty():
+				errors.append(
+					"features.json: '%s' needs a non-empty 'description' saying what is being tried"
+					% flag_name
+				)
 
 	return {KEY_ENABLED: enabled, KEY_ROLLOUT: percent, KEY_DESCRIPTION: description}
 

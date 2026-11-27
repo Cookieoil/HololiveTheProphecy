@@ -88,8 +88,9 @@ foreach ($gate in $gates) {
     }
 }
 
-# Anti-slop lint: architectural rules and size ratchets for first-party scripts.
-# Same script the CI `validate` job runs; python is the only non-Godot gate.
+# Anti-slop lint: banned patterns plus the size / branching / get_parent ratchets.
+# --strict so a stale ratchet entry fails the run instead of warning, which is what
+# keeps the ceiling one-way. Same script the CI `validate` job runs.
 Write-Host ''
 Write-Host '=== Anti-slop lint ===' -ForegroundColor Cyan
 $python = Get-Command python -ErrorAction SilentlyContinue
@@ -99,7 +100,7 @@ if (-not $python) {
     $failed += 'Anti-slop lint'
 }
 else {
-    $lint = Start-Process -FilePath $python.Source -ArgumentList 'Tools/line_godot_slop.py' -NoNewWindow -Wait -PassThru
+    $lint = Start-Process -FilePath $python.Source -ArgumentList 'Tools/line_godot_slop.py', '--strict' -NoNewWindow -Wait -PassThru
     if ($lint.ExitCode -ne 0) {
         Write-Host ('FAILED (exit ' + $lint.ExitCode + '): Anti-slop lint') -ForegroundColor Red
         $failed += 'Anti-slop lint'

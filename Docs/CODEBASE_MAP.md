@@ -32,7 +32,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 563 | Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single… |
 | [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 28 | Static utility for dice rolls. Separated for easy mocking/seeding in tests. |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn loop, resolved at step… |
-| [`Core/FeatureFlags.gd`](map/Core/FeatureFlags.md) | `FeatureFlags` | 204 | Registry and deterministic evaluator for staged feature flags. A flag lives in `res://Data/json/… |
+| [`Core/FeatureFlags.gd`](map/Core/FeatureFlags.md) | `FeatureFlags` | 232 | Registry and deterministic evaluator for staged feature flags. A flag lives in `res://Data/json/… |
 | [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 638 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that r… |
 | [`Core/GameUI.gd`](map/Core/GameUI.md) | `GameUI` | 106 | Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameMa… |
 | [`Core/Telemetry/HttpBatchSink.gd`](map/Core/Telemetry/HttpBatchSink.md) | `HttpBatchSink` | 54 | Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but the finish… |
@@ -74,7 +74,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager al… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 400 | extends RefCounted, 9 function(s) |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 759 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns… |
-| [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 475 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
+| [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 479 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
 | [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 243 | Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifa… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 85 | Headless compile gate: loads every project GDScript outside the excluded folders, so a type erro… |
@@ -99,11 +99,11 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 99 | Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/deb… |
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 302 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigati… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 846 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is vie… |
-| [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 258 | Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd.… |
+| [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 272 | Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd.… |
 | [`GDTest/EnemySkillBalanceTest.gd`](map/GDTest/EnemySkillBalanceTest.md) | `EnemySkillBalanceTest` | 269 | Locks the enemy-skill balance pass: - an enemy threshold matches the parity of the slot it sits… |
 | [`GDTest/EnemyTurnOverlapTest.gd`](map/GDTest/EnemyTurnOverlapTest.md) | `EnemyTurnOverlapTest` | 232 | Locks the enemy-turn overlap ("fast mode" pacing): - consecutive enemies hand control to the nex… |
 | [`GDTest/EnemyUltAuraTest.gd`](map/GDTest/EnemyUltAuraTest.md) | `EnemyUltAuraTest` | 139 | Locks in the enemy Ultimate warning lifecycle. The crimson character aura and the Moxie orb prev… |
-| [`GDTest/FeatureFlagsTest.gd`](map/GDTest/FeatureFlagsTest.md) | `FeatureFlagsTest` | 118 | Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bucketing, the precedence… |
+| [`GDTest/FeatureFlagsTest.gd`](map/GDTest/FeatureFlagsTest.md) | `FeatureFlagsTest` | 157 | Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bucketing, the precedence… |
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the card the player merged *int… |
 | [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 286 | Locks the top-bar hover tooltips (HudTooltip) and the slab they are drawn on (the tooltip theme… |
 | [`GDTest/MessageLogTest.gd`](map/GDTest/MessageLogTest.md) | `MessageLogTest` | 46 | Locks the battle message log: the game authors it in BBCode (`ColorUtils.colorize` and the HOW T… |

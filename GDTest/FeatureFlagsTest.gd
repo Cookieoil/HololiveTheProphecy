@@ -115,3 +115,42 @@ func test_evaluate_reports_flags_in_name_order() -> void:
 	var sorted: Array = keys.duplicate()
 	sorted.sort()
 	assert_that(keys).is_equal(sorted)
+
+
+## The typo trap this guard exists for: `rollout_pct` would otherwise read as
+## "rollout_percent unset", and unset means 100% - a 5% canary shipping to everyone.
+func test_a_typoed_key_is_rejected_instead_of_defaulting_to_full_rollout() -> void:
+	var normalized: Dictionary = FeatureFlags.normalize({
+		"flags": {
+			"canary": {"enabled": true, "rollout_pct": 5, "description": "5% canary"},
+		},
+	})
+	var raw_errors: Variant = normalized.get("errors")
+	assert_bool(raw_errors is PackedStringArray).is_true()
+	if raw_errors is PackedStringArray:
+		var messages: PackedStringArray = raw_errors
+		assert_int(messages.size()).is_equal(1)
+		assert_bool(messages[0].contains("rollout_pct")).is_true()
+		assert_bool(messages[0].contains("unknown key")).is_true()
+
+
+func test_an_unknown_top_level_key_is_rejected() -> void:
+	var normalized: Dictionary = FeatureFlags.normalize({"flags": {}, "extra": {}})
+	var raw_errors: Variant = normalized.get("errors")
+	assert_bool(raw_errors is PackedStringArray).is_true()
+	if raw_errors is PackedStringArray:
+		var messages: PackedStringArray = raw_errors
+		assert_int(messages.size()).is_equal(1)
+		assert_bool(messages[0].contains("extra")).is_true()
+
+
+func test_a_non_string_description_is_rejected() -> void:
+	var normalized: Dictionary = FeatureFlags.normalize({
+		"flags": {"exp": {"enabled": true, "description": 5}},
+	})
+	var raw_errors: Variant = normalized.get("errors")
+	assert_bool(raw_errors is PackedStringArray).is_true()
+	if raw_errors is PackedStringArray:
+		var messages: PackedStringArray = raw_errors
+		assert_int(messages.size()).is_equal(1)
+		assert_bool(messages[0].contains("must be a string")).is_true()

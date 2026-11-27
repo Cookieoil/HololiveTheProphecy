@@ -81,14 +81,17 @@ Server/supabase/
                                          # v_cohort_pick_rates, v_defeat_causes,
                                          # v_replayable_runs, v_run_overview
   migrations/003_run_flags.sql           # telemetry_runs.flags + v_flag_cohorts
+  migrations/004_flag_cohorts_by_balance.sql  # v_flag_cohorts scoped per balance patch
   functions/telemetry-ingest/index.ts    # validated, idempotent batch ingest
 ```
 
 `telemetry_runs.flags` holds the staged flags that were ON for a run (see
 `Core/FeatureFlags.gd` and `Data/json/features.json`), and `v_flag_cohorts` reports
-each flag's win rate next to the runs that never had it — so an experiment is read
-before it is rolled out to everyone. Flags do not enter `balance_hash`: they are
-recorded per run, so raising a rollout does not re-partition earlier balance data.
+each flag's win rate next to the runs that never had it — scoped to the **same
+`balance_hash`**, so a balance patch is never read as a flag effect — so an
+experiment is read before it is rolled out to everyone. Flags do not enter
+`balance_hash`: they are recorded per run, so raising a rollout does not
+re-partition earlier balance data.
 
 Every view is **production only**: runs from a developer build or touched by a
 tester tool are excluded.

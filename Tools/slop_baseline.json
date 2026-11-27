@@ -1,8 +1,9 @@
 {
-  "_comment": "Ratchet baseline for Tools/line_godot_slop.py. Values are the CURRENT size of known large files/functions: they may only shrink. Do not raise an entry; split the class or extract a helper instead.",
+  "_comment": "Ratchet baseline for Tools/line_godot_slop.py. Values are the CURRENT metric for known offenders: they may only shrink. Do not raise an entry; split the class, extract a helper or flatten the branches instead. `complexity` is a function's branch score (1 + one point per if/elif/for/while/match in the body); `get_parent` counts upward tree walks per file, which may only go down.",
   "defaults": {
     "max_file_lines": 900,
-    "max_function_lines": 80
+    "max_function_lines": 80,
+    "max_complexity": 12
   },
   "files": {
     "Managers/GameManager.gd": 1182,
@@ -22,5 +23,33 @@
     "Skills/SkillPreviewFormatter.gd::_substitute_tokens": 109,
     "Tools/CodeIndexParser.gd::parse_script": 146,
     "Tools/validate_gameData.gd::_validate_effect": 92
+  },
+  "complexity": {
+    "Core/DataLoader.gd::_build_config": 15,
+    "Managers/GameManager.gd::_run_game_loop": 19,
+    "Managers/TelemetryManager.gd::_build_offered": 13,
+    "Scenes/BattleUnit/StatusIconCatalog.gd::extract_unit_statuses": 29,
+    "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 18,
+    "Scenes/BattleUnit/UnitUI.gd::_load_unit_texture": 15,
+    "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 30,
+    "Scenes/HUD/BattleOverlayController.gd::_find_character_texture_in_node": 15,
+    "Scenes/HUD/BattleOverlayController.gd::rebuild_for_units": 15,
+    "Scenes/HUD/MoxieOrbUI.gd::_draw": 15,
+    "Skills/SkillPreviewFormatter.gd::_substitute_tokens": 17,
+    "Tools/CodeIndexParser.gd::parse_script": 23,
+    "Tools/check_navigation.gd::_scan_declarations": 13,
+    "Tools/dataBuilder.gd::_coerce": 16,
+    "Tools/dataBuilder.gd::_parse_table": 15,
+    "Tools/dataBuilder.gd::_read_config": 15,
+    "Tools/gen_code_index.gd::_append_functions": 13,
+    "Tools/validate_gameData.gd::_validate_effect": 29,
+    "Tools/validate_gameData.gd::_validate_units": 18
+  },
+  "get_parent": {
+    "Scenes/Cards/CardUI.gd": 2,
+    "Scenes/Cards/HandBar.gd": 2,
+    "Scenes/HUD/BattleOverlayController.gd": 1,
+    "Scenes/HUD/OutlineGlow.gd": 2
   }
 }
+

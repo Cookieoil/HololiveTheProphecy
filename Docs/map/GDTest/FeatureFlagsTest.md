@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/FeatureFlagsTest.gd` — `class_name FeatureFlagsTest` extends `GdUnitTestSuite`
 
-`118` lines · [back to the map](../../CODEBASE_MAP.md)
+`157` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bucketing, the precedence order, and the rule that an unknown flag is always off.
 
@@ -17,6 +17,9 @@ Public API:
 - L87-92 `test_a_half_rollout_is_on_for_roughly_half_the_seeds() -> void`
 - L95-108 `test_a_malformed_registry_reports_every_problem() -> void`
 - L111-117 `test_evaluate_reports_flags_in_name_order() -> void`
+- L122-134 `test_a_typoed_key_is_rejected_instead_of_defaulting_to_full_rollout() -> void` — The typo trap this guard exists for: `rollout_pct` would otherwise read as "rollout_percent unset", and unset means 100% - a 5% canary shipping to everyone.
+- L137-144 `test_an_unknown_top_level_key_is_rejected() -> void`
+- L147-156 `test_a_non_string_description_is_rejected() -> void`
 
 Private:
 - L12-42 `_definitions`
