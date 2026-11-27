@@ -60,6 +60,7 @@ const CMD_RESPAWN_WAVE: String = "respawn_wave"           # {}
 const CMD_CLEAR_WAVE: String = "clear_wave"               # {}
 const CMD_SHOW_VICTORY: String = "show_victory"           # {}
 const CMD_SHOW_DEFEAT: String = "show_defeat"             # {}
+const CMD_SET_FLAG: String = "set_flag"                   # { name: String, enabled: int }
 
 ## Amounts the quick action buttons apply.
 const DAMAGE_STEP: int = 5
@@ -112,6 +113,12 @@ var _gated_buttons: Array[Button] = []
 var _target_entries: Array[Dictionary] = []
 ## Labels currently in `_target_selector`, so an unchanged unit list is not rebuilt.
 var _target_labels: PackedStringArray = PackedStringArray()
+## Flags tab: one toggle per staged flag (Core/FeatureFlags.gd), rebuilt only when the
+## flag set changes so a refresh does not churn the node tree.
+var _flags_hint: Label
+var _flags_list: VBoxContainer
+var _flag_labels: PackedStringArray = PackedStringArray()
+var _flag_toggles: Dictionary[String, CheckButton] = {}
 #endregion
 
 
@@ -158,6 +165,7 @@ func refresh(snapshot: Dictionary, targets: Array[Dictionary]) -> void:
 	]
 	_hand_cap_label.text = str(max_hand)
 	_rebuild_targets(targets)
+	_rebuild_flags(snapshot)
 
 
 ## Enables or greys out every state-mutating tool. The scene locks the panel while
@@ -192,6 +200,22 @@ func toggle_menu() -> void:
 		close_menu()
 	else:
 		open_menu()
+
+
+## Selects a tab by its title. Tooling seam: the UI snapshot runner captures each tab,
+## and a tester can jump straight to one.
+func show_tab(title: String) -> bool:
+	var found: Array[Node] = find_children("*", "TabContainer", true, false)
+	if found.is_empty():
+		return false
+	var tabs: TabContainer = found[0] as TabContainer
+	if tabs == null:
+		return false
+	for index: int in range(tabs.get_tab_count()):
+		if tabs.get_tab_title(index) == title:
+			tabs.current_tab = index
+			return true
+	return false
 #endregion
 
 
@@ -278,6 +302,7 @@ func _build_layout() -> void:
 	_build_resources_tab(tabs)
 	_build_units_tab(tabs)
 	_build_screen_tab(tabs)
+	_build_flags_tab(tabs)
 
 
 ## Overflow stress: spawning ignores `max_hand_size` on purpose, so a tester can see
@@ -435,6 +460,106 @@ func _build_screen_tab(tabs: TabContainer) -> void:
 	page.add_child(result_row)
 	result_row.add_child(_make_button("Preview victory", CMD_SHOW_VICTORY))
 	result_row.add_child(_make_button("Preview defeat", CMD_SHOW_DEFEAT))
+
+
+## Staged feature flags (Core/FeatureFlags.gd): flip one for this run to see what it
+## does. The flip travels as a normal debug command, so the run is flagged as
+## tester-touched and a manual experiment never lands in a balance view.
+func _build_flags_tab(tabs: TabContainer) -> void:
+	var page := _make_tab(tabs, "Flags")
+
+	_flags_hint = _make_label("No staged flags in features.json.", 11, SECTION_COLOR)
+	page.add_child(_flags_hint)
+
+	_flags_list = VBoxContainer.new()
+	_flags_list.add_theme_constant_override("separation", 2)
+	page.add_child(_flags_list)
+
+
+## One toggle per flag. The rows are rebuilt only when the flag *set* changes; a value
+## change just moves a check, so a refresh cannot steal a click mid-press.
+func _rebuild_flags(snapshot: Dictionary) -> void:
+	if _flags_list == null:
+		return
+	var raw_flags: Variant = snapshot.get("flags", {})
+	if not (raw_flags is Dictionary):
+		return
+	var flags: Dictionary = raw_flags
+	var names: Array = flags.keys()
+	names.sort()
+	var labels: PackedStringArray = PackedStringArray()
+	for key: Variant in names:
+		labels.append(str(key))
+	if labels != _flag_labels:
+		_flag_labels = labels
+		_build_flag_rows(names, flags)
+	_sync_flag_values(flags)
+
+
+func _build_flag_rows(names: Array, flags: Dictionary) -> void:
+	# Retire the old toggles from the gated list before freeing them, or the next
+	# set_gameplay_enabled() would poke at freed nodes.
+	for flag_name: String in _flag_toggles.keys():
+		_gated_buttons.erase(_flag_toggles[flag_name])
+	_flag_toggles.clear()
+	for child: Node in _flags_list.get_children():
+		child.queue_free()
+	_flags_hint.visible = names.is_empty()
+
+	for key: Variant in names:
+		var flag_name: String = str(key)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		var label := _make_label(flag_name, 11, READOUT_COLOR)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		var toggle := CheckButton.new()
+		toggle.focus_mode = Control.FOCUS_NONE
+		toggle.tooltip_text = _flag_tooltip(flags, flag_name)
+		toggle.toggled.connect(_on_flag_toggled.bind(flag_name))
+		_gated_buttons.append(toggle)
+		row.add_child(toggle)
+		_flags_list.add_child(row)
+		_flag_toggles[flag_name] = toggle
+
+
+func _sync_flag_values(flags: Dictionary) -> void:
+	for flag_name: String in _flag_toggles.keys():
+		var toggle: CheckButton = _flag_toggles[flag_name]
+		# set_pressed_no_signal: pushing state down must not look like a click.
+		toggle.set_pressed_no_signal(_flag_enabled(flags, flag_name))
+
+
+func _flag_enabled(flags: Dictionary, flag_name: String) -> bool:
+	var raw: Variant = flags.get(flag_name, {})
+	if not (raw is Dictionary):
+		return false
+	var entry: Dictionary = raw
+	var raw_enabled: Variant = entry.get("enabled", false)
+	if raw_enabled is bool:
+		var enabled: bool = raw_enabled
+		return enabled
+	return false
+
+
+## The flag's own description, which the data gate requires it to have: it is what the
+## experiment is trying to find out.
+func _flag_tooltip(flags: Dictionary, flag_name: String) -> String:
+	var raw: Variant = flags.get(flag_name, {})
+	if not (raw is Dictionary):
+		return flag_name
+	var entry: Dictionary = raw
+	var description: String = str(entry.get("description", "")).strip_edges()
+	if description.is_empty():
+		return flag_name
+	return "%s\n%s" % [flag_name, description]
+
+
+func _on_flag_toggled(pressed: bool, flag_name: String) -> void:
+	debug_command_requested.emit(CMD_SET_FLAG, {
+		"name": flag_name,
+		"enabled": 1 if pressed else 0,
+	})
 
 
 func _make_tab(tabs: TabContainer, title: String) -> VBoxContainer:

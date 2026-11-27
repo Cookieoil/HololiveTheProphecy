@@ -92,11 +92,18 @@ func _capture() -> void:
 	scene.debug_menu.open_menu()
 	await _settle()
 	_shot("04_debug_menu.png")
+	# Same panel, on the Flags tab: the staged-flag toggles and their descriptions are
+	# the one tool that only makes sense visible.
+	if scene.debug_menu.show_tab("Flags"):
+		await _settle()
+		_shot("05_debug_flags.png")
+	else:
+		_fail("the debug palette has no Flags tab")
 	scene.debug_menu.close_menu()
 
 	await scene.show_battle_result(true)
 	await _settle()
-	_shot("05_victory_cutscene.png")
+	_shot("06_victory_cutscene.png")
 
 	_finish()
 

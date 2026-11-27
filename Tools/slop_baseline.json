@@ -6,14 +6,14 @@
     "max_complexity": 12
   },
   "files": {
-    "Managers/GameManager.gd": 1182,
+    "Managers/GameManager.gd": 1173,
     "Managers/TelemetryManager.gd": 1020,
     "Scenes/BattleUnit/UnitUI.gd": 1340,
     "Scenes/Cards/CardUI.gd": 1380,
     "Tools/validate_gameData.gd": 1262
   },
   "functions": {
-    "Managers/GameManager.gd::_handle_debug_command": 97,
+    "Managers/GameManager.gd::_handle_debug_command": 92,
     "Managers/GameManager.gd::_run_game_loop": 98,
     "Scenes/BattleUnit/StatusIconCatalog.gd::extract_unit_statuses": 132,
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 127,

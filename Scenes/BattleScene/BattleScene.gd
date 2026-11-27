@@ -544,6 +544,7 @@ func _debug_snapshot(state: GameState) -> Dictionary:
 		"waves": state.wave_definitions.size(),
 		"dice_size": state.get_dice_size(state.turn_number),
 		"next_bonus": state.next_skill_bonus,
+		"flags": state.flag_report(),
 	}
 
 

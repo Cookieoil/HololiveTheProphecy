@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleScene/BattleScene.gd` — `class_name BattleScene` extends `GameUI`
 
-`669` lines · [back to the map](../../../CODEBASE_MAP.md)
+`670` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > extends GameUI, 2 signal(s), 11 export(s), 46 function(s)
 
@@ -96,16 +96,16 @@ Private:
 - L512-515 `_on_debug_command_requested`
 - L518-524 `_refresh_debug_menu`
 - L527-530 `_debug_state`
-- L534-547 `_debug_snapshot`
-- L553-562 `_build_debug_targets`
-- L572-587 `_setup_result_overlay`
-- L593-595 `_on_restart_requested`
-- L599-604 `_debug_target_entry`
-- L611-623 `_setup_consent_gate`
-- L629-637 `_run_consent_gate`
-- L642-648 `_setup_telemetry_uploader`
-- L653-655 `_on_game_over_drain`
-- L662-667 `_should_prompt_consent`
+- L534-548 `_debug_snapshot`
+- L554-563 `_build_debug_targets`
+- L573-588 `_setup_result_overlay`
+- L594-596 `_on_restart_requested`
+- L600-605 `_debug_target_entry`
+- L612-624 `_setup_consent_gate`
+- L630-638 `_run_consent_gate`
+- L643-649 `_setup_telemetry_uploader`
+- L654-656 `_on_game_over_drain`
+- L663-668 `_should_prompt_consent`
 
 Uses: BattleOverlayController, BattleResultOverlay, Card, CardIconCatalog, DataLoader, DebugMenuPopup, EnemyIntent, GameDatabase, GameManager, GameState, GameUI, HandBar, StatusIconCatalog, TelemetryConsent, TelemetryConsentPopup, TelemetryUploader, TooltipIconCatalog, Unit, UnitData, UnitUI
 Used by: GDTest/BattleEndTest.gd, GDTest/CodeIndexTest.gd, GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, GDTest/MessageLogTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TooltipIconCatalogTest.gd, GDTest/UiSnapshotTest.gd, Scenes/BattleUnit/SpinePortrait.gd, Scenes/BattleUnit/StatusIconCatalog.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/Cards/CardUI.gd, Scenes/HUD/BattleResultOverlay.gd, Scenes/HUD/MoxieOrbUI.gd, Scenes/HUD/TooltipIconCatalog.gd, Tools/SnapshotRunner.gd, Tools/check_navigation.gd

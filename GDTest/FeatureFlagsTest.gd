@@ -9,6 +9,19 @@ extends GdUnitTestSuite
 const SHIPPED_PATH: String = "res://Data/json/features.json"
 
 
+## A run carrying one staged flag and one that is staged off.
+func _state_with_flags() -> GameState:
+	var state: GameState = GameState.new()
+	state.set_run_seed(4242)
+	state.apply_config({
+		"flag_definitions": {
+			"exp": {"enabled": true, "rollout_percent": 50, "description": "under test"},
+			"off_flag": {"enabled": false, "description": "staged off"},
+		},
+	})
+	return state
+
+
 func _definitions() -> Dictionary:
 	var root: Dictionary = {
 		"flags": {
@@ -180,6 +193,48 @@ func test_a_valid_rollout_percent_is_kept() -> void:
 	})
 	assert_int(_stored_percent(normalized, "canary")).is_equal(25)
 	assert_that(normalized.get("errors")).is_equal(PackedStringArray())
+
+
+## The tester tool path: a flag flipped mid-run re-resolves through the same code the
+## setup path uses, and an unknown name is refused instead of invented.
+func test_a_run_can_flip_a_flag_through_the_debug_tool() -> void:
+	var state: GameState = _state_with_flags()
+
+	var report: Dictionary = state.flag_report()
+	assert_bool(report.has("exp")).is_true()
+	assert_bool(report.has("off_flag")).is_true()
+	var raw_entry: Variant = report.get("exp", {})
+	if raw_entry is Dictionary:
+		var entry: Dictionary = raw_entry
+		assert_str(str(entry.get("description", ""))).is_equal("under test")
+
+	assert_str(state.debug_set_flag({"name": "off_flag", "enabled": 1})).is_equal("Flag off_flag -> on")
+	assert_bool(FeatureFlags.is_active(state.flags, "off_flag")).is_true()
+	assert_str(state.debug_set_flag({"name": "exp", "enabled": 0})).is_equal("Flag exp -> off")
+	assert_bool(FeatureFlags.is_active(state.flags, "exp")).is_false()
+	assert_str(state.debug_set_flag({"name": "nope", "enabled": 1})).is_equal("Unknown flag 'nope'.")
+
+
+## An override is the highest precedence, so it wins over a rollout of zero.
+func test_an_override_beats_the_rollout() -> void:
+	var state: GameState = GameState.new()
+	state.set_run_seed(11)
+	state.apply_config({
+		"flag_definitions": {"exp": {"enabled": true, "rollout_percent": 0, "description": "x"}},
+	})
+	assert_bool(FeatureFlags.is_active(state.flags, "exp")).is_false()
+	assert_bool(state.set_flag_override("exp", true)).is_true()
+	assert_bool(FeatureFlags.is_active(state.flags, "exp")).is_true()
+	assert_bool(state.set_flag_override("missing", true)).is_false()
+
+
+## A run with no flags still reports an empty registry rather than failing.
+func test_a_run_without_flags_reports_nothing() -> void:
+	var state: GameState = GameState.new()
+	state.set_run_seed(3)
+	state.apply_config({})
+	assert_int(state.flag_report().size()).is_equal(0)
+	assert_int(state.flags.size()).is_equal(0)
 
 
 func test_an_unknown_top_level_key_is_rejected() -> void:
