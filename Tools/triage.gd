@@ -54,18 +54,18 @@ func _initialize() -> void:
 	if ARG_CREATE in OS.get_cmdline_user_args():
 		_file_issues(tasks)
 	quit(0)
+#endregion
 
-
+#region Private Methods
+## The value after `name` on the command line, or `fallback`.
 func _arg_value(name: String, fallback: String) -> String:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	for index: int in range(args.size()):
 		if args[index] == name and index + 1 < args.size():
 			return args[index + 1]
 	return fallback
-#endregion
 
 
-#region Private Methods
 ## The telemetry report, or an empty one: intake works with whatever evidence exists.
 func _read_report() -> Dictionary:
 	var path: String = _arg_value(ARG_REPORT, "")
