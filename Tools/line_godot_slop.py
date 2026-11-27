@@ -4,8 +4,9 @@
 This is the "back pressure" layer for the patterns an LLM reaches for when it
 takes the shortest path to a green screen: imperative timers, frame pumping,
 upward tree walks and Node types leaking into the pure-logic core. It also
-ratchets file and function size so a class can only shrink, never quietly grow
-into a god object one PR at a time.
+ratchets file size, function size, function branching and `get_parent()` use
+against Tools/slop_baseline.json, so a class can only shrink and a function can
+only get flatter, never quietly grow into a god object one PR at a time.
 
 Why a hand-written checker instead of gdlint: the rules here are architectural
 (where a type may live, which APIs are banned outright), not formatting. Keeping
@@ -18,6 +19,9 @@ Usage:
     python Tools/line_godot_slop.py --strict   # warnings are fatal too
 
 Exit codes: 0 clean, 1 violations (or warnings with --strict).
+
+Run it with --strict in CI: a stale ratchet entry is otherwise only a warning,
+which leaves slack for the next PR to fill back in.
 """
 
 from __future__ import annotations
@@ -69,8 +73,17 @@ CORE_EXTENDS_EXCEPTIONS = {
 BASELINE_RELATIVE = "Tools/slop_baseline.json"
 DEFAULT_MAX_FILE_LINES = 900
 DEFAULT_MAX_FUNCTION_LINES = 80
+## Branching score of a function: 1 + one point per `if` / `elif` / `for` / `while` /
+## `match` statement in its body. Line length alone cannot see nested spaghetti, and
+## the complexity number is the one Slop Code Bench-style benches actually measure.
+DEFAULT_MAX_COMPLEXITY = 12
+## `get_parent()` walks upward into a tree the node does not own, so a file may only
+## keep the calls it already had (the ratchet records them, nothing may be added).
+DEFAULT_MAX_GET_PARENT = 0
 
 FUNC_START = re.compile(r"^(?:static )?func ([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+BRANCH_STATEMENT = re.compile(r"^(?:if|elif|for|while|match)\b")
+GET_PARENT_CALL = re.compile(r"\bget_parent\s*\(")
 # A function ends at the next top-level declaration. `##` starts a doc comment
 # block that belongs to the next declaration, not to the function above it.
 TOP_LEVEL = re.compile(
@@ -89,8 +102,9 @@ def _rel(path: pathlib.Path, root: pathlib.Path) -> str:
     return path.relative_to(root).as_posix()
 
 
-def _function_lengths(lines: list[str]) -> dict[str, int]:
-    lengths: dict[str, int] = {}
+def _function_bodies(lines: list[str]) -> list[tuple[str, int, int]]:
+    """`(name, start_index, end_index)` for every top-level function."""
+    spans: list[tuple[str, int, int]] = []
     index = 0
     while index < len(lines):
         match = FUNC_START.match(lines[index])
@@ -100,9 +114,37 @@ def _function_lengths(lines: list[str]) -> dict[str, int]:
         end = index + 1
         while end < len(lines) and not TOP_LEVEL.match(lines[end]):
             end += 1
-        lengths[match.group(1)] = end - index
+        spans.append((match.group(1), index, end))
         index = end
-    return lengths
+    return spans
+
+
+def _complexity(lines: list[str], start: int, end: int) -> int:
+    """1 + the decision points in one function body.
+
+    `and` / `or` are deliberately not counted: they are cheap, and counting them
+    makes the number noisy without catching the nesting that actually hurts.
+    """
+    score = 1
+    for line in lines[start:end]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if BRANCH_STATEMENT.match(stripped):
+            score += 1
+    return score
+
+
+def _count_get_parent(lines: list[str]) -> int:
+    """Upward tree walks in this file, ignoring comments and quoted text."""
+    total = 0
+    for line in lines:
+        if line.strip().startswith("#"):
+            continue
+        for match in GET_PARENT_CALL.finditer(line):
+            if not _inside_string(line, match.start()):
+                total += 1
+    return total
 
 
 def _load_baseline(root: pathlib.Path) -> dict:
@@ -113,9 +155,8 @@ def _load_baseline(root: pathlib.Path) -> dict:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise SystemExit(f"ERROR: {BASELINE_RELATIVE} is not valid JSON: {exc}")
-    data.setdefault("defaults", {})
-    data.setdefault("files", {})
-    data.setdefault("functions", {})
+    for section in ("defaults", "files", "functions", "complexity", "get_parent"):
+        data.setdefault(section, {})
     return data
 
 
@@ -152,82 +193,128 @@ def _banned_matches(line: str) -> list[str]:
     return messages
 
 
+def _check_ratchet(
+    where: str,
+    measured: int,
+    allowed: int,
+    tracked: bool,
+    hint: str,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Fails above a ceiling; warns below it, so the ceiling gets tightened."""
+    if measured > allowed:
+        errors.append(
+            f"{where}: ERROR: {measured} is over the ratchet ceiling of {allowed}. {hint}"
+        )
+    elif tracked and measured < allowed:
+        warnings.append(
+            f"{where}: WARNING: {measured} is below the ratchet baseline of "
+            f"{allowed}; tighten {BASELINE_RELATIVE}."
+        )
+
+
+def _check_banned_lines(rel: str, path: pathlib.Path, lines: list[str], errors: list[str]) -> None:
+    for line_no, line in enumerate(lines, start=1):
+        if line.strip().startswith("#"):
+            continue
+        for message in _banned_matches(line):
+            if "process_frame" in message and FRAME_PUMP_EXEMPT_PARTS.intersection(path.parts):
+                continue
+            errors.append(f"{rel}:{line_no}: ERROR: {message}")
+
+
+def _check_core_purity(rel: str, path: pathlib.Path, lines: list[str], errors: list[str]) -> None:
+    if "Core" not in path.parts or rel in CORE_EXTENDS_EXCEPTIONS:
+        return
+    for line_no, line in enumerate(lines, start=1):
+        if CORE_EXTENDS_BANNED.match(line):
+            errors.append(
+                f"{rel}:{line_no}: ERROR: `Core/` must stay pure logic "
+                "(`RefCounted`/`Resource`) so it can be tested headlessly. "
+                "Move the Node into `Managers/` or `Scenes/`."
+            )
+
+
+def _warn_stale(tracked: set[str], seen: set[str], what: str, warnings: list[str]) -> None:
+    for stale in sorted(tracked - seen):
+        warnings.append(
+            f"{stale}: WARNING: baseline entry for a missing {what}; remove it from "
+            f"{BASELINE_RELATIVE}."
+        )
+
+
 def lint(root: pathlib.Path, strict: bool) -> int:
     baseline = _load_baseline(root)
     defaults = baseline["defaults"]
     max_file_lines = int(defaults.get("max_file_lines", DEFAULT_MAX_FILE_LINES))
     max_function_lines = int(defaults.get("max_function_lines", DEFAULT_MAX_FUNCTION_LINES))
-    file_baseline: dict[str, int] = baseline["files"]
-    function_baseline: dict[str, int] = baseline["functions"]
+    max_complexity = int(defaults.get("max_complexity", DEFAULT_MAX_COMPLEXITY))
+    file_baseline: dict = baseline["files"]
+    function_baseline: dict = baseline["functions"]
+    complexity_baseline: dict = baseline["complexity"]
+    get_parent_baseline: dict = baseline["get_parent"]
 
     errors: list[str] = []
     warnings: list[str] = []
     seen_files: set[str] = set()
     seen_functions: set[str] = set()
+    seen_get_parent: set[str] = set()
 
     for path in _iter_scripts(root):
         rel = _rel(path, root)
         seen_files.add(rel)
         lines = path.read_text(encoding="utf-8").splitlines()
 
-        for line_no, line in enumerate(lines, start=1):
-            stripped = line.strip()
-            if stripped.startswith("#"):
-                continue
-            for message in _banned_matches(line):
-                if (
-                    "process_frame" in message
-                    and FRAME_PUMP_EXEMPT_PARTS.intersection(path.parts)
-                ):
-                    continue
-                errors.append(f"{rel}:{line_no}: ERROR: {message}")
+        _check_banned_lines(rel, path, lines, errors)
+        _check_core_purity(rel, path, lines, errors)
+        _check_ratchet(
+            rel,
+            len(lines),
+            int(file_baseline.get(rel, max_file_lines)),
+            rel in file_baseline,
+            "Split the class instead of growing it.",
+            errors,
+            warnings,
+        )
 
-        if "Core" in path.parts and rel not in CORE_EXTENDS_EXCEPTIONS:
-            for line_no, line in enumerate(lines, start=1):
-                if CORE_EXTENDS_BANNED.match(line):
-                    errors.append(
-                        f"{rel}:{line_no}: ERROR: `Core/` must stay pure logic "
-                        "(`RefCounted`/`Resource`) so it can be tested headlessly. "
-                        "Move the Node into `Managers/` or `Scenes/`."
-                    )
-
-        allowed = int(file_baseline.get(rel, max_file_lines))
-        if len(lines) > allowed:
-            errors.append(
-                f"{rel}: ERROR: {len(lines)} lines exceeds the ratchet ceiling of "
-                f"{allowed}. Split the class instead of growing it."
-            )
-        elif rel in file_baseline and len(lines) < allowed:
-            warnings.append(
-                f"{rel}: WARNING: {len(lines)} lines is below the ratchet baseline "
-                f"of {allowed}; tighten {BASELINE_RELATIVE}."
-            )
-
-        for name, length in _function_lengths(lines).items():
+        for name, start, end in _function_bodies(lines):
             key = f"{rel}::{name}"
             seen_functions.add(key)
-            allowed = int(function_baseline.get(key, max_function_lines))
-            if length > allowed:
-                errors.append(
-                    f"{rel}: ERROR: `{name}()` is {length} lines, over the ratchet "
-                    f"ceiling of {allowed}. Extract a helper instead of extending it."
-                )
-            elif key in function_baseline and length < allowed:
-                warnings.append(
-                    f"{key}: WARNING: {length} lines is below the ratchet baseline "
-                    f"of {allowed}; tighten {BASELINE_RELATIVE}."
-                )
+            _check_ratchet(
+                f"`{key}()`",
+                end - start,
+                int(function_baseline.get(key, max_function_lines)),
+                key in function_baseline,
+                "Extract a helper instead of extending it.",
+                errors,
+                warnings,
+            )
+            _check_ratchet(
+                f"`{key}()` branch score",
+                _complexity(lines, start, end),
+                int(complexity_baseline.get(key, max_complexity)),
+                key in complexity_baseline,
+                "Flatten the branches or extract a helper.",
+                errors,
+                warnings,
+            )
 
-    for stale in sorted(set(file_baseline) - seen_files):
-        warnings.append(
-            f"{stale}: WARNING: baseline entry for a missing file; remove it from "
-            f"{BASELINE_RELATIVE}."
+        seen_get_parent.add(rel)
+        _check_ratchet(
+            f"`{rel}` get_parent() calls",
+            _count_get_parent(lines),
+            int(get_parent_baseline.get(rel, DEFAULT_MAX_GET_PARENT)),
+            rel in get_parent_baseline,
+            "A child must not walk up into a tree it does not own: emit a signal instead.",
+            errors,
+            warnings,
         )
-    for stale in sorted(set(function_baseline) - seen_functions):
-        warnings.append(
-            f"{stale}: WARNING: baseline entry for a missing function; remove it from "
-            f"{BASELINE_RELATIVE}."
-        )
+
+    _warn_stale(set(file_baseline), seen_files, "file", warnings)
+    _warn_stale(set(function_baseline), seen_functions, "function", warnings)
+    _warn_stale(set(complexity_baseline), seen_functions, "function", warnings)
+    _warn_stale(set(get_parent_baseline), seen_get_parent, "file", warnings)
 
     for message in warnings:
         print(message)

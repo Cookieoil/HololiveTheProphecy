@@ -290,6 +290,10 @@ static func _previous_line(entries: Array, index: int) -> String:
 
 
 static func _banned_finding(path_value: String, line: int, text: String) -> Dictionary:
+	# Only GDScript can call these: a diff that *documents* the ban (AGENTS.md, a
+	# changelog, this file's own rule list) is prose, not a violation.
+	if not path_value.ends_with(SCRIPT_SUFFIX):
+		return {}
 	for pattern: String in BANNED_PATTERNS:
 		var start: int = text.find(pattern)
 		while start >= 0:

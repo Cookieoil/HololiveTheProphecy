@@ -17,8 +17,9 @@ metric server exists for:
   6. Wasted resources           - turns ended with actions still playable
   7. Experience cohorts         - the same pick rates for new vs veteran players
   8. Defeat causes              - which enemy or status actually killed the run
-  9. Staged feature flags       - win rate with a flag on vs off, so an experiment
-                                 is read before it is rolled out to everyone
+  9. Staged feature flags       - win rate with a flag on vs off *within the same
+                                 balance patch*, so an experiment is read before it
+                                 is rolled out to everyone
 
 No third-party dependencies: standard library only.
 
@@ -674,23 +675,35 @@ def defeat_causes(runs: dict[str, dict]) -> dict:
 
 
 def flag_cohorts(runs: dict[str, dict]) -> dict[str, dict]:
-    """Win rate with each staged flag on, next to the runs that did not have it.
+    """Win rate with each staged flag on, next to runs on the *same* balance patch.
 
-    Both sides have to have runs for the comparison to mean anything: an empty
-    control group only says the rollout is still too small, which is why the counts
-    are printed next to the rates instead of a lift number that implies confidence.
+    Keyed by `flag|balance_hash` on purpose: pooling every run into one control group
+    would compare the flag-on runs of a new patch against the flag-off runs of the old
+    one, and read a balance change as a flag effect (Simpson's paradox). Both sides of
+    a row are therefore always the same patch.
     """
     cohorts: dict[str, dict] = {}
     for run in runs.values():
         if run["abandoned"]:
             continue
+        balance = str(run.get("balance_hash", ""))
         for flag in run.get("flags") or []:
-            row = cohorts.setdefault(flag, {"on": 0, "on_wins": 0, "off": 0, "off_wins": 0})
+            key = "%s|%s" % (flag, balance)
+            row = cohorts.setdefault(key, {
+                "flag": flag,
+                "balance": balance,
+                "on": 0,
+                "on_wins": 0,
+                "off": 0,
+                "off_wins": 0,
+            })
             row["on"] += 1
             row["on_wins"] += 1 if run["victory"] else 0
-    for flag, row in cohorts.items():
+    for row in cohorts.values():
         for run in runs.values():
-            if run["abandoned"] or flag in (run.get("flags") or []):
+            if run["abandoned"] or str(run.get("balance_hash", "")) != row["balance"]:
+                continue
+            if row["flag"] in (run.get("flags") or []):
                 continue
             row["off"] += 1
             row["off_wins"] += 1 if run["victory"] else 0
@@ -911,12 +924,13 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths,
     flags = flag_cohorts(finished)
     if flags:
         add("")
-        add("-- 11. Staged feature flags (win rate on vs off) --")
-        for flag, row in sorted(flags.items()):
+        add("-- 11. Staged feature flags (win rate on vs off, same balance patch) --")
+        for _key, row in sorted(flags.items()):
             on_rate = _pct(row["on_wins"] / row["on"]) if row["on"] else "  0.0%"
             off_rate = _pct(row["off_wins"] / row["off"]) if row["off"] else "  0.0%"
-            add("  %-28s on %4d run(s) win %s  |  off %4d run(s) win %s" % (
-                flag, row["on"], on_rate, row["off"], off_rate))
+            add("  %-26s %-12s on %4d run(s) win %s  off %4d run(s) win %s" % (
+                row["flag"], row["balance"][:12] or "-", row["on"], on_rate,
+                row["off"], off_rate))
 
     return "\n".join(lines)
 #endregion

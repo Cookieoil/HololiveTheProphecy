@@ -243,6 +243,20 @@ func test_a_banned_pattern_inside_a_string_literal_is_not_flagged() -> void:
 	assert_bool(_rules(_review(unquoted)).has("banned_pattern")).is_true()
 
 
+## Documentation mentions the ban on purpose; only GDScript can call the API.
+func test_a_banned_pattern_documented_in_markdown_is_not_flagged() -> void:
+	var docs: String = "\n".join([
+		"diff --git a/AGENTS.md b/AGENTS.md",
+		"--- a/AGENTS.md",
+		"+++ b/AGENTS.md",
+		"@@ -1,1 +1,2 @@",
+		" # Rules",
+		"+- Never use `create_timer()` to sequence anything.",
+		"",
+	])
+	assert_bool(_rules(_review(docs)).has("banned_pattern")).is_false()
+
+
 ## GDScript has no private tests, so a suite's method names are not "new API surface".
 func test_test_suite_methods_are_not_treated_as_public_api() -> void:
 	var fixture: String = "\n".join([

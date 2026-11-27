@@ -40,9 +40,11 @@ Run all five gates from the repo root — they are exactly the gates CI runs:
 4. Unit tests:
    `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://GDTest -c --ignoreHeadlessMode`
 5. Anti-slop lint — bans `create_timer()`, frame pumps and upward tree walks,
-   keeps `Core/` pure logic, and ratchets file/function size against
-   `Tools/slop_baseline.json` (baseline entries may only shrink):
-   `python Tools/line_godot_slop.py`
+   keeps `Core/` pure logic, and ratchets file lines, function lines, a function's
+   branch score (1 + one point per `if`/`elif`/`for`/`while`/`match`) and
+   `get_parent()` calls per file against `Tools/slop_baseline.json` (baseline
+   entries may only shrink). `--strict` makes a stale entry fail instead of warn:
+   `python Tools/line_godot_slop.py --strict`
 
 Never commit past a red gate. If a gate fails, fix the root cause — do not weaken the gate.
 If gate 3 fails because the index is stale, regenerate it (`Docs/` is generated — never

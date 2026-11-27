@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/DiffReviewParser.gd` — `class_name DiffReviewParser` extends `RefCounted`
 
-`475` lines · [back to the map](../../CODEBASE_MAP.md)
+`479` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and returns plain Dictionaries: no file system access, no git, no pri…
 
@@ -41,19 +41,19 @@ Private:
 - L255-261 `_append_entry`
 - L265-282 `_line_findings`
 - L285-289 `_previous_line`
-- L292-305 `_banned_finding`
-- L310-324 `_quoted_at`
-- L332-344 `_todo_finding`
-- L347-355 `_api_finding`
-- L358-366 `_is_public_function`
-- L371-376 `_risk_finding`
-- L379-390 `_change_findings`
-- L395-401 `_needs_test`
-- L404-410 `_line_totals`
-- L413-429 `_stats`
-- L432-443 `_area`
-- L448-459 `_promote_strict`
-- L462-471 `_finding`
+- L292-309 `_banned_finding`
+- L314-328 `_quoted_at`
+- L336-348 `_todo_finding`
+- L351-359 `_api_finding`
+- L362-370 `_is_public_function`
+- L375-380 `_risk_finding`
+- L383-394 `_change_findings`
+- L399-405 `_needs_test`
+- L408-414 `_line_totals`
+- L417-433 `_stats`
+- L436-447 `_area`
+- L452-463 `_promote_strict`
+- L466-475 `_finding`
 
 Uses: CodeIndexParser
 Used by: GDTest/DiffReviewTest.gd, Tools/review_diff.gd
