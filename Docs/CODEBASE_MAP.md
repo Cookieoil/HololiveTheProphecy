@@ -68,11 +68,11 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Scenes/HUD/TelemetryConsentPopup.gd`](map/Scenes/HUD/TelemetryConsentPopup.md) | `TelemetryConsentPopup` | 339 | First-launch disclosure for gameplay telemetry: a full-screen modal that asks the player whether… |
 | [`Scenes/HUD/TooltipIconCatalog.gd`](map/Scenes/HUD/TooltipIconCatalog.md) | `TooltipIconCatalog` | 334 | Inline icon registry for tooltip descriptions (SkillTooltipPopup bodies). Two authoring styles a… |
 | [`Scenes/HUD/TooltipIconEntry.gd`](map/Scenes/HUD/TooltipIconEntry.md) | `TooltipIconEntry` | 133 | One tooltip keyword/icon rule, consumed by TooltipIconCatalog. DisplayMode decides how the keywo… |
-| [`Skills/EffectBlock.gd`](map/Skills/EffectBlock.md) | `EffectBlock` | 668 | The universal data skill effect component Use configureble resource for all effect scripts Execu… |
+| [`Skills/EffectBlock.gd`](map/Skills/EffectBlock.md) | `EffectBlock` | 669 | The universal data skill effect component Use configureble resource for all effect scripts Execu… |
 | [`Skills/SkillContext.gd`](map/Skills/SkillContext.md) | `SkillContext` | 48 | Runtime context passed to every EffectBlock.execute(). Three inter-block communication channels:… |
 | [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 54 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of effects for unmerged and m… |
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager al… |
-| [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 400 | extends RefCounted, 9 function(s) |
+| [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 445 | extends RefCounted, 16 function(s) |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 759 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 479 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
 | [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 250 | Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is… |

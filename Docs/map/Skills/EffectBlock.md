@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Skills/EffectBlock.gd` — `class_name EffectBlock` extends `SkillEffect`
 
-`668` lines · [back to the map](../../CODEBASE_MAP.md)
+`669` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > The universal data skill effect component Use configureble resource for all effect scripts Execution pipeline: Phase 1: Resolve Targets Phase 2: Check Condition…
 
@@ -32,31 +32,31 @@ Exports:
 - L108 `store_resolved_value: bool = false`
 
 Public API:
-- L205-251 `compute_value_from_inputs(card_val: int, stored_val: int, state: GameState, sample_target: Unit = null, caster: Unit = null) -> int`
-- L259-316 `execute(ctx: SkillContext) -> void`
-- L605-646 `get_description() -> String`
+- L205-252 `compute_value_from_inputs(card_val: int, stored_val: int, state: GameState, sample_target: Unit = null, caster: Unit = null) -> int`
+- L260-317 `execute(ctx: SkillContext) -> void`
+- L606-647 `get_description() -> String`
 
 Private:
 - L115-116 `_color_unit`
 - L119-181 `_resolve_targets`
 - L185-201 `_check_condition`
-- L253-255 `_resolve_value`
-- L317-341 `_deal_damage`
-- L343-362 `_gain_shield`
-- L364-382 `_reduce_shield`
-- L385-404 `_heal`
-- L407-428 `_deal_true_damage`
-- L431-437 `_add_bonus`
-- L440-450 `_apply_modifier`
-- L455-458 `_flash_auto_selected`
-- L461-491 `_modify_card`
-- L494-509 `_apply_card_mod`
-- L512-551 `_discard_card`
-- L554-562 `_draw_card`
-- L565-568 `_set_next_skill_bonus`
-- L573-589 `_apply_status`
-- L592-601 `_raise_max_hp`
-- L649-666 `_describe_value`
+- L254-256 `_resolve_value`
+- L318-342 `_deal_damage`
+- L344-363 `_gain_shield`
+- L365-383 `_reduce_shield`
+- L386-405 `_heal`
+- L408-429 `_deal_true_damage`
+- L432-438 `_add_bonus`
+- L441-451 `_apply_modifier`
+- L456-459 `_flash_auto_selected`
+- L462-492 `_modify_card`
+- L495-510 `_apply_card_mod`
+- L513-552 `_discard_card`
+- L555-563 `_draw_card`
+- L566-569 `_set_next_skill_bonus`
+- L574-590 `_apply_status`
+- L593-602 `_raise_max_hp`
+- L650-667 `_describe_value`
 
 Uses: Card, GameState, SkillContext, SkillEffect, Unit
 Used by: Core/DataLoader.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryTest.gd, Skills/SkillPreviewFormatter.gd

@@ -19,7 +19,6 @@
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 140,
     "Scenes/HUD/MoxieOrbUI.gd::_draw": 103,
     "Scenes/HUD/SkillTooltipPopup.gd::_build_ui": 84,
-    "Skills/SkillPreviewFormatter.gd::_substitute_tokens": 109,
     "Tools/CodeIndexParser.gd::parse_script": 146,
     "Tools/validate_gameData.gd::_validate_effect": 92
   },
@@ -33,7 +32,6 @@
     "Scenes/HUD/BattleOverlayController.gd::_find_character_texture_in_node": 15,
     "Scenes/HUD/BattleOverlayController.gd::rebuild_for_units": 15,
     "Scenes/HUD/MoxieOrbUI.gd::_draw": 15,
-    "Skills/SkillPreviewFormatter.gd::_substitute_tokens": 17,
     "Tools/CodeIndexParser.gd::parse_script": 23,
     "Tools/check_navigation.gd::_scan_declarations": 13,
     "Tools/dataBuilder.gd::_coerce": 16,
