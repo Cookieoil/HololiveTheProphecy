@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/FeatureFlags.gd` — `class_name FeatureFlags` extends `RefCounted`
 
-`232` lines · [back to the map](../../CODEBASE_MAP.md)
+`261` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Registry and deterministic evaluator for staged feature flags. A flag lives in `res://Data/json/features.json` and is switched on for a *share* of runs, not for…
 
@@ -33,11 +33,12 @@ Public API:
 - L140-141 `static is_active(flags: Dictionary, flag_name: String) -> bool` — True when a run's evaluated flag set has this flag on.
 
 Private:
-- L148-192 `_normalize_entry`
-- L195-199 `_is_valid_name`
-- L203-208 `_fnv1a`
-- L211-222 `_to_int`
-- L225-229 `_to_bool`
+- L148-185 `_normalize_entry`
+- L188-192 `_is_valid_name`
+- L201-228 `_read_rollout`
+- L232-237 `_fnv1a`
+- L240-251 `_to_int`
+- L254-258 `_to_bool`
 
 Uses: —
 Used by: Core/DataLoader.gd, Core/GameState.gd, GDTest/FeatureFlagsTest.gd

@@ -32,7 +32,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 563 | Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single… |
 | [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 28 | Static utility for dice rolls. Separated for easy mocking/seeding in tests. |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn loop, resolved at step… |
-| [`Core/FeatureFlags.gd`](map/Core/FeatureFlags.md) | `FeatureFlags` | 232 | Registry and deterministic evaluator for staged feature flags. A flag lives in `res://Data/json/… |
+| [`Core/FeatureFlags.gd`](map/Core/FeatureFlags.md) | `FeatureFlags` | 261 | Registry and deterministic evaluator for staged feature flags. A flag lives in `res://Data/json/… |
 | [`Core/GameState.gd`](map/Core/GameState.md) | `GameState` | 638 | Pure game state. No nodes, no signals, no rendering. All mutation happens through methods that r… |
 | [`Core/GameUI.gd`](map/Core/GameUI.md) | `GameUI` | 106 | Abstract UI interface the GameManager talks to. Implemented by the graphical BattleScene; GameMa… |
 | [`Core/Telemetry/HttpBatchSink.gd`](map/Core/Telemetry/HttpBatchSink.md) | `HttpBatchSink` | 54 | Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but the finish… |
@@ -103,7 +103,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/EnemySkillBalanceTest.gd`](map/GDTest/EnemySkillBalanceTest.md) | `EnemySkillBalanceTest` | 269 | Locks the enemy-skill balance pass: - an enemy threshold matches the parity of the slot it sits… |
 | [`GDTest/EnemyTurnOverlapTest.gd`](map/GDTest/EnemyTurnOverlapTest.md) | `EnemyTurnOverlapTest` | 232 | Locks the enemy-turn overlap ("fast mode" pacing): - consecutive enemies hand control to the nex… |
 | [`GDTest/EnemyUltAuraTest.gd`](map/GDTest/EnemyUltAuraTest.md) | `EnemyUltAuraTest` | 139 | Locks in the enemy Ultimate warning lifecycle. The crimson character aura and the Moxie orb prev… |
-| [`GDTest/FeatureFlagsTest.gd`](map/GDTest/FeatureFlagsTest.md) | `FeatureFlagsTest` | 157 | Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bucketing, the precedence… |
+| [`GDTest/FeatureFlagsTest.gd`](map/GDTest/FeatureFlagsTest.md) | `FeatureFlagsTest` | 205 | Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bucketing, the precedence… |
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the card the player merged *int… |
 | [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 286 | Locks the top-bar hover tooltips (HudTooltip) and the slab they are drawn on (the tooltip theme… |
 | [`GDTest/MessageLogTest.gd`](map/GDTest/MessageLogTest.md) | `MessageLogTest` | 46 | Locks the battle message log: the game authors it in BBCode (`ColorUtils.colorize` and the HOW T… |

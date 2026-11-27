@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/FeatureFlagsTest.gd` — `class_name FeatureFlagsTest` extends `GdUnitTestSuite`
 
-`157` lines · [back to the map](../../CODEBASE_MAP.md)
+`205` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bucketing, the precedence order, and the rule that an unknown flag is always off.
 
@@ -18,11 +18,14 @@ Public API:
 - L95-108 `test_a_malformed_registry_reports_every_problem() -> void`
 - L111-117 `test_evaluate_reports_flags_in_name_order() -> void`
 - L122-134 `test_a_typoed_key_is_rejected_instead_of_defaulting_to_full_rollout() -> void` — The typo trap this guard exists for: `rollout_pct` would otherwise read as "rollout_percent unset", and unset means 100% - a 5% canary shipping to everyone.
-- L137-144 `test_an_unknown_top_level_key_is_rejected() -> void`
-- L147-156 `test_a_non_string_description_is_rejected() -> void`
+- L160-172 `test_an_unreadable_rollout_percent_fails_closed() -> void` — A value nobody can read must never become a full rollout: the fallback for a broken `rollout_percent` is off, not everyone (it used to fall back to 100%).
+- L175-182 `test_a_valid_rollout_percent_is_kept() -> void`
+- L185-192 `test_an_unknown_top_level_key_is_rejected() -> void`
+- L195-204 `test_a_non_string_description_is_rejected() -> void`
 
 Private:
 - L12-42 `_definitions`
+- L139-155 `_stored_percent`
 
 Uses: FeatureFlags
 Used by: —

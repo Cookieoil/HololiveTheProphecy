@@ -134,6 +134,54 @@ func test_a_typoed_key_is_rejected_instead_of_defaulting_to_full_rollout() -> vo
 		assert_bool(messages[0].contains("unknown key")).is_true()
 
 
+## The `rollout_percent` a normalise() call stored for one flag, or -1 when the flag
+## is missing. Typed so the test never calls int() on a Variant.
+func _stored_percent(normalized: Dictionary, flag_name: String) -> int:
+	var raw_flags: Variant = normalized.get("flags")
+	if not (raw_flags is Dictionary):
+		return -1
+	var flags: Dictionary = raw_flags
+	var raw_entry: Variant = flags.get(flag_name, {})
+	if not (raw_entry is Dictionary):
+		return -1
+	var entry: Dictionary = raw_entry
+	var raw_percent: Variant = entry.get("rollout_percent", -1)
+	if raw_percent is int:
+		var int_value: int = raw_percent
+		return int_value
+	if raw_percent is float:
+		var float_value: float = raw_percent
+		return int(float_value)
+	return -1
+
+
+## A value nobody can read must never become a full rollout: the fallback for a
+## broken `rollout_percent` is off, not everyone (it used to fall back to 100%).
+func test_an_unreadable_rollout_percent_fails_closed() -> void:
+	for bad_value: Variant in ["5%", false, 12.5, null, -10, 150]:
+		var normalized: Dictionary = FeatureFlags.normalize({
+			"flags": {
+				"canary": {"enabled": true, "rollout_percent": bad_value, "description": "x"},
+			},
+		})
+		var raw_errors: Variant = normalized.get("errors")
+		assert_bool(raw_errors is PackedStringArray).is_true()
+		if raw_errors is PackedStringArray:
+			var messages: PackedStringArray = raw_errors
+			assert_int(messages.size()).is_equal(1)
+		assert_int(_stored_percent(normalized, "canary")).is_equal(0)
+
+
+func test_a_valid_rollout_percent_is_kept() -> void:
+	var normalized: Dictionary = FeatureFlags.normalize({
+		"flags": {
+			"canary": {"enabled": true, "rollout_percent": 25, "description": "x"},
+		},
+	})
+	assert_int(_stored_percent(normalized, "canary")).is_equal(25)
+	assert_that(normalized.get("errors")).is_equal(PackedStringArray())
+
+
 func test_an_unknown_top_level_key_is_rejected() -> void:
 	var normalized: Dictionary = FeatureFlags.normalize({"flags": {}, "extra": {}})
 	var raw_errors: Variant = normalized.get("errors")

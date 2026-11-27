@@ -82,6 +82,8 @@ Server/supabase/
                                          # v_replayable_runs, v_run_overview
   migrations/003_run_flags.sql           # telemetry_runs.flags + v_flag_cohorts
   migrations/004_flag_cohorts_by_balance.sql  # v_flag_cohorts scoped per balance patch
+  migrations/005_exclude_abandoned_from_flag_cohorts.sql  # ... and never counting an
+                                         # abandoned run as a loss
   functions/telemetry-ingest/index.ts    # validated, idempotent batch ingest
 ```
 
