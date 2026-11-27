@@ -61,12 +61,23 @@ the human be the first reader of your own diff:
 
 `godot --headless --path . --script res://Tools/review_diff.gd -- --base origin/main --strict`
 
-`--strict` fails on `undocumented_api` and `core_purity`. `untested_change`, `banned_pattern`,
-`todo_added`, `oversize_diff` and `large_file_change` are advisory: this repo names suites by
-behaviour, so a filename match for "did this change come with a test" would be wrong as often
-as it is right. Read the advisory list before pushing and decide.
+It leads with the **blast radius**: `high` when trunk code moved (`Core/`, `Managers/`, the
+EventBus, `Data/json/config.json`, `project.godot`, CI, or any script the generated map shows
+many others depend on — the fan-in is read off `Docs/map/<path>.md`), `medium` for leaf game
+code, `low` for tests/tools/docs only. Read the high tier line by line; skim the low one once
+the gates are green. It also reports whether a staged feature flag bounds the change.
+
+`--strict` fails on `undocumented_api`, `core_purity` and `assertionless_test` (a newly added
+`GDTest/` `test_*` method with no assertion — a test that cannot fail is coverage theatre).
+`untested_change`, `banned_pattern`, `todo_added`, `unstaged_rollout`, `oversize_diff` and
+`large_file_change` are advisory: this repo names suites by behaviour, so a filename match for
+"did this change come with a test" would be wrong as often as it is right. Read the advisory
+list before pushing and decide.
 Commit first: the reviewer diffs the branch against the base, so it reads what is committed.
 CI runs the same reviewer without `--strict` and posts it as a sticky PR comment.
+Add `--adversarial` to append the context-isolated brief — the invariants a *fresh* reviewer
+should attack plus the files whose map pages belong in its context; hand that, the diff and
+`AGENTS.md` to a reviewer that never saw the authoring conversation.
 `pwsh -File Tools/preflight.ps1 -Review` runs every gate plus this review.
 
 ## Forward pressure (task intake)
