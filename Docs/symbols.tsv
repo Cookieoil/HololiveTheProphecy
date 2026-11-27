@@ -1056,7 +1056,7 @@ _flag_overrides	func	Core/GameState.gd:631-636	(config: Dictionary) -> Dictionar
 _flash_active	var	Scenes/Cards/CardUI.gd:156-156	: bool = false
 _flash_auto_selected	func	Skills/EffectBlock.gd:462-465	(ctx: SkillContext, cards: Array[Card]) -> void
 _flash_hostile	var	Scenes/Cards/CardUI.gd:158-158	: bool = false
-_fnv1a	func	Core/FeatureFlags.gd:203-208	static (text: String) -> int
+_fnv1a	func	Core/FeatureFlags.gd:232-237	static (text: String) -> int
 _fold_visibility	func	Scenes/Cards/CardUI.gd:949-950	static (yaw: float) -> float
 _font_variation	var	Scenes/HUD/BattleResultPrompt.gd:53-53	: FontVariation
 _footer_rtl	var	Scenes/HUD/SkillTooltipPopup.gd:28-28	: RichTextLabel
@@ -1207,7 +1207,7 @@ _is_showing	var	Scenes/HUD/BattleResultOverlay.gd:120-120	: bool = false
 _is_skill_anim	func	Scenes/BattleUnit/UnitUI.gd:576-580	(anim: StringName) -> bool
 _is_snake_case_id	func	Tools/validate_gameData.gd:262-265	(text: String) -> bool
 _is_target_highlighted	var	Scenes/BattleUnit/UnitUI.gd:80-80	: bool = false
-_is_valid_name	func	Core/FeatureFlags.gd:195-199	static (flag_name: String) -> bool
+_is_valid_name	func	Core/FeatureFlags.gd:188-192	static (flag_name: String) -> bool
 _join	func	Tools/check_navigation.gd:272-276	(values: PackedStringArray) -> String
 _join_paths	func	Tools/gen_code_index.gd:416-419	(values: PackedStringArray) -> String
 _keys_of	func	Tools/validate_gameData.gd:204-208	(source: Dictionary) -> PackedStringArray
@@ -1322,7 +1322,7 @@ _next_action_order	var	Scenes/BattleUnit/SpinePortrait.gd:68-68	: int = 0
 _next_deal_slot	func	Scenes/Cards/HandBar.gd:332-338	() -> int
 _next_file	func	Managers/TelemetryUploader.gd:120-135	() -> void
 _next_id	var	Core/Card.gd:11-11	: int = 0
-_normalize_entry	func	Core/FeatureFlags.gd:148-192	static (flag_name: String, entry: Dictionary, errors: PackedStringArray) -> Dictionary
+_normalize_entry	func	Core/FeatureFlags.gd:148-185	static (flag_name: String, entry: Dictionary, errors: PackedStringArray) -> Dictionary
 _normalize_status_id	func	Core/Unit.gd:323-324	(status_id: String) -> String
 _normalized_text	func	Tools/gen_code_index.gd:179-180	(res_path: String) -> String
 _note_turn_action	func	Managers/TelemetryManager.gd:390-410	(decision_type: String, chosen: Dictionary) -> void
@@ -1467,6 +1467,7 @@ _read_json_object	func	Core/DataLoader.gd:158-173	static (path: String) -> Dicti
 _read_json_object	func	Tools/validate_gameData.gd:450-471	(path: String, label: String) -> Dictionary
 _read_lines	func	Tools/check_navigation.gd:102-103	(res_path: String) -> PackedStringArray
 _read_output_dir	func	Tools/gen_code_index.gd:111-117	(user_args: PackedStringArray) -> String
+_read_rollout	func	Core/FeatureFlags.gd:201-228	static (flag_name: String, raw: Variant, errors: PackedStringArray) -> int
 _read_shared_strings	func	Tools/xlsx_reader.gd:88-109	static (zip: ZIPReader) -> PackedStringArray
 _read_skills	func	Tools/dataBuilder.gd:497-507	(grid: Array, enums: Dictionary) -> Dictionary
 _read_text	func	Core/DataLoader.gd:189-197	static (path: String) -> String
@@ -1640,6 +1641,7 @@ _status_signature	func	Scenes/BattleUnit/UnitUI.gd:781-789	(statuses: Array[Dict
 _statuses_dirty	var	Scenes/BattleUnit/UnitUI.gd:133-133	: bool = true
 _stop_pose_tweens	func	Scenes/Cards/CardUI.gd:680-686	() -> void
 _stop_slide	func	Scenes/Cards/CardUI.gd:599-602	() -> void
+_stored_percent	func	GDTest/FeatureFlagsTest.gd:139-155	(normalized: Dictionary, flag_name: String) -> int
 _strict	var	Tools/validate_gameData.gd:85-85	: bool = false
 _string_field	func	Tools/validate_gameData.gd:329-339	(source: Dictionary, key: String, context: String, required: bool) -> String
 _strip_bbcode	func	GDTest/EnemySkillBalanceTest.gd:52-55	static (text: String) -> String
@@ -1684,11 +1686,11 @@ _title	var	Scenes/HUD/BattleResultOverlay.gd:113-113	: Label
 _title_ghost	var	Scenes/HUD/BattleResultOverlay.gd:114-114	: Label
 _title_stack	var	Scenes/HUD/BattleResultOverlay.gd:112-112	: MarginContainer
 _title_variation	var	Scenes/HUD/BattleResultOverlay.gd:115-115	: FontVariation
-_to_bool	func	Core/FeatureFlags.gd:225-229	static (value: Variant, fallback: bool) -> bool
+_to_bool	func	Core/FeatureFlags.gd:254-258	static (value: Variant, fallback: bool) -> bool
 _to_bool	func	Tools/dataBuilder.gd:332-349	(value: Variant, fallback: bool) -> bool
 _to_float	func	Core/Telemetry/TelemetryConsent.gd:192-199	(value: Variant) -> float
 _to_int	func	Core/DataLoader.gd:208-224	static (value: Variant, fallback: int) -> int
-_to_int	func	Core/FeatureFlags.gd:211-222	static (value: Variant, fallback: int) -> int
+_to_int	func	Core/FeatureFlags.gd:240-251	static (value: Variant, fallback: int) -> int
 _to_int	func	Core/GameState.gd:433-449	static (value: Variant, fallback: int = 0) -> int
 _to_int	func	Core/Telemetry/TelemetryConsent.gd:178-189	(value: Variant, fallback: int) -> int
 _to_int	func	Tools/dataBuilder.gd:312-328	(value: Variant, fallback: int) -> int
@@ -2407,7 +2409,7 @@ test_a_malformed_registry_reports_every_problem	func	GDTest/FeatureFlagsTest.gd:
 test_a_merge_decision_names_the_result_card	func	GDTest/TelemetryTest.gd:383-402	() -> void
 test_a_merge_with_no_release_starts_from_the_cards_own_slot	func	GDTest/CardMergeAnimationTest.gd:212-225	() -> void
 test_a_new_disclosure_version_re_asks_everyone	func	GDTest/TelemetryConsentTest.gd:116-120	() -> void
-test_a_non_string_description_is_rejected	func	GDTest/FeatureFlagsTest.gd:147-156	() -> void
+test_a_non_string_description_is_rejected	func	GDTest/FeatureFlagsTest.gd:195-204	() -> void
 test_a_play_decision_carries_its_alternatives_and_outcome	func	GDTest/TelemetryTest.gd:314-380	() -> void
 test_a_quoted_marker_or_a_docs_line_is_not_a_todo	func	GDTest/DiffReviewTest.gd:172-212	() -> void
 test_a_release_build_never_mounts_the_overlay	func	GDTest/DebugMenuTest.gd:741-753	() -> void
@@ -2417,6 +2419,7 @@ test_a_run_with_a_later_wave_is_not_the_final_wave	func	GDTest/BattleEndTest.gd:
 test_a_stale_granted_file_cannot_start_collection	func	GDTest/TelemetryConsentTest.gd:256-272	() -> void
 test_a_todo_in_added_code_is_flagged	func	GDTest/DiffReviewTest.gd:158-168	() -> void
 test_a_typoed_key_is_rejected_instead_of_defaulting_to_full_rollout	func	GDTest/FeatureFlagsTest.gd:122-134	() -> void
+test_a_valid_rollout_percent_is_kept	func	GDTest/FeatureFlagsTest.gd:175-182	() -> void
 test_a_victory_has_no_killed_by	func	GDTest/TelemetryTest.gd:683-694	() -> void
 test_action_buttons_are_labelless_icons	func	GDTest/HudTooltipTest.gd:238-260	() -> void
 test_action_buttons_light_up_on_hover	func	GDTest/HudTooltipTest.gd:265-285	() -> void
@@ -2429,7 +2432,8 @@ test_an_immediate_skip_wave_clear_spawns_the_next_wave_and_continues	func	GDTest
 test_an_ultimate_that_clears_the_final_wave_ends_the_player_phase	func	GDTest/BattleEndTest.gd:282-298	() -> void
 test_an_undocumented_public_function_is_flagged_only_without_a_doc_line	func	GDTest/DiffReviewTest.gd:140-145	() -> void
 test_an_unknown_flag_is_off	func	GDTest/FeatureFlagsTest.gd:80-84	() -> void
-test_an_unknown_top_level_key_is_rejected	func	GDTest/FeatureFlagsTest.gd:137-144	() -> void
+test_an_unknown_top_level_key_is_rejected	func	GDTest/FeatureFlagsTest.gd:185-192	() -> void
+test_an_unreadable_rollout_percent_fails_closed	func	GDTest/FeatureFlagsTest.gd:160-172	() -> void
 test_aura_drops_when_the_roll_lands_short	func	GDTest/EnemyUltAuraTest.gd:108-119	() -> void
 test_aura_warns_before_the_roll_then_releases_on_the_cast	func	GDTest/EnemyUltAuraTest.gd:87-105	() -> void
 test_authored_catalog_resolves_both_sample_statuses	func	GDTest/TooltipIconCatalogTest.gd:22-40	() -> void

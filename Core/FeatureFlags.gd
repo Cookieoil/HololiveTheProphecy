@@ -164,14 +164,7 @@ static func _normalize_entry(flag_name: String, entry: Dictionary, errors: Packe
 
 	var percent: int = DEFAULT_ROLLOUT
 	if entry.has(KEY_ROLLOUT):
-		percent = _to_int(entry.get(KEY_ROLLOUT), DEFAULT_ROLLOUT)
-		if percent < 0 or percent > BUCKETS:
-			errors.append("features.json: '%s.rollout_percent' must be 0..%d (found %d)" % [
-				flag_name,
-				BUCKETS,
-				percent,
-			])
-			percent = clampi(percent, 0, BUCKETS)
+		percent = _read_rollout(flag_name, entry.get(KEY_ROLLOUT), errors)
 
 	var description: String = ""
 	if not entry.has(KEY_DESCRIPTION):
@@ -197,6 +190,42 @@ static func _is_valid_name(flag_name: String) -> bool:
 	if regex.compile(NAME_PATTERN) != OK:
 		return false
 	return regex.search(flag_name) != null
+
+
+## Reads `rollout_percent` strictly: a whole number, 0..BUCKETS.
+##
+## Anything else - a string, a bool (which GDScript does not treat as a number), a
+## fraction, a value out of range - is an error and resolves to 0. Failing closed
+## matters here: the old fallback was DEFAULT_ROLLOUT, so an unreadable value meant
+## a full rollout to every player.
+static func _read_rollout(flag_name: String, raw: Variant, errors: PackedStringArray) -> int:
+	var number: float = 0.0
+	if raw is int:
+		var int_value: int = raw
+		number = float(int_value)
+	elif raw is float:
+		var float_value: float = raw
+		number = float_value
+	else:
+		errors.append(
+			"features.json: '%s.rollout_percent' must be a number 0..%d (found %s)"
+			% [flag_name, BUCKETS, JSON.stringify(raw)]
+		)
+		return 0
+	if number != floor(number):
+		errors.append(
+			"features.json: '%s.rollout_percent' must be a whole number (found %s)"
+			% [flag_name, JSON.stringify(raw)]
+		)
+		return 0
+	var percent: int = int(number)
+	if percent < 0 or percent > BUCKETS:
+		errors.append(
+			"features.json: '%s.rollout_percent' must be 0..%d (found %d)"
+			% [flag_name, BUCKETS, percent]
+		)
+		return 0
+	return percent
 
 
 ## FNV-1a over the UTF-8 bytes, masked back to 32 bits.

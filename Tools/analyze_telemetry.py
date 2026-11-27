@@ -725,7 +725,7 @@ def _bar(value: int, scale: int) -> str:
 
 
 def report(events, runs, picks, instead, presence, strategy, damage, paths,
-           coverage=None, waste=None, cohorts=None, deaths=None) -> str:
+           coverage=None, waste=None, cohorts=None, deaths=None, excluded=None) -> str:
     lines: list[str] = []
     add = lines.append
     # Everything the header reports must describe the same set the sections do, or
@@ -735,8 +735,6 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths,
     finished = {rid: run for rid, run in visible.items() if not run["abandoned"]}
     abandoned = [run for run in visible.values() if run["abandoned"]]
     victories = sum(1 for run in finished.values() if run["victory"])
-    tainted = sum(1 for run in visible.values() if run["tainted"])
-    dev_builds = sum(1 for run in visible.values() if run["dev_build"])
     decisions = [e for e in events if e.get("type") == "decision"]
 
     add("=== TELEMETRY BALANCE REPORT ===")
@@ -745,10 +743,13 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths,
     add("runs:       %d finished (victories %d, win rate %s) + %d abandoned"
         % (len(finished), victories,
            _pct(victories / len(finished)) if finished else "  0.0%", len(abandoned)))
-    add("decisions:  %d   debug-tainted runs: %d" % (len(decisions), tainted))
-    if dev_builds:
-        add("            developer-build runs: %d  (excluded with --production-only)"
-            % dev_builds)
+    add("decisions:  %d" % len(decisions))
+    # Named explicitly so a filtered number is never mistaken for the whole spool.
+    if excluded:
+        tainted = sum(1 for run in excluded.values() if run["tainted"])
+        dev_builds = sum(1 for run in excluded.values() if run["dev_build"])
+        add("excluded:   %d run(s) (debug-tainted %d, developer build %d)"
+            % (len(excluded), tainted, dev_builds))
 
     add("")
     add("-- Run outcomes --")
@@ -958,23 +959,28 @@ def main(argv: list[str]) -> int:
 
     runs = index_runs(events)
     clean = keep_clean(events, runs, args.include_debug, args.production_only)
+    # One filtered set feeds every section *and* the JSON export. Passing the raw
+    # `runs` to one of them is how a developer playtest ends up in a balance number.
+    visible_ids: set = {str(event.get("run_id", "")) for event in clean}
+    clean_runs = {run_id: run for run_id, run in runs.items() if run_id in visible_ids}
+    excluded = {run_id: run for run_id, run in runs.items() if run_id not in visible_ids}
     decisions = [e for e in clean if e.get("type") == "decision"]
     picks = offer_and_pick(decisions)
     instead = substitution(decisions)
-    presence = match_presence(decisions, runs)
+    presence = match_presence(decisions, clean_runs)
     strategy = enemy_strategy(decisions)
     damage = situational_damage(clean)
-    coverage = roster_coverage(decisions, runs)
+    coverage = roster_coverage(decisions, clean_runs)
     waste = wasted_resources(decisions, clean)
-    cohorts = cohort_pick_rates(decisions, runs)
-    deaths = defeat_causes(runs)
+    cohorts = cohort_pick_rates(decisions, clean_runs)
+    deaths = defeat_causes(clean_runs)
 
-    print(report(clean, runs, picks, instead, presence, strategy, damage, paths,
-                 coverage, waste, cohorts, deaths))
+    print(report(clean, clean_runs, picks, instead, presence, strategy, damage, paths,
+                 coverage, waste, cohorts, deaths, excluded))
 
     if args.json_out:
         payload = {
-            "runs": runs,
+            "runs": clean_runs,
             "pick_rates": picks,
             "chose_instead": instead,
             "win_loss": presence["rows"],
@@ -983,7 +989,7 @@ def main(argv: list[str]) -> int:
             "roster_coverage": coverage,
             "wasted_resources": waste,
             "cohort_pick_rates": cohorts,
-            "flag_cohorts": flag_cohorts(runs),
+            "flag_cohorts": flag_cohorts(clean_runs),
             "defeat_causes": {
                 "killed_by": dict(deaths["killed_by"]),
                 "ally_deaths": dict(deaths["ally_deaths"]),
