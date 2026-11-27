@@ -190,6 +190,16 @@ func test_a_quoted_marker_or_a_docs_line_is_not_a_todo() -> void:
 		"",
 	])
 	assert_bool(_rules(_review(named_constant)).has("todo_added")).is_false()
+	var prose: String = "\n".join([
+		"diff --git a/Tools/Thing.gd b/Tools/Thing.gd",
+		"--- a/Tools/Thing.gd",
+		"+++ b/Tools/Thing.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+## This is not a leftover TODO, it is prose.",
+		"",
+	])
+	assert_bool(_rules(_review(prose)).has("todo_added")).is_false()
 	var docs: String = "\n".join([
 		"diff --git a/Docs/map/Tools/Thing.md b/Docs/map/Tools/Thing.md",
 		"--- a/Docs/map/Tools/Thing.md",

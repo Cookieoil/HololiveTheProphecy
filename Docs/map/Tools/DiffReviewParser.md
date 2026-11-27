@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/DiffReviewParser.gd` — `class_name DiffReviewParser` extends `RefCounted`
 
-`473` lines · [back to the map](../../CODEBASE_MAP.md)
+`474` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and returns plain Dictionaries: no file system access, no git, no pri…
 
@@ -43,17 +43,17 @@ Private:
 - L284-288 `_previous_line`
 - L291-304 `_banned_finding`
 - L309-323 `_quoted_at`
-- L330-342 `_todo_finding`
-- L345-353 `_api_finding`
-- L356-364 `_is_public_function`
-- L369-374 `_risk_finding`
-- L377-388 `_change_findings`
-- L393-399 `_needs_test`
-- L402-408 `_line_totals`
-- L411-427 `_stats`
-- L430-441 `_area`
-- L446-457 `_promote_strict`
-- L460-469 `_finding`
+- L331-343 `_todo_finding`
+- L346-354 `_api_finding`
+- L357-365 `_is_public_function`
+- L370-375 `_risk_finding`
+- L378-389 `_change_findings`
+- L394-400 `_needs_test`
+- L403-409 `_line_totals`
+- L412-428 `_stats`
+- L431-442 `_area`
+- L447-458 `_promote_strict`
+- L461-470 `_finding`
 
 Uses: CodeIndexParser
 Used by: GDTest/DiffReviewTest.gd, Tools/review_diff.gd

@@ -325,8 +325,9 @@ static func _quoted_at(text: String, index: int) -> bool:
 
 ## Only shipped source is checked: a generated Docs/ page mirrors the source (and the
 ## constant that names the marker), and a quoted marker is data, not a leftover. The
-## marker must also be a standalone word, so the `MARKER_TODO` constant itself is not
-## mistaken for a leftover.
+## marker must also look like one - the word TODO or FIXME immediately followed by a
+## colon or an opening parenthesis - so prose that merely mentions the word, and the
+## MARKER_TODO constant, stay quiet.
 static func _todo_finding(path_value: String, line: int, text: String) -> Dictionary:
 	if not path_value.ends_with(SCRIPT_SUFFIX):
 		return {}
@@ -334,11 +335,11 @@ static func _todo_finding(path_value: String, line: int, text: String) -> Dictio
 		if not text.contains(marker):
 			continue
 		var regex: RegEx = RegEx.new()
-		if regex.compile("\\b%s\\b" % marker) != OK:
+		if regex.compile("\\b%s\\s*[:(]" % marker) != OK:
 			continue
 		for found: RegExMatch in regex.search_all(text):
 			if not _quoted_at(text, found.get_start()):
-				return _finding("todo_added", path_value, line, "TODO/FIXME left in added code")
+				return _finding("todo_added", path_value, line, "TODO/FIXME marker left in added code")
 	return {}
 
 

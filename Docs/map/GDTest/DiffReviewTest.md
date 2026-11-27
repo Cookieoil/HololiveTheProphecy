@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/DiffReviewTest.gd` — `class_name DiffReviewTest` extends `GdUnitTestSuite`
 
-`248` lines · [back to the map](../../CODEBASE_MAP.md)
+`258` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd. Each fixture is an inline unified diff, so the test never depend…
 
@@ -13,10 +13,10 @@ Public API:
 - L140-145 `test_an_undocumented_public_function_is_flagged_only_without_a_doc_line() -> void`
 - L148-155 `test_core_purity_is_advisory_until_strict() -> void`
 - L158-168 `test_a_todo_in_added_code_is_flagged() -> void`
-- L172-202 `test_a_quoted_marker_or_a_docs_line_is_not_a_todo() -> void` — The marker naming the rule (and a docs page quoting it) is not a leftover TODO.
-- L205-209 `test_markdown_report_lists_the_findings() -> void`
-- L213-233 `test_a_banned_pattern_inside_a_string_literal_is_not_flagged() -> void` — A fixture that feeds the parser a banned-looking string is data, not a call.
-- L237-247 `test_test_suite_methods_are_not_treated_as_public_api() -> void` — GDScript has no private tests, so a suite's method names are not "new API surface".
+- L172-212 `test_a_quoted_marker_or_a_docs_line_is_not_a_todo() -> void` — The marker naming the rule (and a docs page quoting it) is not a leftover TODO.
+- L215-219 `test_markdown_report_lists_the_findings() -> void`
+- L223-243 `test_a_banned_pattern_inside_a_string_literal_is_not_flagged() -> void` — A fixture that feeds the parser a banned-looking string is data, not a call.
+- L247-257 `test_test_suite_methods_are_not_treated_as_public_api() -> void` — GDScript has no private tests, so a suite's method names are not "new API surface".
 
 Private:
 - L12-20 `_rules`

@@ -61,6 +61,7 @@ the human be the first reader of your own diff:
 
 `--strict` fails on `untested_change`, `undocumented_api` and `core_purity`; the other
 rules (`banned_pattern`, `todo_added`, `oversize_diff`, `large_file_change`) are advisory.
+Commit first: the reviewer diffs the branch against the base, so it reads what is committed.
 CI runs the same reviewer without `--strict` and posts it as a sticky PR comment.
 `pwsh -File Tools/preflight.ps1 -Review` runs every gate plus this review.
 
