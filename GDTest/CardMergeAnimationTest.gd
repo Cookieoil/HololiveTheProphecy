@@ -32,11 +32,15 @@ const FOLDED_MILLIS: int = 360
 const HALF_WAY_MILLIS: int = 150
 ## Long enough for the hand layout to settle, so slot positions are real.
 const LAYOUT_SETTLE_MILLIS: int = 60
+## The real card scene, for the one check that needs a card built by hand instead of by
+## the bar it would belong to.
+const CARD_SCENE: PackedScene = preload("res://Scenes/Cards/CardUI.tscn")
 
 
 ## Minimal HandBar: the real one lives inside BattleScene, which would start a
-## whole game, so only the node path HandBar actually needs is built here.
-func _make_hand_bar() -> HandBar:
+## whole game, so only the node path HandBar actually needs is built here. Pass a
+## parent to mount the bar somewhere other than this suite.
+func _make_hand_bar(parent: Node = null) -> HandBar:
 	var bar: HandBar = HandBar.new()
 	var margin: MarginContainer = MarginContainer.new()
 	margin.name = "MarginContainer"
@@ -47,7 +51,10 @@ func _make_hand_bar() -> HandBar:
 	bar.add_child(margin)
 	margin.add_child(column)
 	column.add_child(row)
-	add_child(bar)
+	if parent == null:
+		add_child(bar)
+	else:
+		parent.add_child(bar)
 	return bar
 
 
@@ -561,3 +568,44 @@ func test_the_two_cards_are_drawn_detached_from_the_hand_layout() -> void:
 
 	for plate: ForgePlate in _plates(_card_ui(bar, merged)):
 		assert_bool(plate.top_level).is_true()
+
+
+## A stand-in for the live scene: the node an upward walk used to reach the state
+## through, by reading `game_manager.state` off a parent chain. It answers both
+## properties, so a check can prove nothing reads them on the way down.
+class StubSceneRoot extends Node:
+	## What an upward walk looked for on every ancestor.
+	var game_manager: Node
+	var state: GameState
+
+
+## The hand is told its state, it does not go looking for one: a GameState one node up
+## is invisible, and only the push from the scene's show_game_state() makes merge rules
+## available. That is the whole wiring contract - nothing here walks up the tree.
+func test_the_hand_takes_its_state_from_the_scene_pushing_it_down() -> void:
+	var root := StubSceneRoot.new()
+	var state: GameState = GameState.new()
+	root.state = state
+	root.game_manager = root
+	add_child(root)
+	var bar: HandBar = _make_hand_bar(root)
+
+	assert_object(bar._get_game_state()).is_null()
+
+	bar.game_state = state
+	assert_object(bar._get_game_state()).is_equal(state)
+
+
+## A card belongs to the bar that handed it one and to no other: a card sitting under a
+## real HandBar it was never handed to claims nothing, because the link is the
+## reference passed into `setup()` rather than a search of the card's ancestors.
+func test_a_card_claims_only_the_bar_it_was_handed_to() -> void:
+	var bar: HandBar = _make_hand_bar()
+	var hand: Array[Card] = [Card.new(4)]
+	bar.set_hand(hand)
+	assert_object(_card_ui(bar, hand[0]).hand_bar).is_equal(bar)
+
+	var orphan: CardUI = CARD_SCENE.instantiate()
+	bar.add_child(orphan)
+	orphan.setup(Card.new(5))
+	assert_object(orphan._resolve_hand_bar()).is_null()

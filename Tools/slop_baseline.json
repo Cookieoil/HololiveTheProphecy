@@ -1,5 +1,5 @@
 {
-  "_comment": "Ratchet baseline for Tools/line_godot_slop.py. Values are the CURRENT metric for known offenders: they may only shrink. Do not raise an entry; split the class, extract a helper or flatten the branches instead. `complexity` is a function's branch score (1 + one point per if/elif/for/while/match in the body); `get_parent` counts upward tree walks per file, which may only go down.",
+  "_comment": "Ratchet baseline for Tools/line_godot_slop.py. Values are the CURRENT metric for known offenders: they may only shrink. Do not raise an entry; split the class, extract a helper or flatten the branches instead. `complexity` is a function's branch score (1 + one point per if/elif/for/while/match in the body); `get_parent` counts upward tree walks per file, which may only go down - it is empty because no first-party file walks upward any more, so the default of 0 applies everywhere.",
   "defaults": {
     "max_file_lines": 900,
     "max_function_lines": 80,
@@ -9,7 +9,7 @@
     "Managers/GameManager.gd": 1173,
     "Managers/TelemetryManager.gd": 1020,
     "Scenes/BattleUnit/UnitUI.gd": 1340,
-    "Scenes/Cards/CardUI.gd": 1380,
+    "Scenes/Cards/CardUI.gd": 1376,
     "Tools/validate_gameData.gd": 1262
   },
   "functions": {
@@ -45,11 +45,6 @@
     "Tools/validate_gameData.gd::_validate_effect": 29,
     "Tools/validate_gameData.gd::_validate_units": 18
   },
-  "get_parent": {
-    "Scenes/Cards/CardUI.gd": 2,
-    "Scenes/Cards/HandBar.gd": 2,
-    "Scenes/HUD/BattleOverlayController.gd": 1,
-    "Scenes/HUD/OutlineGlow.gd": 2
-  }
+  "get_parent": {}
 }
 

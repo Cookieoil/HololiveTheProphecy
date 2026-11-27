@@ -110,17 +110,10 @@ enum CardModType {
 #endregion
 
 #region Helpers
-# Helper for coloring unit names based on side
+## A unit's name in its side's colour. It stays here because it is the adapter that knows
+## a `Unit` (its display name and side); the colouring rule itself lives in ColorUtils.
 func _color_unit(unit: Unit) -> String:
-	var col: String = ColorUtils.COLOR_ALLY if unit.is_ally else ColorUtils.COLOR_ENEMY
-	return ColorUtils.colorize(unit.data.display_name, col)
-
-func _color_value(value: int, type: String = "hp") -> String:
-	var col: String = ColorUtils.COLOR_HP if type == "hp" else ColorUtils.COLOR_SHIELD
-	return ColorUtils.colorize(str(value), col)
-
-func _color_card(card: Card) -> String:
-	return ColorUtils.colorize(str(card.get_effective_value()), ColorUtils.COLOR_CARD)
+	return ColorUtils.unit_name(unit.data.display_name, unit.is_ally)
 #endregion
 #region Phase 1: Resolve Targets
 func _resolve_targets(ctx: SkillContext) -> Array[Unit]:
@@ -328,9 +321,9 @@ func _deal_damage(ctx: SkillContext, targets: Array[Unit], damage: int) -> void:
 		var hp_lost: int = target.take_damage(damage)
 		var caster_name: String = _color_unit(ctx.caster)
 		var target_name: String = _color_unit(target)
-		var dmg_str: String = _color_value(damage)
-		var lost_str: String = _color_value(hp_lost)
-		var hp_str: String = _color_value(target.current_hp)
+		var dmg_str: String = ColorUtils.stat_value(damage)
+		var lost_str: String = ColorUtils.stat_value(hp_lost)
+		var hp_str: String = ColorUtils.stat_value(target.current_hp)
 		
 		# Base message: "Goblin deals 5 damage to Warrior (HP lost: 4) → HP: 6"
 		var log_msg: String = "%s deals %s damage to %s (HP lost: %s) → HP: %s" % [
@@ -338,7 +331,7 @@ func _deal_damage(ctx: SkillContext, targets: Array[Unit], damage: int) -> void:
 		]
 		# If the actual damage dealt (hp_lost) was different from the attempted amount, note it
 		if hp_lost != damage:
-			var attempted_str: String = _color_value(damage)
+			var attempted_str: String = ColorUtils.stat_value(damage)
 			log_msg += " [Attempted: %s]" % attempted_str
 		
 		ctx.log(log_msg)
@@ -353,7 +346,7 @@ func _gain_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
 			continue
 		var gained: int = target.gain_shield(amount)
 		var target_name: String = _color_unit(target)
-		var gained_str: String = _color_value(gained, "shield")
+		var gained_str: String = ColorUtils.stat_value(gained, "shield")
 		var shield_str: String = ColorUtils.colorize(str(target.shield) + " V", ColorUtils.COLOR_SHIELD)
 		
 		# Base message: "Enemy A gains 5 Shield (Total: 8 V)"
@@ -361,7 +354,7 @@ func _gain_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
 		
 		# Only append the attempted amount if it was modified/capped
 		if gained != amount:
-			var amt_str: String = _color_value(amount, "shield")
+			var amt_str: String = ColorUtils.stat_value(amount, "shield")
 			log_msg += " [Attempted: %s]" % amt_str
 			
 		ctx.log(log_msg)
@@ -374,7 +367,7 @@ func _reduce_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> voi
 			continue
 		var removed: int = target.reduce_shield(amount)
 		var target_name: String = _color_unit(target)
-		var rem_str: String = _color_value(removed, "shield")
+		var rem_str: String = ColorUtils.stat_value(removed, "shield")
 		var shield_str: String = ColorUtils.colorize(str(target.shield) + " V", ColorUtils.COLOR_SHIELD)
 		
 		# Base message: "Reduced [Target]'s shield by 3 (Total: 5 V)"
@@ -382,7 +375,7 @@ func _reduce_shield(ctx: SkillContext, targets: Array[Unit], amount: int) -> voi
 			target_name, rem_str, shield_str
 		]
 		if removed != amount:
-			var amt_str: String = _color_value(amount, "shield")
+			var amt_str: String = ColorUtils.stat_value(amount, "shield")
 			log_msg += " [Attempted: %s]" % amt_str
 		
 		ctx.log(log_msg)
@@ -396,7 +389,7 @@ func _heal(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
 		var restored: int = target.heal(amount)
 		var caster_name: String = _color_unit(ctx.caster)
 		var target_name: String = _color_unit(target)
-		var rest_str: String = _color_value(restored)
+		var rest_str: String = ColorUtils.stat_value(restored)
 		var hp_str: String = ColorUtils.colorize(str(target.current_hp) + " HP", ColorUtils.COLOR_HP)
 		
 		# Base message: "Priest heals Warrior for 8 (Total: 12 HP)"
@@ -404,7 +397,7 @@ func _heal(ctx: SkillContext, targets: Array[Unit], amount: int) -> void:
 			caster_name, target_name, rest_str, hp_str
 		]
 		if restored != amount:
-			var amt_str: String = _color_value(amount)
+			var amt_str: String = ColorUtils.stat_value(amount)
 			log_msg += " [Attempted: %s]" % amt_str
 		
 		ctx.log(log_msg)
@@ -417,7 +410,7 @@ func _deal_true_damage(ctx: SkillContext, targets: Array[Unit], amount: int) -> 
 			continue
 		var true_damage: int = target.deal_true_damage(amount)
 		var target_name: String = _color_unit(target)
-		var dmg_str: String = _color_value(true_damage)
+		var dmg_str: String = ColorUtils.stat_value(true_damage)
 		var hp_str: String = ColorUtils.colorize(str(target.current_hp) + " HP", ColorUtils.COLOR_HP)
 		
 		# Base message: "Warrior loses 8 health (Total: 8 HP)"
@@ -425,7 +418,7 @@ func _deal_true_damage(ctx: SkillContext, targets: Array[Unit], amount: int) -> 
 			target_name, dmg_str, hp_str
 		]
 		if true_damage != amount:
-			var amt_str: String = _color_value(amount)
+			var amt_str: String = ColorUtils.stat_value(amount)
 			log_msg += " [Attempted: %s]" % amt_str
 		
 		ctx.log(log_msg)
@@ -588,7 +581,7 @@ func _apply_status(ctx: SkillContext, targets: Array[Unit], value: int) -> void:
 			continue
 		var new_count: int = target.apply_status(id, amount)
 		var target_name: String = _color_unit(target)
-		var amount_str: String = _color_value(amount)
+		var amount_str: String = ColorUtils.stat_value(amount)
 		var total_str: String = ColorUtils.colorize(str(new_count), ColorUtils.COLOR_CARD)
 		ctx.log("%s gains %s %s (total: %s)" % [
 			target_name, amount_str, id.capitalize(), total_str
@@ -600,9 +593,9 @@ func _raise_max_hp(ctx: SkillContext, targets: Array[Unit], value: int) -> void:
 	for target: Unit in targets:
 		target.raise_max_hp(value)
 		var target_name: String = _color_unit(target)
-		var val_str: String = _color_value(value)
-		var hp_str: String = _color_value(target.current_hp)
-		var max_str: String = _color_value(target.max_hp)
+		var val_str: String = ColorUtils.stat_value(value)
+		var hp_str: String = ColorUtils.stat_value(target.current_hp)
+		var max_str: String = ColorUtils.stat_value(target.max_hp)
 		ctx.log("%s max HP raised to %s → HP: %s/%s" % [
 			target_name, val_str, hp_str, max_str
 		])

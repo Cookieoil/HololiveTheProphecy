@@ -28,6 +28,9 @@ var _fade_tween: Tween
 var _active: bool = false
 
 
+## A glow framed around `target_control`. Attaching is what knows the control, so the
+## attach call also owns the resize link: the glow follows the frame it was hung on and
+## nothing has to walk up the tree to find the frame it belongs to.
 static func attach_to(target_control: Control, p_corner_radius: float = 8.0, p_bleed: float = 15.0) -> OutlineGlow:
 	var glow := OutlineGlow.new()
 	glow.frame_corner_radius = p_corner_radius
@@ -38,6 +41,8 @@ static func attach_to(target_control: Control, p_corner_radius: float = 8.0, p_b
 			var group: CanvasGroup = raw_group
 			glow.bind_canvas_group(group)
 	target_control.add_child(glow)
+	if glow._canvas_group == null and not target_control.resized.is_connected(glow._sync_size):
+		target_control.resized.connect(glow._sync_size)
 	return glow
 
 
@@ -85,8 +90,6 @@ func _ready() -> void:
 	_mat.set_shader_parameter("corner_radius", frame_corner_radius)
 	_sync_size()
 	resized.connect(_sync_size)
-	if get_parent() is Control:
-		(get_parent() as Control).resized.connect(_sync_size)
 
 
 func _exit_tree() -> void:

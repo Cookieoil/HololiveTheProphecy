@@ -12,6 +12,10 @@ const RAIL_RETREAT_TIME: float = 0.22
 var icon_catalog: CardIconCatalog
 var tooltip_icon_catalog: TooltipIconCatalog
 var game_manager: Node # GameManager
+## The scene whose `EntityOverlay/AlliesRow` and `EnemiesRow` this controller binds to.
+## Left unset it defaults to the scene root that owns this node; a test can inject a
+## stand-in. The rows are resolved from it, never by walking up the tree.
+var scene_root: Node
 
 var _rail_layer: CanvasLayer
 var _enemy_rail: VBoxContainer
@@ -247,16 +251,19 @@ func _same_units_and_valid_orbs(old_list: Array[Unit], new_list: Array[Unit]) ->
 
 
 func _auto_bind_scene_rows() -> void:
-	var parent := get_parent()
-	if parent == null:
+	# The rows live in the scene this controller was placed in, so they are resolved
+	# from that scene's root - `owner` by default, or the `scene_root` a test injects.
+	# The controller never walks up looking for the scene it is already part of.
+	var root: Node = scene_root if scene_root != null else owner
+	if root == null:
 		return
 	if _allies_row == null:
-		_allies_row = parent.get_node_or_null("EntityOverlay/AlliesRow") as Control
+		_allies_row = root.get_node_or_null("EntityOverlay/AlliesRow") as Control
 		if _allies_row != null:
 			_allies_row.child_entered_tree.connect(_on_row_children_changed)
 			_allies_row.child_exiting_tree.connect(_on_row_children_changed)
 	if _enemies_row == null:
-		_enemies_row = parent.get_node_or_null("EntityOverlay/EnemiesRow") as Control
+		_enemies_row = root.get_node_or_null("EntityOverlay/EnemiesRow") as Control
 		if _enemies_row != null:
 			_enemies_row.child_entered_tree.connect(_on_row_children_changed)
 			_enemies_row.child_exiting_tree.connect(_on_row_children_changed)
