@@ -359,9 +359,65 @@ func test_review_tier_covers_folders_files_and_measured_fan_in() -> void:
 	assert_str(DiffReviewParser.review_tier(".github/workflows/x.yml")).is_equal("trunk")
 	assert_str(DiffReviewParser.review_tier("project.godot")).is_equal("trunk")
 	assert_str(DiffReviewParser.review_tier("Scenes/HUD/HudTooltip.gd")).is_equal("leaf")
+	assert_str(DiffReviewParser.review_tier(".github/PULL_REQUEST_TEMPLATE.md")).is_equal("leaf")
 	var measured: PackedStringArray = PackedStringArray(["Scenes/Cards/CardUI.gd"])
 	assert_str(DiffReviewParser.review_tier("Scenes/Cards/CardUI.gd", measured)).is_equal("trunk")
 	assert_str(DiffReviewParser.review_tier("Scenes/Cards/HandBar.gd", measured)).is_equal("leaf")
+
+
+## A diff that adds `count` plain lines to one file, for the size rule.
+func _bulk_fixture(path_value: String, count: int) -> String:
+	var lines: Array[String] = [
+		"diff --git a/%s b/%s" % [path_value, path_value],
+		"--- a/%s" % path_value,
+		"+++ b/%s" % path_value,
+		"@@ -1,1 +1,%d @@" % (count + 1),
+		" pass",
+	]
+	for index: int in range(count):
+		lines.append("+line %d" % index)
+	return "\n".join(lines)
+
+
+func test_oversize_counts_source_churn_but_not_regenerated_docs() -> void:
+	var docs: Dictionary = _review(_bulk_fixture("Docs/map/Tools/Thing.md", 500))
+	assert_bool(_rules(docs).has("oversize_diff")).is_false()
+	var source: Dictionary = _review(_bulk_fixture("Scenes/HUD/HudTooltip.gd", 500))
+	assert_bool(_rules(source).has("oversize_diff")).is_true()
+
+
+func test_a_docs_mention_of_the_flag_registry_is_not_a_feature_gate() -> void:
+	var docs: String = "\n".join([
+		"diff --git a/Docs/map/Tools/Thing.md b/Docs/map/Tools/Thing.md",
+		"--- a/Docs/map/Tools/Thing.md",
+		"+++ b/Docs/map/Tools/Thing.md",
+		"@@ -1,1 +1,2 @@",
+		" # Thing",
+		"+- add an entry to Data/json/features.json",
+		"",
+	])
+	assert_bool(CodeIndexParser.dict_bool(_review(docs), "feature_gated")).is_false()
+	var gate_call: String = "\n".join([
+		"diff --git a/Scenes/HUD/HudTooltip.gd b/Scenes/HUD/HudTooltip.gd",
+		"--- a/Scenes/HUD/HudTooltip.gd",
+		"+++ b/Scenes/HUD/HudTooltip.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\tif FeatureFlags.is_active(state.flags, \"my_experiment\"):",
+		"",
+	])
+	assert_bool(CodeIndexParser.dict_bool(_review(gate_call), "feature_gated")).is_true()
+	var quoted: String = "\n".join([
+		"diff --git a/Tools/Thing.gd b/Tools/Thing.gd",
+		"--- a/Tools/Thing.gd",
+		"+++ b/Tools/Thing.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\tconst MARKER: String = \"FeatureFlags.is_active\"",
+		"",
+	])
+	assert_bool(CodeIndexParser.dict_bool(_review(quoted), "feature_gated")).is_false()
+	assert_bool(CodeIndexParser.dict_bool(_review(gate_call.replace("Scenes/HUD/HudTooltip.gd", "GDTest/ThingTest.gd")), "feature_gated")).is_false()
 
 
 func test_fan_in_from_map_reads_the_used_by_line() -> void:

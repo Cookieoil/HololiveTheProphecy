@@ -69,8 +69,9 @@ const ENABLED_KEY: String = "\"enabled\""
 ## rollout the 80/20 rule asks for.
 const ROLLOUT_FULL: int = 100
 ## Areas whose change carries the most blast radius: shared state and the core loops,
-## the managers that own the turn machine, and the pipeline the gates themselves run.
-const TRUNK_PREFIXES: Array[String] = ["Core/", "Managers/", ".github/"]
+## the managers that own the turn machine, and the CI pipeline the gates themselves run
+## through. `.github/` itself is not trunk: a pull-request template cannot break a run.
+const TRUNK_PREFIXES: Array[String] = ["Core/", "Managers/", ".github/workflows/"]
 ## Single-instance seams that are trunk wherever they sit: the runtime config, the
 ## global signal bus, the shared effect interpreter and the one battle entry point.
 const TRUNK_FILES: Array[String] = [
@@ -91,9 +92,11 @@ const TIER_LEAF: String = "leaf"
 const RADIUS_HIGH: String = "high"
 const RADIUS_MEDIUM: String = "medium"
 const RADIUS_LOW: String = "low"
-## Markers that show a change is (or sits behind) a staged flag, which is what makes a
-## leaf change safe to skim: the control path is untouched and the kill switch is one
-## JSON edit.
+## Markers that show a change is behind a staged flag, which is what makes a leaf change
+## safe to skim: the control path is untouched and the kill switch is one JSON edit.
+## They are looked for in scripts only, and never inside a quoted literal - a docs page
+## that documents the registry, or a fixture that feeds the parser gate-looking text, is
+## not a gate.
 const FEATURE_GATE_MARKERS: Array[String] = [
 	"FeatureFlags.is_active",
 	"Data/json/features.json",
@@ -356,15 +359,29 @@ static func _is_leaf_game_code(path_value: String) -> bool:
 
 
 ## True when the diff adds a read of a staged flag, or edits the flag registry itself:
-## either way the control path is untouched and a rollback is one JSON edit.
+## either way the control path is untouched and a rollback is one JSON edit. A marker
+## inside a quoted literal is data (a fixture feeding the parser gate-looking text), not
+## a read, which is the same distinction the banned-pattern rule makes.
 static func _feature_gated(files: Array[Dictionary]) -> bool:
 	for file: Dictionary in files:
-		if CodeIndexParser.dict_string(file, "path") == FEATURES_PATH:
+		var path_value: String = CodeIndexParser.dict_string(file, "path")
+		if path_value == FEATURES_PATH:
 			return true
+		if path_value.begins_with(TEST_DIR) or not path_value.ends_with(SCRIPT_SUFFIX):
+			continue
 		for text: String in _added_texts(file):
-			for marker: String in FEATURE_GATE_MARKERS:
-				if text.contains(marker):
-					return true
+			if _mentions_gate(text):
+				return true
+	return false
+
+
+static func _mentions_gate(text: String) -> bool:
+	for marker: String in FEATURE_GATE_MARKERS:
+		var start: int = text.find(marker)
+		while start >= 0:
+			if not _quoted_at(text, start):
+				return true
+			start = text.find(marker, start + 1)
 	return false
 
 
@@ -710,12 +727,23 @@ static func _change_findings(changed: PackedStringArray, files: Array[Dictionary
 		if _needs_test(path_value, changed):
 			findings.append(_finding("untested_change", path_value, 0,
 				"script changed with no GDTest/<Name>Test.gd in this diff"))
-	var totals: Dictionary = _line_totals(files)
-	var changed_lines: int = CodeIndexParser.dict_int(totals, "added") + CodeIndexParser.dict_int(totals, "removed")
+	var changed_lines: int = _reviewable_lines(files)
 	if changed_lines > MAX_CHANGED_LINES:
 		findings.append(_finding("oversize_diff", "", 0,
 			"%d changed lines; split the change so it can actually be reviewed" % changed_lines))
 	return findings
+
+
+## Changed lines a human actually has to read. The generated `Docs/` tree is excluded:
+## it is regenerated from the sources, so counting it would make every small code change
+## look oversize and train the reader to ignore the rule.
+static func _reviewable_lines(files: Array[Dictionary]) -> int:
+	var total: int = 0
+	for file: Dictionary in files:
+		if CodeIndexParser.dict_string(file, "path").begins_with(DOCS_DIR):
+			continue
+		total += CodeIndexParser.dict_int(file, "added") + CodeIndexParser.dict_int(file, "removed")
+	return total
 
 
 ## Tools/ and GDTest/ changes are excluded: a tool is exercised by running it, and

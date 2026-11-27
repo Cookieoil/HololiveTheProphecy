@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/DiffReviewTest.gd` — `class_name DiffReviewTest` extends `GdUnitTestSuite`
 
-`413` lines · [back to the map](../../CODEBASE_MAP.md)
+`469` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd. Each fixture is an inline unified diff, so the test never depend…
 
@@ -18,13 +18,15 @@ Public API:
 - L223-243 `test_a_banned_pattern_inside_a_string_literal_is_not_flagged() -> void` — A fixture that feeds the parser a banned-looking string is data, not a call.
 - L247-257 `test_a_banned_pattern_documented_in_markdown_is_not_flagged() -> void` — Documentation mentions the ban on purpose; only GDScript can call the API.
 - L261-271 `test_test_suite_methods_are_not_treated_as_public_api() -> void` — GDScript has no private tests, so a suite's method names are not "new API surface".
-- L356-364 `test_review_tier_covers_folders_files_and_measured_fan_in() -> void`
-- L367-371 `test_fan_in_from_map_reads_the_used_by_line() -> void`
-- L374-377 `test_blast_radius_follows_the_trunk_rule() -> void`
-- L380-383 `test_markdown_report_leads_with_the_blast_radius() -> void`
-- L386-392 `test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged() -> void`
-- L395-403 `test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict() -> void`
-- L406-412 `test_adversarial_section_names_the_deep_context_and_the_invariants() -> void`
+- L356-365 `test_review_tier_covers_folders_files_and_measured_fan_in() -> void`
+- L382-386 `test_oversize_counts_source_churn_but_not_regenerated_docs() -> void`
+- L389-420 `test_a_docs_mention_of_the_flag_registry_is_not_a_feature_gate() -> void`
+- L423-427 `test_fan_in_from_map_reads_the_used_by_line() -> void`
+- L430-433 `test_blast_radius_follows_the_trunk_rule() -> void`
+- L436-439 `test_markdown_report_leads_with_the_blast_radius() -> void`
+- L442-448 `test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged() -> void`
+- L451-459 `test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict() -> void`
+- L462-468 `test_adversarial_section_names_the_deep_context_and_the_invariants() -> void`
 
 Private:
 - L12-20 `_rules`
@@ -39,8 +41,9 @@ Private:
 - L301-317 `_tooling_fixture`
 - L321-339 `_feature_fixture`
 - L343-353 `_test_fixture`
+- L369-379 `_bulk_fixture`
 
-Uses: CardUI, CodeIndexParser, DiffReviewParser, GameManager, GameState, HandBar, HudTooltip
+Uses: CardUI, CodeIndexParser, DiffReviewParser, FeatureFlags, GameManager, GameState, HandBar, HudTooltip
 Used by: —
 Loads: —
 

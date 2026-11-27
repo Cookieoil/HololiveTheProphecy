@@ -41,6 +41,6 @@ Private:
 - L254-258 `_to_bool`
 
 Uses: —
-Used by: Core/DataLoader.gd, Core/GameState.gd, GDTest/FeatureFlagsTest.gd, Tools/DiffReviewParser.gd
+Used by: Core/DataLoader.gd, Core/GameState.gd, GDTest/DiffReviewTest.gd, GDTest/FeatureFlagsTest.gd, Tools/DiffReviewParser.gd
 Loads: —
 
