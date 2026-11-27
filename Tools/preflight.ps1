@@ -6,12 +6,14 @@
 #   pwsh -File Tools/preflight.ps1 -Godot 'C:\path\to\godot.exe'
 #   pwsh -File Tools/preflight.ps1 -FixIndex          # regenerate Docs/ first
 #   pwsh -File Tools/preflight.ps1 -SkipIndexCheck    # leave Docs/ alone
+#   pwsh -File Tools/preflight.ps1 -Snapshots         # also render UI snapshots
 #
 # Exits 0 when every gate is green, 1 otherwise.
 param(
     [string]$Godot = 'godot',
     [switch]$FixIndex,
-    [switch]$SkipIndexCheck
+    [switch]$SkipIndexCheck,
+    [switch]$Snapshots
 )
 
 $ErrorActionPreference = 'Continue'
@@ -102,6 +104,23 @@ else {
     }
     else {
         Write-Host 'PASSED: Anti-slop lint' -ForegroundColor Green
+    }
+}
+
+# -Snapshots renders the canonical UI screens with the real OpenGL renderer (the
+# headless gates cannot see pixels) and sanity-checks the PNGs. Off by default:
+# it opens a window and is slower than every other gate together.
+if ($Snapshots) {
+    Write-Host ''
+    Write-Host '=== UI snapshots (rendered) ===' -ForegroundColor Cyan
+    $snapArgs = @('--audio-driver', 'Dummy', '--position', '-4000,-4000', '--path', '.', 'res://Tools/snapshot_runner.tscn')
+    $snap = Start-Process -FilePath $godotExe -ArgumentList $snapArgs -NoNewWindow -Wait -PassThru
+    if ($snap.ExitCode -ne 0) {
+        Write-Host ('FAILED (exit ' + $snap.ExitCode + '): UI snapshots') -ForegroundColor Red
+        $failed += 'UI snapshots'
+    }
+    else {
+        Write-Host 'PASSED: UI snapshots (reports/ui-snapshots/)' -ForegroundColor Green
     }
 }
 

@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (53)
+## 1. Game scripts at a glance (54)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1256 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flows through async callables injected into SkillContext. |
 | [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 1031 | Records every decision a player makes, for game design and balancing. It is a passive observer: GameManager (or a test) calls the `begin_*` / `record_*` hooks a… |
 | [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 238 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSONL files HttpBatchSink leaves in user://telemetry/outbox/, POSTs… |
-| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 645 | extends GameUI, 2 signal(s), 8 export(s), 46 function(s) |
+| [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 659 | extends GameUI, 2 signal(s), 10 export(s), 46 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 649 | extends Control, 3 signal(s), 28 export(s), 37 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 331 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup and automatic inspection of Unit buff/debuff state. Two dictiona… |
 | [`Scenes/BattleUnit/UnitUI.gd`](map/Scenes/BattleUnit/UnitUI.md) | `UnitUI` | 1341 | extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s) |
@@ -56,7 +56,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Scenes/Cards/CardUI.gd`](map/Scenes/Cards/CardUI.md) | `CardUI` | 1381 | Visual representation of one Card in hand. Drag source (play / merge) and drop target (merge only). The card is rendered into an offscreen SubViewport and that… |
 | [`Scenes/Cards/ForgePlate.gd`](map/Scenes/Cards/ForgePlate.md) | `ForgePlate` | 140 | One of the two cards in a merge, drawn as a real fake-3D quad. A merge has to show two cards banking and folding into each other, so a flat copy of a card face… |
 | [`Scenes/Cards/HandBar.gd`](map/Scenes/Cards/HandBar.md) | `HandBar` | 430 | Bottom-edge hand of cards. View-only: it animates, GameManager validates. |
-| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 529 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges UnitUI hover & wave transitions without freed-instance errors. |
+| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 548 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer, and safely bridges UnitUI hover & wave transitions without freed-instance errors. |
 | [`Scenes/HUD/BattleResultOverlay.gd`](map/Scenes/HUD/BattleResultOverlay.md) | `BattleResultOverlay` | 384 | End-of-battle cutscene, staged like a big-budget result screen. The battle scene is the only scene, so the result screen is built in code and mounted on its own… |
 | [`Scenes/HUD/BattleResultPrompt.gd`](map/Scenes/HUD/BattleResultPrompt.md) | `BattleResultPrompt` | 183 | The end screen's action prompt, drawn the way big-budget menus do it: no box, no border and no fill at rest - just wide-tracked lettering flanked by two small d… |
 | [`Scenes/HUD/DebugMenuPopup.gd`](map/Scenes/HUD/DebugMenuPopup.md) | `DebugMenuPopup` | 579 | Tester-only tool palette for the battle scene. Every button here is a *request*: it emits `debug_command_requested` upward and the turn loop performs the mutati… |
@@ -73,6 +73,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execute(). The GameManager always calls: await effect.execute(ctx). Note: This base shouldn't… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 400 | extends RefCounted, 9 function(s) |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 746 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns plain Dictionaries: no file system access, no rendering, no CLI… |
+| [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 242 | Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is headless, and Godot's headless display driver is the dummy rend… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Verify the committed artifacts against the sources with independent scans (coverage, ranges… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 79 | Headless compile gate: loads every project GDScript outside the excluded folders, so a type error, a stale `class_name` or a bad annotation fails CI instead of… |
 | [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 142 | Headless link and compatibility gate for the spine-godot GDExtension. Proves three things: 1. the runtime in `bin/` loaded and exposes the Spine classes the gam… |
@@ -82,7 +83,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single source of truth the game reads at runtime, while res://Data/xlsx/ga… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every cell is returned as a String; DataBuilder performs the typed conve… |
 
-## 2. Tests at a glance (19)
+## 2. Tests at a glance (20)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -105,6 +106,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its stable id from the JSON (unit_id / skill_id), wave overrides ne… |
 | [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 673 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wave / turn / decision / run-ended events, every decision must carr… |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIconEntry). Covers: left-of-keyword icons (LoR style), pure glyphs (Riftbound style), expl… |
+| [`GDTest/UiSnapshotTest.gd`](map/GDTest/UiSnapshotTest.md) | `UiSnapshotTest` | 82 | Locks the seams the UI snapshot pipeline (Tools/snapshot_runner.tscn) relies on: a fixed seed must reproduce the deal, and the overlay must expose a bounded, ca… |
 
 ## 3. Global signals (Managers/EventBus.gd)
 
@@ -127,7 +129,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | `ultimate_cast` | caster: Unit, skill_name: String | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
 | `unit_statuses_changed` | unit: Unit | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
 
-## 4. Scenes (4)
+## 4. Scenes (5)
 
 Node trees live on each scene's page.
 
@@ -136,6 +138,7 @@ Node trees live on each scene's page.
 | [`Scenes/BattleScene/BattleScene.tscn`](map/Scenes/BattleScene/BattleScene.scene.md) | Main `Node` | 46 | `Scenes/BattleScene/BattleScene.gd` |
 | [`Scenes/BattleUnit/UnitUI.tscn`](map/Scenes/BattleUnit/UnitUI.scene.md) | UnitUI `PanelContainer` | 19 | `Scenes/BattleUnit/UnitUI.gd` |
 | [`Scenes/Cards/CardUI.tscn`](map/Scenes/Cards/CardUI.scene.md) | CardUI `PanelContainer` | 9 | `Scenes/Cards/CardUI.gd` |
+| [`Tools/snapshot_runner.tscn`](map/Tools/snapshot_runner.scene.md) | SnapshotRunner `Node` | 1 | `Tools/SnapshotRunner.gd` |
 | [`Tools/validator.tscn`](map/Tools/validator.scene.md) | Validator `Node` | 1 | `Tools/validate_gameData.gd` |
 
 ## 5. Game data (Data/json)
@@ -157,4 +160,4 @@ Top-level keys:
 
 ---
 
-Indexed 72 script(s) (53 game, 19 test), 4 scene(s), 5 data file(s).
+Indexed 74 script(s) (54 game, 20 test), 5 scene(s), 5 data file(s).

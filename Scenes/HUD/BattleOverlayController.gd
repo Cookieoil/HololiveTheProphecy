@@ -173,6 +173,25 @@ func retreat_for_result() -> void:
 	await tween.finished
 
 
+## Exposes the shared skill callout so tooling (the UI snapshot runner) can render a
+## populated tooltip without synthesising mouse hover.
+func get_skill_tooltip() -> SkillTooltipPopup:
+	return _tooltip
+
+
+## Shows the ally Ultimate callout for the unit at `index`, anchored on its orb, and
+## returns true once it was shown. Tooling/test seam: the real path is a hover.
+func show_ally_ultimate_callout(index: int) -> bool:
+	if index < 0 or index >= _current_ally_units.size():
+		return false
+	var unit: Unit = _current_ally_units[index]
+	var orb: MoxieOrbUI = _get_valid_orb(unit)
+	if orb == null:
+		return false
+	_on_orb_hover_started(orb, unit)
+	return true
+
+
 #region Safe Instance Lookup & Auto Row Sync
 
 func _is_live_unit_ui(raw: Variant) -> bool:
