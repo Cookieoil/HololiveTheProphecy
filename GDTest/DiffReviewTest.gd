@@ -1,9 +1,9 @@
 class_name DiffReviewTest
 extends GdUnitTestSuite
-## Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind
-## Tools/review_diff.gd. Each fixture is an inline unified diff, so the test never
-## depends on the shape of the current branch and the expected line numbers are
-## meaningful rather than incidental.
+## Fixture tests for the review layer behind Tools/review_diff.gd: the rules in
+## Tools/DiffReviewParser.gd and the rendering in Tools/DiffReviewFormatter.gd. Each
+## fixture is an inline unified diff, so the test never depends on the shape of the
+## current branch and the expected line numbers are meaningful rather than incidental.
 ##
 ## @author TheGreatJellyfish
 ## @version 11/27/2026
@@ -213,7 +213,7 @@ func test_a_quoted_marker_or_a_docs_line_is_not_a_todo() -> void:
 
 
 func test_markdown_report_lists_the_findings() -> void:
-	var report: String = DiffReviewParser.format_markdown(_review(_banned_fixture()))
+	var report: String = DiffReviewFormatter.format_markdown(_review(_banned_fixture()))
 	assert_bool(report.contains("### Second-pass review")).is_true()
 	assert_bool(report.contains("banned_pattern")).is_true()
 	assert_bool(report.contains("Scenes/Thing.gd:11")).is_true()
@@ -434,9 +434,205 @@ func test_blast_radius_follows_the_trunk_rule() -> void:
 
 
 func test_markdown_report_leads_with_the_blast_radius() -> void:
-	var report: String = DiffReviewParser.format_markdown(_review(_trunk_fixture()))
+	var report: String = DiffReviewFormatter.format_markdown(_review(_trunk_fixture()))
 	assert_bool(report.contains("Blast radius: HIGH")).is_true()
 	assert_bool(report.contains("Core/GameState.gd")).is_true()
+
+
+## A blank line between arrange and act must not be read as the end of the test: every
+## suite here writes it that way, and the rule is blocking under --strict.
+func test_a_blank_line_inside_a_new_test_does_not_hide_its_assertion() -> void:
+	var fixture: String = "\n".join([
+		"diff --git a/GDTest/ThingTest.gd b/GDTest/ThingTest.gd",
+		"--- a/GDTest/ThingTest.gd",
+		"+++ b/GDTest/ThingTest.gd",
+		"@@ -1,1 +1,5 @@",
+		" pass",
+		"+func test_thing() -> void:",
+		"+\tvar value: int = 1",
+		"+",
+		"+\tassert_int(value).is_equal(1)",
+		"",
+	])
+	var result: Dictionary = _review(fixture, true)
+	assert_bool(_rules(result).has("assertionless_test")).is_false()
+	assert_int(DiffReviewParser.blocking_count(result)).is_equal(0)
+
+
+## A wrapped signature keeps the body open until the `:` closes it.
+func test_a_wrapped_test_signature_still_finds_its_assertion() -> void:
+	var fixture: String = "\n".join([
+		"diff --git a/GDTest/ThingTest.gd b/GDTest/ThingTest.gd",
+		"--- a/GDTest/ThingTest.gd",
+		"+++ b/GDTest/ThingTest.gd",
+		"@@ -1,1 +1,6 @@",
+		" pass",
+		"+func test_thing(",
+		"+\tvalue: int",
+		"+) -> void:",
+		"+\tassert_int(value).is_equal(1)",
+		"",
+	])
+	assert_bool(_rules(_review(fixture, true)).has("assertionless_test")).is_false()
+
+
+## A test whose only mention of the word is a comment still cannot fail.
+func test_a_comment_mentioning_assert_does_not_count_as_an_assertion() -> void:
+	var fixture: String = "\n".join([
+		"diff --git a/GDTest/ThingTest.gd b/GDTest/ThingTest.gd",
+		"--- a/GDTest/ThingTest.gd",
+		"+++ b/GDTest/ThingTest.gd",
+		"@@ -1,1 +1,3 @@",
+		" pass",
+		"+func test_thing() -> void:",
+		"+\t# nothing to assert here",
+		"",
+	])
+	assert_bool(_rules(_review(fixture)).has("assertionless_test")).is_true()
+
+
+## Two tests added back to back: the first one's empty body must not borrow the
+## second one's assertion.
+func test_an_empty_test_does_not_borrow_the_next_tests_assertion() -> void:
+	var fixture: String = "\n".join([
+		"diff --git a/GDTest/ThingTest.gd b/GDTest/ThingTest.gd",
+		"--- a/GDTest/ThingTest.gd",
+		"+++ b/GDTest/ThingTest.gd",
+		"@@ -1,1 +1,5 @@",
+		" pass",
+		"+func test_first() -> void:",
+		"+	pass",
+		"+func test_second() -> void:",
+		"+\tassert_bool(true).is_true()",
+		"",
+	])
+	var result: Dictionary = _review(fixture)
+	var flagged: PackedStringArray = PackedStringArray()
+	for raw: Variant in CodeIndexParser.dict_array(result, "advisory"):
+		if CodeIndexParser.dict_string(_finding_of(raw), "rule") == "assertionless_test":
+			flagged.append(CodeIndexParser.dict_string(_finding_of(raw), "where"))
+	assert_array(flagged).contains_exactly(["GDTest/ThingTest.gd:2"])
+
+
+func _finding_of(raw: Variant) -> Dictionary:
+	if raw is Dictionary:
+		var finding: Dictionary = raw
+		return finding
+	return {}
+
+
+func test_adversarial_section_names_the_deep_context_and_the_invariants() -> void:
+	var section: String = DiffReviewFormatter.adversarial_section(_review(_trunk_fixture()))
+	assert_bool(section.contains("Adversarial review (context-isolated)")).is_true()
+	assert_bool(section.contains("Core/GameState.gd")).is_true()
+	assert_bool(section.contains("feature flag OFF")).is_true()
+	var leaf: String = DiffReviewFormatter.adversarial_section(_review(_tooling_fixture()))
+	assert_bool(leaf.contains("leaf-only change")).is_true()
+
+
+## The brief is collapsed in the pull-request comment so the report stays a screenful.
+func test_a_collapsible_adversarial_brief_is_wrapped_in_details() -> void:
+	var section: String = DiffReviewFormatter.adversarial_section(_review(_trunk_fixture()), true)
+	assert_bool(section.begins_with("<details>")).is_true()
+	assert_bool(section.ends_with("</details>")).is_true()
+
+
+## Only what ships decides the fan-in: otherwise adding unit tests to an isolated leaf
+## widget would promote it to trunk and demand a line-by-line read of a HUD tooltip.
+func test_fan_in_counts_runtime_dependents_only() -> void:
+	var page: String = "Used by: Scenes/Cards/HandBar.gd, GDTest/CardUITest.gd, Tools/check_navigation.gd\n"
+	assert_int(DiffReviewParser.fan_in_from_map(page)).is_equal(1)
+	assert_bool(DiffReviewParser.is_non_shipped("GDTest/ThingTest.gd")).is_true()
+	assert_bool(DiffReviewParser.is_non_shipped("Tools/review_diff.gd")).is_true()
+	assert_bool(DiffReviewParser.is_non_shipped("Scenes/Cards/CardUI.gd")).is_false()
+
+
+## A flagged change that touches scenes or shaders needs the rendered snapshot: the
+## headless gates rasterise nothing.
+func test_a_scene_or_shader_change_asks_for_visual_proof() -> void:
+	assert_bool(DiffReviewFormatter.needs_ui_proof(PackedStringArray(["Scenes/HUD/HudTooltip.gd"]))).is_true()
+	assert_bool(DiffReviewFormatter.needs_ui_proof(PackedStringArray(["Shaders/FakeCard3D.gdshader"]))).is_true()
+	assert_bool(DiffReviewFormatter.needs_ui_proof(PackedStringArray(["Core/GameState.gd"]))).is_false()
+	var report: String = DiffReviewFormatter.format_markdown(_review(_leaf_fixture()))
+	assert_bool(report.contains("Visual proof: required")).is_true()
+
+
+## A report longer than the cap is cut with a footer, not dumped: the reviewer exists to
+## lower review cost.
+func test_the_report_caps_its_finding_list() -> void:
+	var findings: Array[Dictionary] = []
+	for index: int in range(DiffReviewFormatter.MAX_REPORTED_FINDINGS + 3):
+		findings.append({"rule": "todo_added", "where": "a.gd:%d" % index, "detail": "x"})
+	var report: String = DiffReviewFormatter.format_markdown({
+		"stats": {"file_count": 1, "added": 1, "removed": 0},
+		"blocking": [],
+		"advisory": findings,
+		"blast_radius": DiffReviewParser.RADIUS_LOW,
+		"trunk_paths": PackedStringArray(),
+		"feature_gated": false,
+		"changed_paths": PackedStringArray(["Tools/a.gd"]),
+	})
+	assert_bool(report.contains("and 3 more finding(s) hidden")).is_true()
+	assert_bool(report.contains("a.gd:0")).is_true()
+	assert_bool(report.contains("a.gd:%d" % DiffReviewFormatter.MAX_REPORTED_FINDINGS)).is_false()
+
+
+## A note-to-self that names a flag is prose: only a real read counts as a gate.
+func test_a_comment_naming_the_flag_api_is_not_a_feature_gate() -> void:
+	var fixture: String = "\n".join([
+		"diff --git a/Scenes/HUD/HudTooltip.gd b/Scenes/HUD/HudTooltip.gd",
+		"--- a/Scenes/HUD/HudTooltip.gd",
+		"+++ b/Scenes/HUD/HudTooltip.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\t# TODO: gate this on FeatureFlags.is_active later",
+		"",
+	])
+	assert_bool(CodeIndexParser.dict_bool(_review(fixture), "feature_gated")).is_false()
+
+
+## Documenting a ban in a comment is not a call to the banned API.
+func test_a_banned_pattern_in_a_comment_is_not_flagged() -> void:
+	var fixture: String = "\n".join([
+		"diff --git a/Scenes/HUD/HudTooltip.gd b/Scenes/HUD/HudTooltip.gd",
+		"--- a/Scenes/HUD/HudTooltip.gd",
+		"+++ b/Scenes/HUD/HudTooltip.gd",
+		"@@ -1,1 +1,2 @@",
+		" pass",
+		"+\t# never use create_timer() to sequence this",
+		"",
+	])
+	assert_bool(_rules(_review(fixture)).has("banned_pattern")).is_false()
+
+
+## Each enabled flag is judged on its own rollout, so a second one cannot hide behind the
+## first, and a staged value already on an unchanged line still counts as staged.
+func test_unstaged_rollout_is_judged_per_flag() -> void:
+	var second_flag_bare: String = "\n".join([
+		"diff --git a/Data/json/features.json b/Data/json/features.json",
+		"--- a/Data/json/features.json",
+		"+++ b/Data/json/features.json",
+		"@@ -1,1 +1,3 @@",
+		" {",
+		"+\t\"a\": {\"enabled\": true, \"rollout_percent\": 25, \"description\": \"x\"},",
+		"+\t\"b\": {\"enabled\": true, \"description\": \"y\"}",
+		" }",
+		"",
+	])
+	assert_bool(_rules(_review(second_flag_bare)).has("unstaged_rollout")).is_true()
+	var staged_context_line: String = "\n".join([
+		"diff --git a/Data/json/features.json b/Data/json/features.json",
+		"--- a/Data/json/features.json",
+		"+++ b/Data/json/features.json",
+		"@@ -1,3 +1,3 @@",
+		" \t\"flags\": {\"my_experiment\": {",
+		"-\t\t\"enabled\": false,",
+		"+\t\t\"enabled\": true,",
+		" \t\t\"rollout_percent\": 25,",
+		" }",
+		"",
+	])
+	assert_bool(_rules(_review(staged_context_line)).has("unstaged_rollout")).is_false()
 
 
 func test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged() -> void:
@@ -457,12 +653,3 @@ func test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict() ->
 	assert_bool(_rules(strict).has("assertionless_test")).is_true()
 	var covered: Dictionary = _review(_test_fixture(true))
 	assert_bool(_rules(covered).has("assertionless_test")).is_false()
-
-
-func test_adversarial_section_names_the_deep_context_and_the_invariants() -> void:
-	var section: String = DiffReviewParser.adversarial_section(_review(_trunk_fixture()))
-	assert_bool(section.contains("Adversarial review (context-isolated)")).is_true()
-	assert_bool(section.contains("Core/GameState.gd")).is_true()
-	assert_bool(section.contains("feature flag OFF")).is_true()
-	var leaf: String = DiffReviewParser.adversarial_section(_review(_tooling_fixture()))
-	assert_bool(leaf.contains("leaf-only change")).is_true()

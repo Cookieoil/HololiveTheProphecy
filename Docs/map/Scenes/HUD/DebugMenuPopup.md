@@ -126,7 +126,7 @@ Private:
 - L687-693 `_on_unit_action_pressed`
 - L696-700 `_on_spawn_custom_pressed`
 
-Uses: Card
+Uses: —
 Used by: GDTest/DebugFlagsTest.gd, GDTest/DebugMenuTest.gd, GDTest/HudTooltipTest.gd, Scenes/BattleScene/BattleScene.gd
 Loads: —
 

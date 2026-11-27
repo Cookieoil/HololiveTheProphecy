@@ -54,7 +54,7 @@ Private:
 - L460-467 `_float_of`
 - L471-485 `_slug`
 
-Uses: BattleScene, CodeIndexParser
+Uses: CodeIndexParser
 Used by: GDTest/TriageParserTest.gd, Tools/triage.gd
 Loads: —
 

@@ -22,6 +22,6 @@ Private:
 - L83-89 `_build_label`
 
 Uses: —
-Used by: GDTest/DiffReviewTest.gd, GDTest/HudTooltipTest.gd
+Used by: GDTest/HudTooltipTest.gd
 Loads: —
 

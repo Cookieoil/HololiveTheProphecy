@@ -74,7 +74,7 @@ Private:
 - L726-736 `_used_by_files`
 - L739-761 `_measure`
 
-Uses: BattleOverlayController, BattleScene, Card, CardUI, CodeIndexParser, GameManager, SkillPreviewFormatter
+Uses: CodeIndexParser
 Used by: —
 Loads: res://Docs/CODEBASE_MAP.md, res://Docs/symbols.tsv, res://Docs/map, res://Tools/gen_code_index.gd, res://, res://Data/json, res://Managers/EventBus.gd, res://reports/navigation-test, res://.godot/, res://reports/, res://Trash/, res://bin/, res://Docs, res://Docs/, res://Core/Card.gd, res://Managers/GameManager.gd, res://Scenes/Cards/CardUI.gd, res://Scenes/Cards/CardUI.tscn, res://Scenes/HUD/BattleOverlayController.gd, res://Scenes/BattleScene/BattleScene.tscn
 

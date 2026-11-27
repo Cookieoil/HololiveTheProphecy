@@ -34,6 +34,6 @@ Private:
 - L443-444 `_num_bb`
 
 Uses: Card, EffectBlock, EnemyIntent, GameState, SkillData, SkillEffect, TooltipIconCatalog, Unit
-Used by: GDTest/AllyKitTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/BattleOverlayController.gd, Tools/check_navigation.gd
+Used by: GDTest/AllyKitTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TooltipIconCatalogTest.gd, Scenes/HUD/BattleOverlayController.gd
 Loads: res://Data/json/skills.json.
 

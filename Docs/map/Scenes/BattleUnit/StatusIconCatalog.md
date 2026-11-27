@@ -41,7 +41,7 @@ Private:
 - L302-312 `_extract_scalar_int`
 - L315-361 `_parse_status_object`
 
-Uses: BattleScene, Unit
+Uses: Unit
 Used by: GDTest/StatusCatalogTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/BattleUnit/UnitUI.gd, Scenes/HUD/TooltipIconCatalog.gd
 Loads: res://Scenes/BattleScene/Assets/icon.svg, res://Scenes/BattleScene/Assets/icon2.png
 

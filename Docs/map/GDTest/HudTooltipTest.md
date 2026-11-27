@@ -34,7 +34,7 @@ Private:
 - L65-71 `_labels`
 - L75-80 `_tooltip_slab`
 
-Uses: BattleScene, DebugMenuPopup, HudTooltip
+Uses: DebugMenuPopup, HudTooltip
 Used by: —
 Loads: res://Scenes/BattleScene/BattleScene.tscn, res://Scenes/HUD/HudTooltip.gd, res://Scenes/HUD/HudTooltipTheme.tres
 

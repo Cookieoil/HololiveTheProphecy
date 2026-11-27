@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/CodeIndexTest.gd` — `class_name CodeIndexTest` extends `GdUnitTestSuite`
 
-`302` lines · [back to the map](../../CODEBASE_MAP.md)
+`332` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigation set (Docs/). Each fixture is an inline script so the test nev…
 
@@ -27,7 +27,9 @@ Public API:
 - L262-266 `test_data_file_array_shape() -> void`
 - L269-272 `test_page_file_names_are_derived_from_the_source_path() -> void`
 - L275-287 `test_dependency_scan_ignores_comments() -> void`
-- L290-301 `test_resource_refs_are_deduplicated_and_skip_addons() -> void`
+- L293-306 `test_dependency_scan_ignores_class_names_inside_string_literals() -> void` — A class name that only ever appears inside a string - a tool's rule list, a fixture, a scene path - is not a dependency. Counted as one, it inflates the class's…
+- L311-317 `test_strip_literals_keeps_the_lines_shape() -> void` — The literal is blanked rather than removed, so the line's shape - and therefore a whole-word match next to it - is unchanged. A trailing comment is dropped.
+- L320-331 `test_resource_refs_are_deduplicated_and_skip_addons() -> void`
 
 Private:
 - L15-45 `_script_fixture`
@@ -36,7 +38,7 @@ Private:
 - L74-79 `_entry_at`
 - L82-99 `_scene_fixture`
 
-Uses: BattleScene, Card, CardUI, CodeIndexParser, GameUI, Unit
+Uses: CodeIndexParser
 Used by: —
 Loads: res://Fixture/Thing.gd, res://Fixture/Thing.tscn, res://Scenes/Cards/CardUI.tscn, res://Data/json/units.json, res://Data/json/waves.json
 

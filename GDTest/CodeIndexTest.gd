@@ -287,6 +287,36 @@ func test_dependency_scan_ignores_comments() -> void:
 	assert_array(CodeIndexParser.dict_string_array(info, "uses")).contains_exactly(["CardUI"])
 
 
+## A class name that only ever appears inside a string - a tool's rule list, a fixture, a
+## scene path - is not a dependency. Counted as one, it inflates the class's `Used by`
+## fan-in, which the diff reviewer now measures to decide how deep a review has to go.
+func test_dependency_scan_ignores_class_names_inside_string_literals() -> void:
+	var text: String = "\n".join([
+		"extends RefCounted",
+		"const TRUNK_FILES: Array[String] = [\"Scenes/BattleScene/BattleScene.gd\"]",
+		"func go() -> void:",
+		"\tvar path_value: String = \"CardUI lives here\"",
+		"\tvar used: Unit = null  # Card is only named in this comment",
+		"\tpass",
+	])
+	var info: Dictionary = CodeIndexParser.parse_script(SCRIPT_PATH, text)
+	var infos: Array[Dictionary] = [info]
+	var texts: Dictionary = {SCRIPT_PATH: text}
+	CodeIndexParser.apply_dependencies(infos, texts, PackedStringArray(["BattleScene", "Card", "CardUI", "Unit"]))
+	assert_array(CodeIndexParser.dict_string_array(info, "uses")).contains_exactly(["Unit"])
+
+
+## The literal is blanked rather than removed, so the line's shape - and therefore a
+## whole-word match next to it - is unchanged. A trailing comment is dropped.
+func test_strip_literals_keeps_the_lines_shape() -> void:
+	var line: String = "\tvar s: String = \"CardUI\""
+	var stripped: String = CodeIndexParser.strip_literals(line)
+	assert_int(stripped.length()).is_equal(line.length())
+	assert_bool(stripped.contains("CardUI")).is_false()
+	assert_str(CodeIndexParser.strip_literals("\tvar card: CardUI = null")).is_equal("\tvar card: CardUI = null")
+	assert_bool(CodeIndexParser.strip_literals("\tvar x: int = 1  # note").contains("#")).is_false()
+
+
 func test_resource_refs_are_deduplicated_and_skip_addons() -> void:
 	var text: String = "\n".join([
 		"extends Node",

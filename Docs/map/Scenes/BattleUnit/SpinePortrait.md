@@ -111,7 +111,7 @@ Private:
 - L615-620 `_emit_action_lead`
 - L640-647 `_ensure_canvas_group`
 
-Uses: BattleScene
+Uses: —
 Used by: GDTest/EnemyTurnOverlapTest.gd, Scenes/BattleUnit/UnitUI.gd
 Loads: res://Scenes/BattleScene/Assets/icon.svg, res://Scenes/BattleUnit/SpinePortrait.gdshader
 

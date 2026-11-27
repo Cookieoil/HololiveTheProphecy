@@ -88,7 +88,7 @@ Private:
 - L367-373 `_kill_cutscene`
 - L378-382 `_on_restart_pressed`
 
-Uses: BattleResultPrompt, BattleScene
+Uses: BattleResultPrompt
 Used by: GDTest/BattleEndTest.gd, Scenes/BattleScene/BattleScene.gd
 Loads: res://Scenes/HUD/BattleResultBackdrop.gdshader, res://Scenes/HUD/BattleResultEmblem.gdshader, res://Scenes/BattleScene/Assets/icon2.png, res://Scenes/BattleScene/Assets/icon.svg
 
