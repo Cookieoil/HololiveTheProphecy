@@ -22,7 +22,7 @@ Public API:
 Private:
 - L11-15 `_make_unit`
 
-Uses: BattleScene, StatusIconCatalog, Unit, UnitData
+Uses: StatusIconCatalog, Unit, UnitData
 Used by: —
 Loads: res://Scenes/BattleScene/Assets/StatusIcons.tres
 

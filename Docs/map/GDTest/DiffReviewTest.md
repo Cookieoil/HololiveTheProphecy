@@ -1,9 +1,9 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `GDTest/DiffReviewTest.gd` — `class_name DiffReviewTest` extends `GdUnitTestSuite`
 
-`469` lines · [back to the map](../../CODEBASE_MAP.md)
+`656` lines · [back to the map](../../CODEBASE_MAP.md)
 
-> Fixture tests for Tools/DiffReviewParser.gd, the pure review layer behind Tools/review_diff.gd. Each fixture is an inline unified diff, so the test never depend…
+> Fixture tests for the review layer behind Tools/review_diff.gd: the rules in Tools/DiffReviewParser.gd and the rendering in Tools/DiffReviewFormatter.gd. Each f…
 
 Public API:
 - L111-117 `test_parse_diff_reads_paths_counts_and_lines() -> void`
@@ -24,9 +24,20 @@ Public API:
 - L423-427 `test_fan_in_from_map_reads_the_used_by_line() -> void`
 - L430-433 `test_blast_radius_follows_the_trunk_rule() -> void`
 - L436-439 `test_markdown_report_leads_with_the_blast_radius() -> void`
-- L442-448 `test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged() -> void`
-- L451-459 `test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict() -> void`
-- L462-468 `test_adversarial_section_names_the_deep_context_and_the_invariants() -> void`
+- L444-459 `test_a_blank_line_inside_a_new_test_does_not_hide_its_assertion() -> void` — A blank line between arrange and act must not be read as the end of the test: every suite here writes it that way, and the rule is blocking under --strict.
+- L463-476 `test_a_wrapped_test_signature_still_finds_its_assertion() -> void` — A wrapped signature keeps the body open until the `:` closes it.
+- L480-491 `test_a_comment_mentioning_assert_does_not_count_as_an_assertion() -> void` — A test whose only mention of the word is a comment still cannot fail.
+- L496-514 `test_an_empty_test_does_not_borrow_the_next_tests_assertion() -> void` — Two tests added back to back: the first one's empty body must not borrow the second one's assertion.
+- L524-530 `test_adversarial_section_names_the_deep_context_and_the_invariants() -> void`
+- L534-537 `test_a_collapsible_adversarial_brief_is_wrapped_in_details() -> void` — The brief is collapsed in the pull-request comment so the report stays a screenful.
+- L542-547 `test_fan_in_counts_runtime_dependents_only() -> void` — Only what ships decides the fan-in: otherwise adding unit tests to an isolated leaf widget would promote it to trunk and demand a line-by-line read of a HUD too…
+- L552-557 `test_a_scene_or_shader_change_asks_for_visual_proof() -> void` — A flagged change that touches scenes or shaders needs the rendered snapshot: the headless gates rasterise nothing.
+- L562-577 `test_the_report_caps_its_finding_list() -> void` — A report longer than the cap is cut with a footer, not dumped: the reviewer exists to lower review cost.
+- L581-591 `test_a_comment_naming_the_flag_api_is_not_a_feature_gate() -> void` — A note-to-self that names a flag is prose: only a real read counts as a gate.
+- L595-605 `test_a_banned_pattern_in_a_comment_is_not_flagged() -> void` — Documenting a ban in a comment is not a call to the banned API.
+- L610-635 `test_unstaged_rollout_is_judged_per_flag() -> void` — Each enabled flag is judged on its own rollout, so a second one cannot hide behind the first, and a staged value already on an unchanged line still counts as st…
+- L638-644 `test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged() -> void`
+- L647-655 `test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict() -> void`
 
 Private:
 - L12-20 `_rules`
@@ -42,8 +53,9 @@ Private:
 - L321-339 `_feature_fixture`
 - L343-353 `_test_fixture`
 - L369-379 `_bulk_fixture`
+- L517-521 `_finding_of`
 
-Uses: CardUI, CodeIndexParser, DiffReviewParser, FeatureFlags, GameManager, GameState, HandBar, HudTooltip
+Uses: CodeIndexParser, DiffReviewFormatter, DiffReviewParser
 Used by: —
 Loads: —
 

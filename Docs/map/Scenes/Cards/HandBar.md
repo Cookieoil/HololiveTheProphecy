@@ -67,6 +67,6 @@ Private:
 - L408-409 `_on_event_card_discarded`
 
 Uses: Card, CardUI, ForgePlate, GameState, Unit
-Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/DiffReviewTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/CardUI.gd
+Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/Cards/CardDrag.gd, Scenes/Cards/CardUI.gd
 Loads: res://Scenes/Cards/CardUI.tscn
 

@@ -72,7 +72,7 @@ Private:
 - L533-536 `_on_ultimate_cast`
 - L542-552 `_on_game_over`
 
-Uses: Card, CardIconCatalog, EnemyIntent, GameManager, GameState, MoxieOrbUI, SkillPreviewFormatter, SkillTooltipPopup, TooltipIconCatalog, Unit, UnitUI
-Used by: GDTest/BattleOverlayControllerTest.gd, Scenes/BattleScene/BattleScene.gd, Tools/check_navigation.gd
+Uses: Card, CardIconCatalog, EnemyIntent, GameState, MoxieOrbUI, SkillPreviewFormatter, SkillTooltipPopup, TooltipIconCatalog, Unit, UnitUI
+Used by: GDTest/BattleOverlayControllerTest.gd, Scenes/BattleScene/BattleScene.gd
 Loads: —
 

@@ -13,6 +13,9 @@ extends SceneTree
 ## The fan-in behind that tier comes from the generated map, so the measure is the
 ## codebase's own dependency graph rather than a guess.
 ##
+## The rules live in Tools/DiffReviewParser.gd and the rendering in
+## Tools/DiffReviewFormatter.gd; this file is only the git plumbing and the CLI.
+##
 ## Usage:
 ##   godot --headless --path . --script res://Tools/review_diff.gd
 ##   godot --headless --path . --script res://Tools/review_diff.gd -- \
@@ -42,7 +45,7 @@ const FORMAT_TEXT: String = "text"
 const GIT_FAILED: int = 2
 ## The generated map: its `Used by:` line is the measured fan-in that decides which
 ## changed scripts are trunk, whatever folder they happen to sit in.
-const MAP_DIR: String = "Docs/map"
+const MAP_DIR: String = "res://Docs/map"
 const SCRIPT_SUFFIX: String = ".gd"
 #endregion
 
@@ -66,7 +69,7 @@ func _initialize() -> void:
 	var result: Dictionary = DiffReviewParser.review(diff_text, options)
 	var report: String = _format(result)
 	if ARG_ADVERSARIAL in OS.get_cmdline_user_args():
-		report = report.strip_edges() + "\n\n" + DiffReviewParser.adversarial_section(result) + "\n"
+		report = report.strip_edges() + "\n\n" + DiffReviewFormatter.adversarial_section(result, _is_markdown()) + "\n"
 	print(report)
 	var output_path: String = _arg_value(ARG_OUTPUT, "")
 	if not output_path.is_empty():
@@ -89,9 +92,14 @@ func _git_diff(base: String) -> Dictionary:
 
 
 func _format(result: Dictionary) -> String:
-	if _arg_value(ARG_FORMAT, FORMAT_TEXT) == FORMAT_MARKDOWN:
-		return DiffReviewParser.format_markdown(result)
-	return DiffReviewParser.format_text(result)
+	if _is_markdown():
+		return DiffReviewFormatter.format_markdown(result)
+	return DiffReviewFormatter.format_text(result)
+
+
+## Markdown is what CI posts as the pull-request comment; text is for a terminal run.
+func _is_markdown() -> bool:
+	return _arg_value(ARG_FORMAT, FORMAT_TEXT) == FORMAT_MARKDOWN
 
 
 func _arg_value(name: String, fallback: String) -> String:
@@ -119,14 +127,15 @@ func _known_large_files() -> PackedStringArray:
 
 
 ## Trunk by *measurement*: a changed script that the generated map says `TRUNK_FAN_IN`
-## or more others depend on is shared state, so it gets the line-by-line treatment even
-## when its folder looks leaf-like. The map is a gate-checked artifact, so its fan-in
-## cannot drift from the sources; a missing page simply means "not measured".
+## or more others ship against is shared state, so it gets the line-by-line treatment even
+## when its folder looks leaf-like. Test suites and offline tools are skipped - they never
+## reach a player - and the map is a gate-checked artifact, so its fan-in cannot drift
+## from the sources; a missing page simply means "not measured".
 func _measure_trunk_files(files: Array[Dictionary]) -> PackedStringArray:
 	var trunk: PackedStringArray = PackedStringArray()
 	for file: Dictionary in files:
 		var path_value: String = CodeIndexParser.dict_string(file, "path")
-		if not path_value.ends_with(SCRIPT_SUFFIX):
+		if not path_value.ends_with(SCRIPT_SUFFIX) or DiffReviewParser.is_non_shipped(path_value):
 			continue
 		var page: String = "%s/%s.md" % [MAP_DIR, path_value.trim_suffix(SCRIPT_SUFFIX)]
 		if not FileAccess.file_exists(page):

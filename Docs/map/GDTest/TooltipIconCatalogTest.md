@@ -25,7 +25,7 @@ Private:
 - L13-14 `_fresh_catalog`
 - L18-19 `_authored_catalog`
 
-Uses: BattleScene, Card, SkillData, SkillPreviewFormatter, TooltipIconCatalog, TooltipIconEntry, Unit, UnitData
+Uses: Card, SkillData, SkillPreviewFormatter, TooltipIconCatalog, TooltipIconEntry, Unit, UnitData
 Used by: —
 Loads: res://Scenes/BattleScene/Assets/TooltipIcons.tres, res://art/gloom.png
 

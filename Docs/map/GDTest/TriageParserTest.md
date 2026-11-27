@@ -27,7 +27,7 @@ Private:
 - L16-20 `_first_of`
 - L24-45 `_report`
 
-Uses: Card, CodeIndexParser, GameManager, TriageParser
+Uses: CodeIndexParser, TriageParser
 Used by: —
 Loads: —
 

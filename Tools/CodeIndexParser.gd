@@ -290,19 +290,26 @@ static func parse_data_file(res_path: String, text: String) -> Dictionary:
 
 
 ## Records which `class_name` symbols and res:// paths each script touches, so a
-## page can answer "what else do I have to check if I change this?". Comments are
-## stripped first: a doc comment that merely names another script (an example in
-## prose) is not a dependency.
+## page can answer "what else do I have to check if I change this?".
+##
+## Two scans, because the two kinds of reference live in different places. A `res://`
+## path only ever appears *inside* a quoted literal (`preload("res://...")`), so `refs`
+## reads the comment-stripped text with the literals intact. A `class_name` reference is
+## code, so `uses` reads that same text with the literals blanked out: without that, a
+## tool's rule list, a fixture or a doc-example string that merely *names* a class (a
+## reviewer's question about `GameState`, a scene path in `TRUNK_FILES`) would be
+## recorded as a real dependency and quietly inflate the class's `Used by` fan-in.
 static func apply_dependencies(infos: Array[Dictionary], texts: Dictionary, class_names: PackedStringArray) -> void:
 	for info: Dictionary in infos:
 		var repo_path_value: String = dict_string(info, "path")
 		var code_text: String = strip_comments(dict_string(texts, "res://" + repo_path_value))
+		var symbol_text: String = strip_literals(code_text)
 		var own_class: String = dict_string(info, "class_name")
 		var uses: PackedStringArray = PackedStringArray()
 		for candidate: String in class_names:
 			if candidate == own_class:
 				continue
-			if code_text.contains(candidate) and contains_word(code_text, candidate):
+			if symbol_text.contains(candidate) and contains_word(symbol_text, candidate):
 				uses.append(candidate)
 		info["uses"] = uses
 		info["refs"] = scan_resource_refs(code_text)
@@ -316,6 +323,44 @@ static func strip_comments(text: String) -> String:
 			continue
 		kept.append(line)
 	return "\n".join(kept)
+
+
+## Blanks every quoted literal (and a trailing `#` comment), so a dependency scan of the
+## result only ever sees code. Offsets are preserved - a literal becomes spaces rather
+## than disappearing - which keeps `contains_word` boundaries honest.
+static func strip_literals(text: String) -> String:
+	var kept: PackedStringArray = PackedStringArray()
+	for line: String in text.split("\n"):
+		kept.append(line_without_literals(line))
+	return "\n".join(kept)
+
+
+## One line with its quoted literals and comment replaced by spaces.
+static func line_without_literals(line: String) -> String:
+	var out: String = ""
+	var quote: String = ""
+	var escaped: bool = false
+	for index: int in range(line.length()):
+		var character: String = line[index]
+		if escaped:
+			escaped = false
+			out += " "
+			continue
+		if not quote.is_empty():
+			if character == "\\":
+				escaped = true
+			elif character == quote:
+				quote = ""
+			out += " "
+			continue
+		if character == "\"" or character == "'":
+			quote = character
+			out += " "
+			continue
+		if character == "#":
+			break
+		out += character
+	return out
 
 
 ## Core/Card.gd -> Core/Card.md, relative to the directory holding the map.
