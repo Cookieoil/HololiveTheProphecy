@@ -5,8 +5,8 @@
     "max_function_lines": 80
   },
   "files": {
-    "Managers/GameManager.gd": 1255,
-    "Managers/TelemetryManager.gd": 1030,
+    "Managers/GameManager.gd": 1182,
+    "Managers/TelemetryManager.gd": 1020,
     "Scenes/BattleUnit/UnitUI.gd": 1340,
     "Scenes/Cards/CardUI.gd": 1380,
     "Tools/validate_gameData.gd": 1262

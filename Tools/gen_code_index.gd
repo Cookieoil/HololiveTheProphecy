@@ -556,7 +556,7 @@ func _append_script_table(out: PackedStringArray, title: String, infos: Array[Di
 			_map_link(_script_page_path(path_value)),
 			class_cell,
 			CodeIndexParser.dict_int(info, "lines"),
-			_cell(CodeIndexParser.script_role(info)),
+			_cell(CodeIndexParser.overview_role(CodeIndexParser.script_role(info))),
 		])
 	out.append("")
 

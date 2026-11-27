@@ -287,6 +287,30 @@ func test_a_full_battle_records_run_wave_turn_and_decision_events() -> void:
 	assert_bool(_first_decision(sink, TelemetryManager.DECISION_ULTIMATE).is_empty()).is_false()
 
 
+## A staged flag has to reach the report, or the experiment cannot be read at all:
+## the run records the flags that were ON, and nothing else.
+func test_the_run_records_the_flags_that_were_on() -> void:
+	var sink: MemorySink = MemorySink.new()
+	var ui: ScriptedUI = ScriptedUI.new()
+	var manager: GameManager = _prepare(sink, ui, "full")
+	var config: Dictionary = _config()
+	config["flag_definitions"] = {
+		"staged_experiment": {"enabled": true, "rollout_percent": 50, "description": "under test"},
+		"switched_off": {"enabled": false, "description": "staged off"},
+	}
+	config["flag_overrides"] = {"staged_experiment": true}
+
+	await manager.setup_game([_ally_data()], _waves(), ui, config)
+
+	var started: Dictionary = _events_of(sink, "run_started")[0]
+	var raw_flags: Variant = started.get("flags", {})
+	assert_bool(raw_flags is Dictionary).is_true()
+	if raw_flags is Dictionary:
+		var flags: Dictionary = raw_flags
+		assert_bool(flags.has("staged_experiment")).is_true()
+		assert_bool(flags.has("switched_off")).is_false()
+
+
 func test_a_play_decision_carries_its_alternatives_and_outcome() -> void:
 	var sink: MemorySink = MemorySink.new()
 	var ui: ScriptedUI = ScriptedUI.new()

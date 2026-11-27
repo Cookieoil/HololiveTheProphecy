@@ -19,6 +19,9 @@ const RES_SCHEME: String = "res://"
 ## Caps that keep the generated artifacts cheap to read.
 const MAX_ITEM_KEYS: int = 24
 const MAX_DOC_CHARS: int = 160
+## The role cell in the overview table is capped harder than a page header, because
+## the overview has a byte budget and one line per script (see overview_role()).
+const OVERVIEW_ROLE_CHARS: int = 96
 const MAX_REFS_LISTED: int = 20
 const HEADER_SCAN_LINES: int = 40
 const KEY_COLLECT_DEPTH: int = 3
@@ -348,6 +351,16 @@ static func declaration_detail(record: Dictionary, with_value: bool) -> String:
 		if not value_text.is_empty() and value_text.length() <= 40:
 			detail += " = " + value_text
 	return detail
+
+
+## A shorter role for the overview table only. The per-script page carries the full
+## sentence; the overview has a hard byte budget it has to stay inside (see
+## Tools/check_navigation.gd), and one line per script is what keeps it scannable as
+## the project grows.
+static func overview_role(role: String) -> String:
+	if role.length() <= OVERVIEW_ROLE_CHARS:
+		return role
+	return role.substr(0, OVERVIEW_ROLE_CHARS).strip_edges() + "…"
 
 
 ## The map's "role" cell: the file's own header doc when it has one, otherwise a

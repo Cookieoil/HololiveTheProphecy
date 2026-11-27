@@ -140,6 +140,9 @@ Deno.serve(async (request: Request) => {
       ally_lineup: Array.isArray(started.ally_lineup) ? started.ally_lineup : [],
       starting_deck: started.decklist ?? null,
       config_snapshot: started.config ?? null,
+      // The staged flags that were ON for this run; {} keeps the column's default
+      // when a client from before the flag registry uploads.
+      flags: started.flags && typeof started.flags === "object" ? started.flags : {},
       victory: bool(ended.victory),
       end_reason: str(ended.end_reason) || null,
       final_wave: ended.final_wave ?? null,

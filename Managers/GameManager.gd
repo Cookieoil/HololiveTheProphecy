@@ -17,12 +17,6 @@ var instructions_shown: bool = false
 var telemetry: TelemetryManager = TelemetryManager.new()
 
 #region Constants
-## JSON/config string -> WaveTransition (config.json stores readable names).
-const WAVE_MODE_MAP: Dictionary = {
-	"full_turn": GameState.WaveTransition.FULL_TURN,
-	"immediate_skip": GameState.WaveTransition.IMMEDIATE_SKIP,
-}
-
 ## Fraction of an enemy's skill animation that plays before the next enemy may
 ## start its own. Below 1.0 the previous enemy's wind-down overlaps the next
 ## one's wind-up (the "fast mode" feel), so a three-enemy phase no longer costs
@@ -67,11 +61,12 @@ func setup_game(
 ) -> void:
 	state = GameState.new()
 	ui = p_ui
-	_apply_config(config)
-
-	# Seed the run before anything shuffles or rolls, so the whole battle can be
-	# replayed from this one number and telemetry can name it.
-	state.set_run_seed(_config_seed(config))
+	# Seed first: the flag rollout resolved by apply_config() is keyed on the run
+	# seed, which keeps an experiment reproducible and needs no player identifier.
+	# Seeding up front also means the whole battle can be replayed from this one
+	# number, and telemetry can name it.
+	state.set_run_seed(GameState.seed_from_config(config))
+	state.apply_config(config)
 
 	state.wave_definitions = wave_defs
 	# Initialize allies
@@ -81,100 +76,11 @@ func setup_game(
 	telemetry.start_run(state)
 	# Initialize enemies
 	_spawn_wave(0)
-	state.build_deck() # decklist already set by _apply_config
+	state.build_deck() # the decklist was already applied by state.apply_config(config)
 
 	game_running = true
 	await _run_game_loop()
 
-func _apply_config(config: Dictionary) -> void:
-	if config.is_empty():
-		return
-	state.max_hand_size = maxi(1, _config_int(config, "hand_size", GameState.MAX_HAND_SIZE))
-	state.actions_per_turn = maxi(0, _config_int(config, "actions_per_turn", GameState.ACTIONS_PER_TURN))
-	state.merges_per_turn = maxi(0, _config_int(config, "merges_per_turn", GameState.MERGES_PER_TURN))
-
-	var decklist: Array = _config_decklist(config)
-	if not decklist.is_empty():
-		state.CURRENT_DECKLIST = decklist
-
-	var progression: Array[int] = _config_int_list(config, "dice_progression")
-	if not progression.is_empty():
-		state.set_dice_progression(progression)
-
-	if config.has("wave_transition_mode"):
-		var mode_key: String = str(config["wave_transition_mode"]).strip_edges().to_lower()
-		var wave_mode: int = WAVE_MODE_MAP.get(mode_key, GameState.WaveTransition.FULL_TURN)
-		state.wave_transition_mode = wave_mode
-
-
-## Reads an int config entry. JSON always parses numbers as float, so the value
-## is coerced instead of assigned straight into a typed int field.
-func _config_int(config: Dictionary, key: String, fallback: int) -> int:
-	return _coerce_int(config.get(key, fallback), fallback)
-
-
-## The run seed: an explicit `seed` in the config (so a specific battle can be
-## replayed), otherwise a fresh random value.
-func _config_seed(config: Dictionary) -> int:
-	if config.has("seed"):
-		return _coerce_int(config.get("seed"), 0)
-	var generator: RandomNumberGenerator = RandomNumberGenerator.new()
-	generator.randomize()
-	return generator.randi()
-
-
-## Coerces any JSON scalar (float, int, bool, String) into an int.
-func _coerce_int(value: Variant, fallback: int) -> int:
-	if value is int:
-		var int_value: int = value
-		return int_value
-	if value is float:
-		var float_value: float = value
-		return int(float_value)
-	if value is bool:
-		var bool_value: bool = value
-		return 1 if bool_value else 0
-	if value is String:
-		var text: String = value
-		if text.is_valid_int():
-			return text.to_int()
-		if text.is_valid_float():
-			return int(text.to_float())
-	return fallback
-
-
-## Coerces the JSON decklist ([[value, count], ...]) into typed int pairs.
-func _config_decklist(config: Dictionary) -> Array:
-	var parsed: Array = []
-	var raw_list: Variant = config.get("decklist", [])
-	if not (raw_list is Array):
-		return parsed
-	var entries: Array = raw_list
-	for entry: Variant in entries:
-		if not (entry is Array):
-			continue
-		var pair: Array = entry
-		if pair.size() < 2:
-			continue
-		var card_value: int = _coerce_int(pair[0], 0)
-		var card_count: int = _coerce_int(pair[1], 0)
-		if card_count <= 0:
-			continue
-		parsed.append([card_value, card_count])
-	return parsed
-
-
-## Coerces a JSON array of numbers into a typed int array.
-func _config_int_list(config: Dictionary, key: String) -> Array[int]:
-	var parsed: Array[int] = []
-	var raw_list: Variant = config.get(key, [])
-	if not (raw_list is Array):
-		return parsed
-	var entries: Array = raw_list
-	for entry: Variant in entries:
-		parsed.append(_coerce_int(entry, 0))
-	return parsed
-		
 func _spawn_wave(wave_index: int) -> void:
 	state.current_wave = wave_index
 	if wave_index < state.wave_definitions.size():
@@ -703,6 +609,27 @@ func _handle_debug_command(action: Dictionary) -> void:
 
 
 ## Coerces a Variant into a Dictionary (payloads cross the UI boundary as Variant).
+## Coerces a debug-command argument into an int: the tester tools receive their
+## values from UI controls and dictionaries, either of which can hold a float.
+func _coerce_int(value: Variant, fallback: int) -> int:
+	if value is int:
+		var int_value: int = value
+		return int_value
+	if value is float:
+		var float_value: float = value
+		return int(float_value)
+	if value is bool:
+		var bool_value: bool = value
+		return 1 if bool_value else 0
+	if value is String:
+		var text: String = value
+		if text.is_valid_int():
+			return text.to_int()
+		if text.is_valid_float():
+			return int(text.to_float())
+	return fallback
+
+
 func _coerce_dict(value: Variant) -> Dictionary:
 	if value is Dictionary:
 		var dict: Dictionary = value

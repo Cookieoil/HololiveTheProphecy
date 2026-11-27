@@ -1,0 +1,117 @@
+class_name FeatureFlagsTest
+extends GdUnitTestSuite
+## Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bucketing,
+## the precedence order, and the rule that an unknown flag is always off.
+##
+## @author TheGreatJellyfish
+## @version 11/27/2026
+
+const SHIPPED_PATH: String = "res://Data/json/features.json"
+
+
+func _definitions() -> Dictionary:
+	var root: Dictionary = {
+		"flags": {
+			"staged_full": {
+				"enabled": true,
+				"description": "On for everyone once enabled.",
+			},
+			"staged_none": {
+				"enabled": true,
+				"rollout_percent": 0,
+				"description": "Enabled but staged off.",
+			},
+			"staged_half": {
+				"enabled": true,
+				"rollout_percent": 50,
+				"description": "Half of the runs.",
+			},
+			"kill_switched": {
+				"enabled": false,
+				"rollout_percent": 100,
+				"description": "Rolled out but switched off.",
+			},
+		},
+	}
+	var normalized: Dictionary = FeatureFlags.normalize(root)
+	assert_that(normalized.get("errors")).is_equal(PackedStringArray())
+	var raw_flags: Variant = normalized.get("flags")
+	if raw_flags is Dictionary:
+		var definitions: Dictionary = raw_flags
+		return definitions
+	return {}
+
+
+func test_the_shipped_features_file_is_valid() -> void:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(SHIPPED_PATH))
+	var normalized: Dictionary = FeatureFlags.normalize(parsed)
+	assert_that(normalized.get("errors")).is_equal(PackedStringArray())
+
+
+func test_bucketing_is_deterministic_and_in_range() -> void:
+	var first: int = FeatureFlags.bucket_for("424242", "staged_half")
+	assert_int(FeatureFlags.bucket_for("424242", "staged_half")).is_equal(first)
+	assert_bool(first >= 0 and first < FeatureFlags.BUCKETS).is_true()
+	assert_int(first).is_equal(FeatureFlags.bucket_for("424242", "staged_half"))
+
+
+func test_a_flag_spreads_across_buckets() -> void:
+	var on: int = 0
+	for seed: int in range(1000):
+		if FeatureFlags.bucket_for(str(seed), "staged_half") < 50:
+			on += 1
+	# A 50% bucket over 1000 runs must land near half; a hash that collapsed to one
+	# bucket would show up here instead of only in the production numbers.
+	assert_bool(on >= 400 and on <= 600).is_true()
+
+
+func test_precedence_override_then_kill_switch_then_rollout() -> void:
+	var plain: Dictionary = FeatureFlags.evaluate(_definitions(), {}, "1")
+	assert_bool(FeatureFlags.is_active(plain, "staged_full")).is_true()
+	assert_bool(FeatureFlags.is_active(plain, "staged_none")).is_false()
+	assert_bool(FeatureFlags.is_active(plain, "kill_switched")).is_false()
+
+	var forced_off: Dictionary = FeatureFlags.evaluate(_definitions(), {"staged_full": false}, "1")
+	assert_bool(FeatureFlags.is_active(forced_off, "staged_full")).is_false()
+	var forced_on: Dictionary = FeatureFlags.evaluate(_definitions(), {"kill_switched": true}, "1")
+	assert_bool(FeatureFlags.is_active(forced_on, "kill_switched")).is_true()
+
+
+func test_an_unknown_flag_is_off() -> void:
+	var resolved: Dictionary = FeatureFlags.resolve("nope", _definitions(), {}, "1")
+	assert_bool(resolved.get("enabled")).is_false()
+	assert_str(str(resolved.get("source"))).is_equal(FeatureFlags.SOURCE_UNKNOWN)
+	assert_bool(FeatureFlags.is_active(FeatureFlags.evaluate(_definitions(), {}, "1"), "nope")).is_false()
+
+
+func test_a_half_rollout_is_on_for_roughly_half_the_seeds() -> void:
+	var on: int = 0
+	for seed: int in range(200):
+		if FeatureFlags.is_active(FeatureFlags.evaluate(_definitions(), {}, str(seed)), "staged_half"):
+			on += 1
+	assert_bool(on > 50 and on < 150).is_true()
+
+
+func test_a_malformed_registry_reports_every_problem() -> void:
+	var normalized: Dictionary = FeatureFlags.normalize({
+		"flags": {
+			"Bad-Name": {"enabled": true, "description": "x"},
+			"no_description": {"enabled": true},
+			"bad_percent": {"enabled": true, "rollout_percent": 150, "description": "x"},
+			"not_an_object": true,
+		},
+	})
+	var raw_errors: Variant = normalized.get("errors")
+	assert_bool(raw_errors is PackedStringArray).is_true()
+	if raw_errors is PackedStringArray:
+		var messages: PackedStringArray = raw_errors
+		assert_int(messages.size()).is_equal(4)
+
+
+func test_evaluate_reports_flags_in_name_order() -> void:
+	var active: Dictionary = FeatureFlags.evaluate(_definitions(), {}, "7")
+	assert_bool(FeatureFlags.is_active(active, "staged_full")).is_true()
+	var keys: Array = active.keys()
+	var sorted: Array = keys.duplicate()
+	sorted.sort()
+	assert_that(keys).is_equal(sorted)

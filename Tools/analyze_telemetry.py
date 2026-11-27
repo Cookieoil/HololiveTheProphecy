@@ -17,6 +17,8 @@ metric server exists for:
   6. Wasted resources           - turns ended with actions still playable
   7. Experience cohorts         - the same pick rates for new vs veteran players
   8. Defeat causes              - which enemy or status actually killed the run
+  9. Staged feature flags       - win rate with a flag on vs off, so an experiment
+                                 is read before it is rolled out to everyone
 
 No third-party dependencies: standard library only.
 
@@ -116,6 +118,7 @@ def index_runs(events: list[dict]) -> dict[str, dict]:
             entry["player_run_number"] = int(event.get("player_run_number", 0) or 0)
             entry["ally_lineup"] = [str(ally) for ally in (event.get("ally_lineup") or [])]
             entry["dev_build"] = bool(event.get("is_debug_build", False))
+            entry["flags"] = sorted(str(flag) for flag in (event.get("flags") or {}))
         elif kind == "run_ended":
             entry.update({
                 "victory": bool(event.get("victory", False)),
@@ -140,6 +143,7 @@ def index_runs(events: list[dict]) -> dict[str, dict]:
         entry.setdefault("player_run_number", 0)
         entry.setdefault("ally_lineup", [])
         entry.setdefault("dev_build", False)
+        entry.setdefault("flags", [])
         entry.setdefault("killed_by", {})
         entry.setdefault("ally_deaths", [])
     return runs
@@ -668,6 +672,30 @@ def defeat_causes(runs: dict[str, dict]) -> dict:
             ally_deaths[label(death)] += 1
     return {"killed_by": killed_by, "ally_deaths": ally_deaths}
 
+
+def flag_cohorts(runs: dict[str, dict]) -> dict[str, dict]:
+    """Win rate with each staged flag on, next to the runs that did not have it.
+
+    Both sides have to have runs for the comparison to mean anything: an empty
+    control group only says the rollout is still too small, which is why the counts
+    are printed next to the rates instead of a lift number that implies confidence.
+    """
+    cohorts: dict[str, dict] = {}
+    for run in runs.values():
+        if run["abandoned"]:
+            continue
+        for flag in run.get("flags") or []:
+            row = cohorts.setdefault(flag, {"on": 0, "on_wins": 0, "off": 0, "off_wins": 0})
+            row["on"] += 1
+            row["on_wins"] += 1 if run["victory"] else 0
+    for flag, row in cohorts.items():
+        for run in runs.values():
+            if run["abandoned"] or flag in (run.get("flags") or []):
+                continue
+            row["off"] += 1
+            row["off_wins"] += 1 if run["victory"] else 0
+    return cohorts
+
 #endregion
 
 
@@ -878,6 +906,18 @@ def report(events, runs, picks, instead, presence, strategy, damage, paths,
         add("-- 10. Replayable seeds (load one to reproduce a battle exactly) --")
         add("  " + ", ".join(str(seed) for seed in seeds))
 
+    # Computed from the runs this report is actually describing, so a dev build or
+    # an abandoned run cannot land in a cohort number.
+    flags = flag_cohorts(finished)
+    if flags:
+        add("")
+        add("-- 11. Staged feature flags (win rate on vs off) --")
+        for flag, row in sorted(flags.items()):
+            on_rate = _pct(row["on_wins"] / row["on"]) if row["on"] else "  0.0%"
+            off_rate = _pct(row["off_wins"] / row["off"]) if row["off"] else "  0.0%"
+            add("  %-28s on %4d run(s) win %s  |  off %4d run(s) win %s" % (
+                flag, row["on"], on_rate, row["off"], off_rate))
+
     return "\n".join(lines)
 #endregion
 
@@ -929,6 +969,7 @@ def main(argv: list[str]) -> int:
             "roster_coverage": coverage,
             "wasted_resources": waste,
             "cohort_pick_rates": cohorts,
+            "flag_cohorts": flag_cohorts(runs),
             "defeat_causes": {
                 "killed_by": dict(deaths["killed_by"]),
                 "ally_deaths": dict(deaths["ally_deaths"]),

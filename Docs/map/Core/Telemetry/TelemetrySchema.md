@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/Telemetry/TelemetrySchema.gd` — `class_name TelemetrySchema` extends `RefCounted`
 
-`282` lines · [back to the map](../../../CODEBASE_MAP.md)
+`313` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > Pure serialisers that turn live game objects into the plain Dictionaries the telemetry spool stores. Every function is static and side-effect free, so the shape…
 
@@ -34,7 +34,8 @@ Public API:
 - L216-245 `static battlefield_metrics(state: GameState, intents: Array[EnemyIntent]) -> Dictionary` — The "how is the fight going" numbers that de-bias win-rate correlation: they are recorded *before* the decision, so a metric can be stratified by whether the pl…
 - L248-251 `static ratio(numerator: int, denominator: int) -> float`
 - L254-259 `static living_count(units: Array[Unit]) -> int`
-- L264-280 `static to_int(value: Variant, fallback: int = 0) -> int` — Coerces any Variant into an int (dictionaries read back from JSON are floats).
+- L266-290 `static run_started_snapshot(state: GameState, game_version: String, balance_hash: String, player_run_number: int, ally_lineup: Array) -> Dictionary` — The values a run opens with, stored on `run_started`. Built here for the same reason every other event is: the recorder routes, this file decides what an event…
+- L295-311 `static to_int(value: Variant, fallback: int = 0) -> int` — Coerces any Variant into an int (dictionaries read back from JSON are floats).
 
 Uses: Card, EnemyIntent, GameState, SkillData, Unit
 Used by: GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, Managers/TelemetryManager.gd

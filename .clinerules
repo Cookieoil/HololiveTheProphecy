@@ -59,8 +59,10 @@ the human be the first reader of your own diff:
 
 `godot --headless --path . --script res://Tools/review_diff.gd -- --base origin/main --strict`
 
-`--strict` fails on `untested_change`, `undocumented_api` and `core_purity`; the other
-rules (`banned_pattern`, `todo_added`, `oversize_diff`, `large_file_change`) are advisory.
+`--strict` fails on `undocumented_api` and `core_purity`. `untested_change`, `banned_pattern`,
+`todo_added`, `oversize_diff` and `large_file_change` are advisory: this repo names suites by
+behaviour, so a filename match for "did this change come with a test" would be wrong as often
+as it is right. Read the advisory list before pushing and decide.
 Commit first: the reviewer diffs the branch against the base, so it reads what is committed.
 CI runs the same reviewer without `--strict` and posts it as a sticky PR comment.
 `pwsh -File Tools/preflight.ps1 -Review` runs every gate plus this review.

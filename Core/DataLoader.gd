@@ -20,6 +20,7 @@ const ALLIES_PATH: String = "res://Data/json/allies.json"
 const ENEMIES_PATH: String = "res://Data/json/enemies.json"
 const WAVES_PATH: String = "res://Data/json/waves.json"
 const CONFIG_PATH: String = "res://Data/json/config.json"
+const FLAGS_PATH: String = "res://Data/json/features.json"
 
 const DEFAULT_MAX_MOXIE: int = 20
 const DEFAULT_MAX_HP: int = 10
@@ -119,6 +120,7 @@ static func load_database() -> GameDatabase:
 	database.units.merge(database.enemies, true)
 	database.waves = _build_waves(_read_json_object(WAVES_PATH), database.units)
 	database.config = _build_config(_read_json_object(CONFIG_PATH), database.units)
+	database.flags = _build_flags(_read_json_object(FLAGS_PATH))
 	database.balance_hash = _compute_balance_hash()
 	if database.skills.is_empty():
 		_errors.append("[DataLoader] skills.json produced no skills")
@@ -484,6 +486,23 @@ static func _clone_unit(original: UnitData) -> UnitData:
 	return clone
 ## config.json -> normalised config Dictionary. Every number is converted from
 ## the float JSON always produces, so GameState receives real ints.
+## Normalises res://Data/json/features.json through Core/FeatureFlags.gd and surfaces
+## its problems through get_errors(), so a malformed flag fails the data gate instead
+## of silently reading as off.
+static func _build_flags(raw: Dictionary) -> Dictionary:
+	var normalized: Dictionary = FeatureFlags.normalize(raw)
+	var raw_errors: Variant = normalized.get("errors")
+	if raw_errors is PackedStringArray:
+		var messages: PackedStringArray = raw_errors
+		for message: String in messages:
+			_errors.append("[DataLoader] " + message)
+	var raw_flags: Variant = normalized.get("flags")
+	if raw_flags is Dictionary:
+		var definitions: Dictionary = raw_flags
+		return definitions
+	return {}
+
+
 static func _build_config(config_json: Dictionary, units: Dictionary) -> Dictionary:
 	var config: Dictionary = {}
 	if config_json.is_empty():

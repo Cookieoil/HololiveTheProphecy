@@ -171,23 +171,13 @@ func start_run(state: GameState, version: String = "") -> void:
 			sink = batch_sink
 		_owns_sink = true
 	_connect_bus()
-	_emit("run_started", {
-		"game_version": game_version,
-		"balance_hash": balance_hash,
-		"is_debug_build": OS.is_debug_build(),
-		"run_seed": state.run_seed,
-		"player_run_number": player_run_number,
-		"config": {
-			"hand_size": state.max_hand_size,
-			"actions_per_turn": state.actions_per_turn,
-			"merges_per_turn": state.merges_per_turn,
-			"dice_progression": state.turn_dice_progression,
-			"wave_transition_mode": state.wave_transition_mode,
-		},
-		"decklist": state.CURRENT_DECKLIST,
-		"ally_lineup": _ally_lineup(state),
-		"wave_count": state.wave_definitions.size(),
-	})
+	_emit("run_started", TelemetrySchema.run_started_snapshot(
+		state,
+		game_version,
+		balance_hash,
+		player_run_number,
+		_ally_lineup(state)
+	))
 
 
 ## Closes a run with its result. Safe to call twice. `abandoned` marks a run the
