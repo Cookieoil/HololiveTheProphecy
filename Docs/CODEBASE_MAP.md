@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (66)
+## 1. Game scripts at a glance (67)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -47,7 +47,8 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Managers/ColorUtils.gd`](map/Managers/ColorUtils.md) | — | 31 | Color definitions for BBCode |
 | [`Managers/DebugCommandRunner.gd`](map/Managers/DebugCommandRunner.md) | `DebugCommandRunner` | 401 | Tester-only mutations behind the in-game Debug menu (Scenes/HUD/DebugMen… |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI log… |
-| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 885 | Orchestrates the full game loop. Holds GameState + GameUI references. Al… |
+| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 861 | Orchestrates the full game loop. Holds GameState + GameUI references. Al… |
+| [`Managers/SkillContextFactory.gd`](map/Managers/SkillContextFactory.md) | `SkillContextFactory` | 124 | Builds the SkillContext a skill resolves against, with the async callabl… |
 | [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 858 | Records every decision a player makes, for game design and balancing. It… |
 | [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 426 | Drains the telemetry outbox to the metric server, in the background. It… |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 670 | extends GameUI, 2 signal(s), 11 export(s), 46 function(s) |
@@ -95,7 +96,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | `GameDataValidatorRunner` | 394 | Headless, offline validator for the whole game-data pipeline. res://Data… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Ar… |
 
-## 2. Tests at a glance (33)
+## 2. Tests at a glance (34)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -122,6 +123,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the car… |
 | [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 286 | Locks the top-bar hover tooltips (HudTooltip) and the slab they are draw… |
 | [`GDTest/MessageLogTest.gd`](map/GDTest/MessageLogTest.md) | `MessageLogTest` | 46 | Locks the battle message log: the game authors it in BBCode (`ColorUtils… |
+| [`GDTest/SkillContextFactoryTest.gd`](map/GDTest/SkillContextFactoryTest.md) | `SkillContextFactoryTest` | 359 | Locks Managers/SkillContextFactory.gd directly: the callables a skill re… |
 | [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 141 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatal… |
 | [`GDTest/TelemetryConsentTest.gd`](map/GDTest/TelemetryConsentTest.md) | `TelemetryConsentTest` | 362 | Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED an… |
 | [`GDTest/TelemetryDecisionTest.gd`](map/GDTest/TelemetryDecisionTest.md) | `TelemetryDecisionTest` | 194 | Locks Core/Telemetry/TelemetryDecision.gd directly. GDTest/TelemetryTest… |
@@ -188,4 +190,4 @@ Top-level keys:
 
 ---
 
-Indexed 99 script(s) (66 game, 33 test), 6 scene(s), 6 data file(s).
+Indexed 101 script(s) (67 game, 34 test), 6 scene(s), 6 data file(s).

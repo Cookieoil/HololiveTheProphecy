@@ -21,6 +21,17 @@ var telemetry: TelemetryManager = TelemetryManager.new()
 ## rather than reaching back in here, which would be a cycle.
 var _debug: DebugCommandRunner = DebugCommandRunner.new()
 
+#region Enums
+## What a round step decided about what happens next. The loop reads one of these per step
+## so every exit stays visible on its own line (see _run_game_loop).
+enum StepOutcome {
+	CONTINUE_ROUND, ## run the next step of this round
+	NEXT_TURN,      ## this round is done; the next one starts fresh
+	BATTLE_OVER,    ## the run ended; the loop stops
+}
+#endregion
+
+
 #region Constants
 ## Fraction of an enemy's skill animation that plays before the next enemy may
 ## start its own. Below 1.0 the previous enemy's wind-down overlaps the next
@@ -97,102 +108,149 @@ func _spawn_wave(wave_index: int) -> void:
 
 
 #region Main Game Loop
+## The round driver: one line per step, in the order the game depends on. Every boundary
+## in here is pinned by GDTest/TurnLoopTest.gd - read that suite before reordering a step
+## or moving a reset, because the three outcome checks below look alike and are not.
 func _run_game_loop() -> void:
+	_show_intro_once()
+
+	while game_running:
+		_begin_turn()                              # Steps 1-3: intents, resets, draw
+
+		await _player_action_phase()               # Step 4 (async; owns its own exits)
+		if not game_running:
+			break                                  # a lethal action already ended the run
+
+		var after_player: StepOutcome = await _settle_player_phase()
+		if after_player == StepOutcome.BATTLE_OVER:
+			break
+		if after_player == StepOutcome.NEXT_TURN:
+			state.turn_number += 1                 # the new wave gets a full turn first
+			continue
+
+		_reset_enemy_shields()                     # Step 6
+		await _resolve_enemy_turns()               # Step 7 (async - skills may log)
+		var after_enemy: StepOutcome = await _settle_enemy_turn()
+		if after_enemy == StepOutcome.BATTLE_OVER:
+			break
+
+		var after_tick: StepOutcome = await _tick_round() # Step 8: statuses, then re-check
+		if after_tick == StepOutcome.BATTLE_OVER:
+			break
+		state.turn_number += 1
+
+
+## The how-to-play block is a first-run courtesy: turn 0 shows it once, and the flag is
+## kept on the manager so re-entering the loop cannot repeat it.
+func _show_intro_once() -> void:
 	if state.turn_number == 0 and not instructions_shown:
 		_show_instructions()
 		instructions_shown = true
-	
-	while game_running:
-		EventBus.turn_started.emit(state.turn_number)
-		var turn_header: String = ColorUtils.colorize("╔══ TURN %d ══╗" % (state.turn_number + 1), ColorUtils.COLOR_HEADER)
-		if state.turn_number == 0:
-			ui.show_message("\n" + turn_header)
-		else:
-			ui.show_message("\n\n" + turn_header)
 
-		# ── Step 1: Roll enemy intents ──
-		_roll_enemy_intents()
-		ui.show_enemy_intents(current_intents)
 
-		# ── Step 2: Reset ally shields & temp effects ──
-		for ally: Unit in state.allies:
-			ally.ult_used_this_turn = false
-			if not ally.is_dead:
-				ally.reset_shield()
-		for enemy: Unit in state.enemies:
-			enemy.ult_used_this_turn = false
+## Steps 1-3: roll and preview the enemy intents, reset the round's per-turn state, draw
+## up to the hand limit, snapshot the turn for telemetry, and hand it to the player.
+func _begin_turn() -> void:
+	EventBus.turn_started.emit(state.turn_number)
+	ui.show_message(_turn_header())
 
-		# ── Step 3: Draw to hand limit ──
-		var drawn: Array[Card] = state.draw_cards_to_limit()
-		if not drawn.is_empty():
-			var count_str: String = ColorUtils.colorize(str(drawn.size()), ColorUtils.COLOR_CARD)
-			ui.show_message("Drew %s card(s)." % count_str)
+	# ── Step 1: Roll enemy intents ──
+	_roll_enemy_intents()
+	ui.show_enemy_intents(current_intents)
 
-		# Snapshot the turn the player is about to act in: intents, hand, board.
-		telemetry.record_turn_started(state, current_intents, state.get_dice_size(state.turn_number))
+	# ── Step 2: Reset ally shields & temp effects ──
+	_reset_turn_state()
 
-		# ── Step 4: Player action phase (async) ──
-		state.actions_left = state.actions_per_turn
-		state.merges_left = state.merges_per_turn
-		state.next_skill_bonus = 0
-		await _player_action_phase()
+	# ── Step 3: Draw to hand limit ──
+	var drawn: Array[Card] = state.draw_cards_to_limit()
+	if not drawn.is_empty():
+		var count_str: String = ColorUtils.colorize(str(drawn.size()), ColorUtils.COLOR_CARD)
+		ui.show_message("Drew %s card(s)." % count_str)
 
-		# The player phase can end the battle itself - a lethal card, an Ultimate, a
-		# cleared final wave or a debug result preview - so stop before the enemy turn.
-		if not game_running:
-			break
+	# Snapshot the turn the player is about to act in: intents, hand, board.
+	telemetry.record_turn_started(state, current_intents, state.get_dice_size(state.turn_number))
 
-		# ── Step 5: Cleanup played cards ──
-		state.end_player_turn_cleanup()
+	state.actions_left = state.actions_per_turn
+	state.merges_left = state.merges_per_turn
+	state.next_skill_bonus = 0
 
-		# Check for wave clear before enemy turn. A wave with no successor ends the
-		# battle right here: the player's own action just won it, so there is no
-		# enemy turn left to resolve and no next turn to start.
-		if state.all_enemies_dead():
-			_close_turn_record()
-			if _try_advance_wave():
-				state.turn_number += 1
-				continue # loop to next turn (enemies skip this turn)
-			await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
-			break
 
-		# ── Step 6: Reset enemy shields & temp effects ──
-		for enemy: Unit in state.enemies:
-			if not enemy.is_dead:
-				enemy.reset_shield()
+## Turn 1 opens flush under the title card; every later turn gets a blank line first.
+func _turn_header() -> String:
+	var header: String = ColorUtils.colorize(
+		"╔══ TURN %d ══╗" % (state.turn_number + 1), ColorUtils.COLOR_HEADER
+	)
+	if state.turn_number == 0:
+		return "\n" + header
+	return "\n\n" + header
 
-		# ── Step 7: Enemy turn  (async — skills may log) ──
-		await _resolve_enemy_turns()
-		
-		# Post-turn checks
-		if state.all_allies_dead():
-			_close_turn_record()
-			await _finish_battle(false, TelemetryManager.REASON_ALL_ALLIES_DEAD)
-			break
-		
-		if state.all_enemies_dead():
-			if not _try_advance_wave():
-				_close_turn_record()
-				await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
-				break
-				
-		# ── Step 8: Clean up (statuses tick once per round) ──
-		_end_of_turn_cleanup()
+
+## Step 2, the start-of-round resets: both sides release the once-per-turn Ultimate lock
+## and the allies lose their shields. Enemy shields are deliberately NOT reset here - they
+## cover the player phase, so Step 6 clears them instead (see _reset_enemy_shields).
+func _reset_turn_state() -> void:
+	for ally: Unit in state.allies:
+		ally.ult_used_this_turn = false
+		if not ally.is_dead:
+			ally.reset_shield()
+	for enemy: Unit in state.enemies:
+		enemy.ult_used_this_turn = false
+
+
+## Step 5: move the played cards to the discard pile, then settle a board the player just
+## cleared. Returns NEXT_TURN when a wave with a successor took over, BATTLE_OVER when the
+## final wave fell (the player's own action just won the run, so no enemy turn is left to
+## resolve), or CONTINUE_ROUND to let the enemy turn run.
+func _settle_player_phase() -> StepOutcome:
+	state.end_player_turn_cleanup()
+	if not state.all_enemies_dead():
+		return StepOutcome.CONTINUE_ROUND
+	_close_turn_record()
+	if _try_advance_wave():
+		return StepOutcome.NEXT_TURN
+	await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
+	return StepOutcome.BATTLE_OVER
+
+
+## Step 6: enemy shields cover the player phase, so they are cleared here - after the
+## player has finished and immediately before their owners act.
+func _reset_enemy_shields() -> void:
+	for enemy: Unit in state.enemies:
+		if not enemy.is_dead:
+			enemy.reset_shield()
+
+
+## Step 7's post-check. An ally wipe, or a final wave that just fell, ends the run and
+## skips the round tick. A wave WITH a successor advances here and still falls through to
+## the tick, so statuses fire exactly once per round - the one check that can advance the
+## wave and keep the round going.
+func _settle_enemy_turn() -> StepOutcome:
+	if state.all_allies_dead():
 		_close_turn_record()
+		await _finish_battle(false, TelemetryManager.REASON_ALL_ALLIES_DEAD)
+		return StepOutcome.BATTLE_OVER
+	if state.all_enemies_dead() and not _try_advance_wave():
+		_close_turn_record()
+		await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
+		return StepOutcome.BATTLE_OVER
+	return StepOutcome.CONTINUE_ROUND
 
-		# A status tick can finish off the last unit, so re-check the outcome.
-		if state.all_allies_dead():
-			await _finish_battle(false, TelemetryManager.REASON_STATUS_TICK)
-			break
 
-		if state.all_enemies_dead():
-			if _try_advance_wave():
-				state.turn_number += 1
-				continue
-			await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
-			break
-
-		state.turn_number += 1
+## Step 8: every buff/debuff ticks exactly once per round and the turn record closes. The
+## tick can finish off the last ally (a status death, not an ally wipe), clear a wave that
+## still has a successor, or win the run outright, so the outcome is re-checked here.
+func _tick_round() -> StepOutcome:
+	_end_of_turn_cleanup()
+	_close_turn_record()
+	if state.all_allies_dead():
+		await _finish_battle(false, TelemetryManager.REASON_STATUS_TICK)
+		return StepOutcome.BATTLE_OVER
+	if state.all_enemies_dead():
+		if _try_advance_wave():
+			return StepOutcome.NEXT_TURN
+		await _finish_battle(true, TelemetryManager.REASON_FINAL_WAVE)
+		return StepOutcome.BATTLE_OVER
+	return StepOutcome.NEXT_TURN
 
 
 ## Closes the recorded turn on every way out of the loop, so a lethal last turn
@@ -524,98 +582,16 @@ func _respawn_wave_and_show() -> void:
 
 
 #region Context Builders
+## The target/card/flash callables a skill resolves through live in
+## Managers/SkillContextFactory.gd, which is handed the board, the UI and the recorder per
+## call - the same shape as the debug tools. These two keep every call site (and the
+## suites that drive them) reading exactly as before.
 func _build_ally_context(ally: Unit, card: Card) -> SkillContext:
-	var ctx: SkillContext = SkillContext.new(ally, card, state)
-
-	# Apply turn-wide bonus from Buff Skill 2 merged
-	if state.next_skill_bonus > 0:
-		ctx.card_value += state.next_skill_bonus
-		var bonus_str: String = ColorUtils.colorize("+" + str(state.next_skill_bonus), ColorUtils.COLOR_CARD)
-		ui.show_message("  %s bonus value from Buff!" % bonus_str)
-		state.next_skill_bonus = 0
-
-	# Pick_n_target:
-	ctx.pick_n_target = func(count: int, filter: Callable) -> Array[Unit]:
-		var units: Array[Unit] = []
-		for u: Unit in state.allies:
-			if filter.call(u):
-				units.append(u)
-		for u: Unit in state.enemies:
-			if filter.call(u):
-				units.append(u)
-		if units.is_empty():
-			return []
-		var started_ms: int = Time.get_ticks_msec()
-		var picked: Array[Unit] = await ui.ask_pick_targets(units, count)
-		telemetry.note_pick_target(units, count, picked, Time.get_ticks_msec() - started_ms)
-		return picked
-		
-	# Pick_n_card:
-	ctx.pick_n_card = func(count: int, filter: Callable) -> Array[Card]:
-		var units: Array[Card] = []
-		for c: Card in state.hand:
-			if filter.call(c):
-				units.append(c)
-		if units.is_empty():
-			return []
-		var started_ms: int = Time.get_ticks_msec()
-		var picked: Array[Card] = await ui.ask_pick_cards(units, count)
-		telemetry.note_pick_card(units, count, picked, Time.get_ticks_msec() - started_ms)
-		return picked
-
-	# Flash_cards: reveal cards the game picked automatically (no prompt shown).
-	ctx.flash_cards = func(cards: Array[Card]) -> void:
-		if cards.is_empty():
-			return
-		await ui.flash_auto_selected_cards(cards)
-		
-	ctx.log_message = func(msg: String) -> void:
-		ui.show_message("  " + msg)
-	
-	return ctx
+	return SkillContextFactory.build_ally_context(ally, card, state, ui, telemetry)
 
 
 func _build_enemy_context(enemy: Unit, intent: EnemyIntent) -> SkillContext:
-	var ctx: SkillContext = SkillContext.new(enemy, null, state)
-	ctx.card_value = intent.effective_value
-	ctx.is_merged = intent.condition_met
-
-	# Enemy targeting is random — inject auto-target callables
-	ctx.pick_n_target = func(_count: int, _filter: Callable) -> Array[Unit]:
-		var target: Array[Unit] = state.get_living_allies()
-		# Seeded, so the same run seed always targets the same ally.
-		state.shuffle_units(target)
-		var result: Array[Unit] = []
-		
-		for i: int in mini(_count, target.size()):
-			result.append(target[i])
-			
-		if not result.is_empty():
-			var names: Array = result.map(func(t: Unit) -> String: return t.data.display_name)
-			var joined: String = ", ".join(PackedStringArray(names))
-			var colored: String = ColorUtils.colorize(joined, ColorUtils.COLOR_ALLY)
-			ui.show_message(" Targets: %s" % colored)
-		return result
-	
-	ctx.pick_n_card = func(count: int, _filter: Callable) -> Array[Card]:
-		# Enemies never get a hand prompt, so auto-pick the top cards and reveal
-		# them with the hostile (red) flash, since an enemy caused the change.
-		var auto_cards: Array[Card] = state.get_top_n_cards(count)
-		if not auto_cards.is_empty():
-			await ui.flash_auto_selected_cards(auto_cards, true)
-		return auto_cards
-
-	# Flash_cards: reveal cards the game picked automatically (no prompt shown).
-	# Enemy-caused changes flash red (hostile) so the player sees the hit.
-	ctx.flash_cards = func(cards: Array[Card]) -> void:
-		if cards.is_empty():
-			return
-		await ui.flash_auto_selected_cards(cards, true)
-		
-	ctx.log_message = func(msg: String) -> void:
-		ui.show_message("  " + msg)
-	
-	return ctx
+	return SkillContextFactory.build_enemy_context(enemy, intent, state, ui)
 #endregion
 
 #region Skill Resolution

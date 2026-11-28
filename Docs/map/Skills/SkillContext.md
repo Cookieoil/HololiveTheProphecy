@@ -25,6 +25,6 @@ Private:
 - L33-42 `_init`
 
 Uses: Card, GameState, Unit
-Used by: GDTest/AllyKitTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd, Skills/SkillEffect.gd
+Used by: GDTest/AllyKitTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/SkillContextFactoryTest.gd, Managers/GameManager.gd, Managers/SkillContextFactory.gd, Skills/EffectBlock.gd, Skills/SkillEffect.gd
 Loads: —
 

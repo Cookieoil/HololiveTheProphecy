@@ -78,6 +78,6 @@ Private:
 - L336-337 `_on_decline_pressed`
 
 Uses: TelemetryConsent
-Used by: GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, GDTest/TurnLoopTest.gd, Scenes/BattleScene/BattleScene.gd
+Used by: GDTest/SkillContextFactoryTest.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, GDTest/TurnLoopTest.gd, Scenes/BattleScene/BattleScene.gd
 Loads: —
 
