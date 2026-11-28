@@ -59,6 +59,6 @@ Private:
 - L506-562 `_build_config`
 
 Uses: EffectBlock, FeatureFlags, GameDatabase, GameState, SkillData, UnitData
-Used by: GDTest/AllyKitTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryFoundationTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/GameDataValidator.gd, Tools/validate_gameData.gd
+Used by: GDTest/AllyKitTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryFoundationTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/BattleSimulator.gd, Tools/GameDataValidator.gd, Tools/validate_gameData.gd
 Loads: res://Data/json, res://Data/json/skills.json, res://Data/json/allies.json, res://Data/json/enemies.json, res://Data/json/waves.json, res://Data/json/config.json, res://Data/json/features.json, res://Tools/export_xlsx_to_json.gd
 

@@ -19,9 +19,11 @@ const RES_SCHEME: String = "res://"
 ## Caps that keep the generated artifacts cheap to read.
 const MAX_ITEM_KEYS: int = 24
 const MAX_DOC_CHARS: int = 160
-## The role cell in the overview table is capped harder than a page header, because
-## the overview has a byte budget and one line per script (see overview_role()).
-const OVERVIEW_ROLE_CHARS: int = 96
+## The role cell in the overview table is capped harder than a page header, because the
+## overview has a byte budget and one line per script (see overview_role()). 96 was
+## comfortable until the project reached ~100 scripts; at 72 the overview keeps its
+## headroom inside the budget Tools/check_navigation.gd enforces, without dropping a row.
+const OVERVIEW_ROLE_CHARS: int = 72
 const MAX_REFS_LISTED: int = 20
 const HEADER_SCAN_LINES: int = 40
 const KEY_COLLECT_DEPTH: int = 3

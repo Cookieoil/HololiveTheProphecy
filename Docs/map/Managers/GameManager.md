@@ -59,6 +59,6 @@ Private:
 - L845-882 `_log_status_event`
 
 Uses: Card, DebugCommandRunner, DiceRoller, EnemyIntent, GameState, GameUI, SkillContext, SkillData, SkillEffect, TelemetryManager, TelemetrySchema, Unit, UnitData
-Used by: GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/TelemetryTest.gd, Scenes/BattleScene/BattleScene.gd
+Used by: GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/TelemetryTest.gd, Scenes/BattleScene/BattleScene.gd, Tools/BattleSimulator.gd
 Loads: —
 
