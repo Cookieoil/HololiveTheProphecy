@@ -255,7 +255,7 @@ func _hp_summary(units: Array[Unit]) -> String:
 func _spawn_random(state: GameState, ui: GameUI, count: int) -> void:
 	var spawned: int = 0
 	for _i: int in maxi(0, count):
-		state.hand.append(state.spawn_debug_card(randi_range(1, 6)))
+		state.hand.append(state.spawn_debug_card(state.rng.randi_range(1, 6)))
 		spawned += 1
 	if spawned == 0:
 		return
@@ -301,7 +301,7 @@ func _discard_random(state: GameState, ui: GameUI) -> void:
 	if state.hand.is_empty():
 		log_line(ui, "Hand is empty, nothing to discard.")
 		return
-	var index: int = randi_range(0, state.hand.size() - 1)
+	var index: int = state.rng.randi_range(0, state.hand.size() - 1)
 	var card: Card = state.hand[index]
 	state.discard_card(card)
 	log_line(ui, "Discarded %s from hand." % ColorUtils.colorize(
