@@ -22,6 +22,6 @@ Private:
 - L199-218 `_intent_threat`
 
 Uses: Card, EnemyIntent, GameState, SkillData, TelemetrySchema, Unit
-Used by: Managers/TelemetryManager.gd
+Used by: GDTest/TelemetryDecisionTest.gd, Managers/TelemetryManager.gd
 Loads: —
 

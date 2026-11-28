@@ -17,6 +17,6 @@ Exports:
 - L19 `is_enemy: bool = false`
 
 Uses: SkillData
-Used by: Core/DataLoader.gd, Core/GameState.gd, Core/Unit.gd, Data/gameDatabase.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryFoundationTest.gd, GDTest/TelemetryTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, Core/GameState.gd, Core/Unit.gd, Data/gameDatabase.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugCommandRunnerTest.gd, GDTest/DebugMenuTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/StatusCatalogTest.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryDecisionTest.gd, GDTest/TelemetryFoundationTest.gd, GDTest/TelemetryTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
 Loads: —
 

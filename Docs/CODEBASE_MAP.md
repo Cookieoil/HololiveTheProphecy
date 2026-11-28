@@ -91,7 +91,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
 
-## 2. Tests at a glance (28)
+## 2. Tests at a glance (30)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -104,6 +104,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 122 | Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/deb… |
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 332 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigati… |
+| [`GDTest/DebugCommandRunnerTest.gd`](map/GDTest/DebugCommandRunnerTest.md) | `DebugCommandRunnerTest` | 152 | Locks the seams of Managers/DebugCommandRunner.gd that the turn-loop suite cannot reach. GDTest/… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it renders one toggle per st… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 864 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is vie… |
 | [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 656 | Fixture tests for the review layer behind Tools/review_diff.gd: the rules in Tools/DiffReviewPar… |
@@ -117,6 +118,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/MessageLogTest.gd`](map/GDTest/MessageLogTest.md) | `MessageLogTest` | 46 | Locks the battle message log: the game authors it in BBCode (`ColorUtils.colorize` and the HOW T… |
 | [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 141 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatalog. |
 | [`GDTest/TelemetryConsentTest.gd`](map/GDTest/TelemetryConsentTest.md) | `TelemetryConsentTest` | 362 | Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Ag… |
+| [`GDTest/TelemetryDecisionTest.gd`](map/GDTest/TelemetryDecisionTest.md) | `TelemetryDecisionTest` | 194 | Locks Core/Telemetry/TelemetryDecision.gd directly. GDTest/TelemetryTest.gd covers the same shap… |
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its… |
 | [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 697 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wav… |
 | [`GDTest/TelemetryUploaderTest.gd`](map/GDTest/TelemetryUploaderTest.md) | `TelemetryUploaderTest` | 256 | Locks the uploader's delivery rules (Managers/TelemetryUploader.gd), which decide whether a fini… |
@@ -178,4 +180,4 @@ Top-level keys:
 
 ---
 
-Indexed 90 script(s) (62 game, 28 test), 5 scene(s), 6 data file(s).
+Indexed 92 script(s) (62 game, 30 test), 5 scene(s), 6 data file(s).

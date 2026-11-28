@@ -52,6 +52,6 @@ Private:
 - L395-399 `_clear_statuses`
 
 Uses: Card, GameState, GameUI, Unit
-Used by: GDTest/DebugMenuTest.gd, Managers/GameManager.gd
+Used by: GDTest/DebugCommandRunnerTest.gd, GDTest/DebugMenuTest.gd, Managers/GameManager.gd
 Loads: —
 
