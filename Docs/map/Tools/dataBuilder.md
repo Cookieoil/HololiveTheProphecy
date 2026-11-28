@@ -65,6 +65,6 @@ Private:
 - L769-778 `_is_inline_array`
 
 Uses: XlsxReader
-Used by: Tools/export_xlsx_to_json.gd, Tools/validate_gameData.gd
+Used by: Tools/GameDataValidator.gd, Tools/export_xlsx_to_json.gd, Tools/validate_gameData.gd
 Loads: res://Data/xlsx/game_data.xlsx, res://Data/json
 
