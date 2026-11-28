@@ -72,6 +72,10 @@ def load_events(paths: list[Path]) -> list[dict]:
     events: list[dict] = []
     for path in paths:
         path = path.resolve()
+        if not path.exists():
+            # A typo'd path is the same class of bad input as a half-written line: the
+            # report should say it found nothing, not traceback on the way there.
+            continue
         files = sorted(path.glob("*.jsonl")) if path.is_dir() else [path]
         for file in files:
             with file.open("r", encoding="utf-8") as handle:
