@@ -22,6 +22,14 @@ extends GdUnitTestSuite
 
 const TEMP_ROOT: String = "user://telemetry_uploader_test"
 const ENDPOINT: String = "https://metrics.invalid/ingest"
+## The 4xx codes a retry can still fix: 408/429 are timing, 401/403 are a deployment or a
+## key problem (see TelemetryUploader._is_transient).
+const RETRYABLE_CODES: Array[int] = [
+	HTTPClient.RESPONSE_REQUEST_TIMEOUT,
+	HTTPClient.RESPONSE_TOO_MANY_REQUESTS,
+	HTTPClient.RESPONSE_UNAUTHORIZED,
+	HTTPClient.RESPONSE_FORBIDDEN,
+]
 
 
 #region Helpers
@@ -119,6 +127,38 @@ func _has_header(headers: PackedStringArray, name: String, value: String) -> boo
 				and parts[1].strip_edges() == value:
 			return true
 	return false
+
+
+## One run, one scripted response: a fresh uploader, mounted and drained once. Each code
+## gets its own uploader, so one response cannot decide the next code's outcome.
+func _drained_uploader_with_response(code: int) -> TelemetryUploader:
+	var calls: Array[String] = []
+	var uploader: TelemetryUploader = _new_uploader([[HTTPRequest.RESULT_SUCCESS, code]], calls)
+	_write_run(uploader.outbox_path(), "run_probe.jsonl", 1)
+	_mount(uploader)
+
+	uploader.drain()
+
+	return uploader
+
+
+## Which of `codes` ended up quarantined as permanently undeliverable.
+func _quarantined_codes(codes: Array[int]) -> Array[int]:
+	var quarantined: Array[int] = []
+	for code: int in codes:
+		if _count_runs(_drained_uploader_with_response(code).rejected_path()) != 0:
+			quarantined.append(code)
+	return quarantined
+
+
+## Which of `codes` failed to move the run out of the outbox (delivered or quarantined).
+func _calls_that_left_the_run_queued(codes: Array[int]) -> Array[int]:
+	var queued: Array[int] = []
+	for code: int in codes:
+		var uploader: TelemetryUploader = _drained_uploader_with_response(code)
+		if _count_runs(uploader.outbox_path()) != 0 and _count_runs(uploader.archive_path()) == 0:
+			queued.append(code)
+	return queued
 #endregion
 
 
@@ -180,21 +220,17 @@ func test_a_transient_failure_keeps_the_file_and_backs_the_retry_off() -> void:
 ## or key problem. None may be mistaken for the permanent kind - quarantining real player
 ## runs over a rotated key would throw the data away for good.
 func test_a_timeout_a_throttle_and_a_credential_error_are_retried_not_quarantined() -> void:
-	for code: int in [
-		HTTPClient.RESPONSE_REQUEST_TIMEOUT,
-		HTTPClient.RESPONSE_TOO_MANY_REQUESTS,
-		HTTPClient.RESPONSE_UNAUTHORIZED,
-		HTTPClient.RESPONSE_FORBIDDEN,
-	]:
-		var calls: Array[String] = []
-		var uploader: TelemetryUploader = _new_uploader([[HTTPRequest.RESULT_SUCCESS, code]], calls)
-		_write_run(uploader.outbox_path(), "run_slow.jsonl", 1)
-		_mount(uploader)
+	var quarantined: Array[int] = _quarantined_codes(RETRYABLE_CODES)
 
-		uploader.drain()
+	assert_array(quarantined).is_empty()
 
-		assert_int(_count_runs(uploader.outbox_path())).is_equal(1)
-		assert_int(_count_runs(uploader.rejected_path())).is_equal(0)
+
+## The other side of the boundary, so the rule above cannot be satisfied by never
+## quarantining anything: a 400/413/422 *is* the batch, so the drain parks it.
+func test_a_batch_the_server_calls_malformed_is_quarantined() -> void:
+	var still_queued: Array[int] = _calls_that_left_the_run_queued([400, 413, 422])
+
+	assert_array(still_queued).is_empty()
 #endregion
 
 
