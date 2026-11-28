@@ -6,8 +6,8 @@ extends GdUnitTestSuite
 ## happy path: CI ran it against the current data and it printed PASSED. Nothing proved
 ## it still *rejects* bad data, which is the entire point of a gate.
 ##
-## These tests drive `validate_bundle()`, the in-memory seam, so each rule is exercised
-## against a hand-built bundle with no files, no scene tree and no exit code. The
+## These tests drive `GameDataValidator.validate()`, the in-memory seam, so each rule is
+## exercised against a hand-built bundle with no files, no scene tree and no exit code. The
 ## anchor is `test_the_valid_bundle_is_clean`: if that ever fails, every "X is an error"
 ## assertion below it is meaningless, so it is asserted first and asserted hard.
 ##
@@ -99,11 +99,11 @@ func _valid_bundle() -> Dictionary:
 
 
 #region Helpers
-## Runs the rules over one bundle with a fresh runner, so nothing leaks between tests.
+## Runs the rules over one bundle with a fresh engine, so nothing leaks between tests.
 func _report(bundle: Dictionary) -> Dictionary:
-	var runner: GameDataValidatorRunner = GameDataValidatorRunner.new()
-	auto_free(runner)
-	return runner.validate_bundle(bundle)
+	var validator: GameDataValidator = GameDataValidator.new()
+	auto_free(validator)
+	return validator.validate(bundle)
 
 
 func _errors(bundle: Dictionary) -> PackedStringArray:
@@ -193,18 +193,18 @@ func test_the_valid_bundle_is_clean() -> void:
 	assert_int(_lines(report, "warnings").size()).is_equal(0)
 
 
-## And the seam itself is idempotent: a second run over a dirty bundle must not
-## accumulate the first run's diagnostics.
+## And the engine is idempotent: a second run over a dirty bundle must not accumulate
+## the first run's diagnostics.
 func test_a_second_run_starts_from_a_clean_slate() -> void:
-	var runner: GameDataValidatorRunner = GameDataValidatorRunner.new()
-	auto_free(runner)
+	var validator: GameDataValidator = GameDataValidator.new()
+	auto_free(validator)
 
 	var broken: Dictionary = _with_ally({"max_hp": 0})
-	assert_int(_lines(runner.validate_bundle(broken), "errors").size()).is_greater(0)
+	var first: int = _lines(validator.validate(broken), "errors").size()
+	assert_int(first).is_greater(0)
 	# The same broken bundle again reports the same thing, not twice as much.
-	var again: Dictionary = runner.validate_bundle(broken)
-	assert_int(_lines(again, "errors").size()).is_equal(_lines(runner.validate_bundle(broken), "errors").size())
-	assert_int(_lines(runner.validate_bundle(_valid_bundle()), "errors").size()).is_equal(0)
+	assert_int(_lines(validator.validate(broken), "errors").size()).is_equal(first)
+	assert_int(_lines(validator.validate(_valid_bundle()), "errors").size()).is_equal(0)
 #endregion
 
 

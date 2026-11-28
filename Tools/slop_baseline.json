@@ -7,8 +7,7 @@
   },
   "files": {
     "Scenes/BattleUnit/UnitUI.gd": 1340,
-    "Scenes/Cards/CardUI.gd": 1376,
-    "Tools/validate_gameData.gd": 1160
+    "Scenes/Cards/CardUI.gd": 1376
   },
   "functions": {
     "Managers/GameManager.gd::_run_game_loop": 98,
@@ -16,8 +15,7 @@
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 140,
     "Scenes/HUD/MoxieOrbUI.gd::_draw": 103,
     "Scenes/HUD/SkillTooltipPopup.gd::_build_ui": 84,
-    "Tools/CodeIndexParser.gd::parse_script": 146,
-    "Tools/validate_gameData.gd::_validate_effect": 92
+    "Tools/CodeIndexParser.gd::parse_script": 146
   },
   "complexity": {
     "Core/DataLoader.gd::_build_config": 15,
@@ -33,9 +31,7 @@
     "Tools/dataBuilder.gd::_coerce": 16,
     "Tools/dataBuilder.gd::_parse_table": 15,
     "Tools/dataBuilder.gd::_read_config": 15,
-    "Tools/gen_code_index.gd::_append_functions": 13,
-    "Tools/validate_gameData.gd::_validate_effect": 29,
-    "Tools/validate_gameData.gd::_validate_units": 18
+    "Tools/gen_code_index.gd::_append_functions": 13
   },
   "get_parent": {}
 }

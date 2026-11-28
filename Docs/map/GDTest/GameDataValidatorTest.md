@@ -9,7 +9,7 @@ Sections: Fixtures · Helpers · The anchor · Scalars and types · Effect struc
 
 Public API:
 - L189-193 `test_the_valid_bundle_is_clean() -> void` — If this fails, every "X is an error" assertion below it is meaningless: a bundle that is already dirty would satisfy them for the wrong reason.
-- L198-207 `test_a_second_run_starts_from_a_clean_slate() -> void` — And the seam itself is idempotent: a second run over a dirty bundle must not accumulate the first run's diagnostics.
+- L198-207 `test_a_second_run_starts_from_a_clean_slate() -> void` — And the engine is idempotent: a second run over a dirty bundle must not accumulate the first run's diagnostics.
 - L212-215 `test_a_boolean_where_a_number_belongs_is_an_error() -> void`
 - L218-221 `test_a_fractional_number_is_an_error() -> void`
 - L226-230 `test_a_numeric_string_is_a_warning_not_an_error() -> void` — A quoted number is almost always an authoring slip, but the value is usable, so it warns rather than blocks.
@@ -103,7 +103,7 @@ Private:
 - L697-706 `_waves_text`
 - L710-714 `_config_text`
 
-Uses: GameDataValidatorRunner, ValidationReporter
+Uses: GameDataValidator, GameDataValidatorRunner, ValidationReporter
 Used by: —
 Loads: res://Data/json/skills.json, res://Data/json/allies.json, res://Data/json/waves.json, res://Data/json/config.json
 

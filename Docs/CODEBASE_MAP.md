@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (63)
+## 1. Game scripts at a glance (64)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -78,6 +78,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 804 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here takes text in and returns… |
 | [`Tools/DiffReviewFormatter.gd`](map/Tools/DiffReviewFormatter.md) | `DiffReviewFormatter` | 216 | Rendering layer behind Tools/review_diff.gd. Turns the plain Dictionary that Tools/DiffReviewPar… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 781 | Pure review layer behind Tools/review_diff.gd. Every function takes a unified diff as text and r… |
+| [`Tools/GameDataValidator.gd`](map/Tools/GameDataValidator.md) | `GameDataValidator` | 889 | Pure schema and semantic rules for the game data in res://Data/json/. Split out of Tools/validat… |
 | [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 250 | Renders the canonical battle screens to PNGs for the "align visually" loop. Every normal gate is… |
 | [`Tools/TriageParser.gd`](map/Tools/TriageParser.md) | `TriageParser` | 490 | Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns evidence into agent-rea… |
 | [`Tools/ValidationReporter.gd`](map/Tools/ValidationReporter.md) | `ValidationReporter` | 235 | GitHub Actions reporting for the game-data validator: workflow annotations that point at the exa… |
@@ -89,7 +90,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 809 | Headless symbol-index generator for this repository. Parses every first-party GDScript source an… |
 | [`Tools/review_diff.gd`](map/Tools/review_diff.md) | — | 159 | Second-pass reviewer for a branch: summarises the diff and flags the things a reviewer (human or… |
 | [`Tools/triage.gd`](map/Tools/triage.md) | — | 222 | Forward pressure: turns evidence into agent-ready task issues. An agent (or a human) should neve… |
-| [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | `GameDataValidatorRunner` | 1161 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
+| [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | `GameDataValidatorRunner` | 394 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
 
 ## 2. Tests at a glance (31)
@@ -182,4 +183,4 @@ Top-level keys:
 
 ---
 
-Indexed 94 script(s) (63 game, 31 test), 5 scene(s), 6 data file(s).
+Indexed 95 script(s) (64 game, 31 test), 5 scene(s), 6 data file(s).
