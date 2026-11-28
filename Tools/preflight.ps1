@@ -37,6 +37,9 @@ if (-not (Test-Path -LiteralPath $godotExe)) {
 Write-Host ('Godot: ' + $godotExe) -ForegroundColor DarkGray
 
 $failed = @()
+# Gates that could not run on this machine (a missing optional tool). They are printed
+# in the summary, never swallowed: a skipped gate is not a passing gate.
+$skipped = @()
 
 # -FixIndex regenerates the symbol index before the gates run, so a stale index
 # is repaired in the same invocation instead of costing another round trip.
@@ -197,6 +200,55 @@ else {
     }
 }
 
+# The migrations were, until this gate existed, only ever *read*: `create or replace
+# view` cannot add a column in the middle of a view, so
+# Server/supabase/migrations/004_flag_cohorts_by_balance.sql never applied to a fresh
+# database at all - `supabase db push` stopped there, before 005 or 006 ran. This
+# applies 001-006 in order to a real PostgreSQL server and then asserts what the views
+# answer, using the fixtures Tools/analyze_telemetry_test.py already covers. Same gate
+# the CI `validate` job runs.
+#
+# `psql` is not part of the toolchain this repo installs, and the assertion file runs in
+# CI on every pull request, so a machine without it reports a SKIP rather than a failure
+# - but the skip is always printed. Connection settings come from libpq's own
+# environment (PGHOST / PGUSER / PGPASSWORD); the scratch database is dropped and
+# recreated, so nothing else on the server is touched.
+Write-Host ''
+Write-Host '=== Migration parity (PostgreSQL) ===' -ForegroundColor Cyan
+$psql = Get-Command psql -ErrorAction SilentlyContinue
+if (-not $psql) {
+    Write-Host 'SKIPPED: psql not found. Install PostgreSQL 13+ and set PGHOST/PGUSER/PGPASSWORD to run this locally; CI runs it on every pull request.' -ForegroundColor Yellow
+    $skipped += 'Migration parity'
+}
+else {
+    $scratchDb = 'telemetry_test'
+    $migrationOk = $true
+    & $psql.Source '-v' 'ON_ERROR_STOP=1' '-d' 'postgres' '-q' '-c' ("drop database if exists $scratchDb with (force)")
+    if ($LASTEXITCODE -ne 0) { $migrationOk = $false }
+    if ($migrationOk) {
+        & $psql.Source '-v' 'ON_ERROR_STOP=1' '-d' 'postgres' '-q' '-c' ("create database $scratchDb")
+        if ($LASTEXITCODE -ne 0) { $migrationOk = $false }
+    }
+    if ($migrationOk) {
+        foreach ($migration in (Get-ChildItem -LiteralPath 'Server/supabase/migrations' -Filter '*.sql' | Sort-Object Name)) {
+            Write-Host ('  applying ' + $migration.Name) -ForegroundColor DarkGray
+            & $psql.Source '-v' 'ON_ERROR_STOP=1' '-d' $scratchDb '-q' '-f' $migration.FullName
+            if ($LASTEXITCODE -ne 0) { $migrationOk = $false; break }
+        }
+    }
+    if ($migrationOk) {
+        & $psql.Source '-v' 'ON_ERROR_STOP=1' '-d' $scratchDb '-f' 'Server/supabase/tests/migrations_test.sql'
+        if ($LASTEXITCODE -ne 0) { $migrationOk = $false }
+    }
+    if ($migrationOk) {
+        Write-Host 'PASSED: Migration parity' -ForegroundColor Green
+    }
+    else {
+        Write-Host 'FAILED: Migration parity' -ForegroundColor Red
+        $failed += 'Migration parity'
+    }
+}
+
 # -Snapshots renders the canonical UI screens with the real OpenGL renderer (the
 # headless gates cannot see pixels) and sanity-checks the PNGs. Off by default:
 # it opens a window and is slower than every other gate together.
@@ -232,9 +284,17 @@ if ($Review) {
 }
 
 Write-Host ''
+if ($skipped.Count -gt 0) {
+    Write-Host ('PRE-FLIGHT SKIPPED (missing tool, CI runs them): ' + ($skipped -join ', ')) -ForegroundColor Yellow
+}
 if ($failed.Count -gt 0) {
     Write-Host ('PRE-FLIGHT FAILED: ' + ($failed -join ', ')) -ForegroundColor Red
     exit 1
+}
+
+if ($skipped.Count -gt 0) {
+    Write-Host ('PRE-FLIGHT PASSED: every gate that could run is green (' + $skipped.Count + ' skipped).') -ForegroundColor Green
+    exit 0
 }
 
 Write-Host 'PRE-FLIGHT PASSED: every gate is green.' -ForegroundColor Green

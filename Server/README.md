@@ -87,6 +87,8 @@ Server/supabase/
   migrations/006_view_parity_with_the_local_report.sql  # v_replayable_runs production
                                          # only, and the missing-metrics stratum
   functions/telemetry-ingest/index.ts    # validated, idempotent batch ingest
+  tests/migrations_test.sql              # 001-006 applied to a real PostgreSQL, then
+                                         # the views asserted against the local report
 ```
 
 `telemetry_runs.flags` holds the staged flags that were ON for a run (see
@@ -162,6 +164,45 @@ Both commands are gates: `Tools/preflight.ps1` runs them locally (they need `nod
 `deno`, and the script prints the Deno install command when it is missing), and the CI
 `validate` job runs them on every pull request with pinned `actions/setup-node` and
 `denoland/setup-deno`.
+
+## Testing the migrations
+
+The views are the other half of the report, and they used to be the half nobody ran.
+`tests/migrations_test.sql` applies `001`–`006` in order to a real PostgreSQL server and
+then asserts what each view answers, using the fixtures `Tools/analyze_telemetry_test.py`
+already covers: the lopsided-stratum lift (0.125, not 0.25), a decision with no board
+snapshot (bucketed `desperate`, never `winning`), the abandoned run that must not count
+as a loss, and the `sub_prompts` a target-picking skill wrote into `offered_options`.
+Everything runs in one transaction that is rolled back, so the database is left as the
+migrations made it.
+
+It found the reason it was worth writing the first time it ran: `004` adds
+`balance_hash` as the *second* column of `v_flag_cohorts`, and `create or replace view`
+may only *append* columns —
+
+```
+ERROR:  cannot change name of view column "runs_on" to "balance_hash"
+```
+
+— so `supabase db push` stopped at `004`, on every fresh database, before `005` or `006`
+ever ran. Reading the migrations would not have surfaced it. `004` now drops and
+re-creates the view, which is the supported way to change its shape.
+
+```powershell
+# the CI `validate` job runs exactly this, against the runner's own PostgreSQL
+psql -v ON_ERROR_STOP=1 -d postgres -c 'drop database if exists telemetry_test with (force)'
+psql -v ON_ERROR_STOP=1 -d postgres -c 'create database telemetry_test'
+for f in Server/supabase/migrations/*.sql; do
+  psql -v ON_ERROR_STOP=1 -d telemetry_test -q -f "$f"
+done
+psql -v ON_ERROR_STOP=1 -d telemetry_test -f Server/supabase/tests/migrations_test.sql
+```
+
+`Tools/preflight.ps1` runs the same gate whenever `psql` is on `PATH` (connection details
+come from libpq's own `PGHOST` / `PGUSER` / `PGPASSWORD`) and otherwise prints a
+`SKIPPED` line, so the gate is never silently green. A local server also needs
+PostgreSQL 13 or newer, because the scratch database is dropped `with (force)` and
+`gen_random_uuid()` is core from 13 on.
 
 ## Privacy
 

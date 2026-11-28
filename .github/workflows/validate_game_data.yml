@@ -4,9 +4,10 @@ name: Validate Game Data
 # res://Data/json/ is the single source of truth the game loads at runtime and
 # res://Data/xlsx/game_data.xlsx is only a bulk-entry authoring tool. Both are
 # checked here, together with the GDScript compile gate, the generated symbol
-# index in Docs/, the gdUnit4 suite, the anti-slop lint and the telemetry-ingest
-# TypeScript suite, so a broken data edit, a typing regression or a stale code map
-# cannot reach main.
+# index in Docs/, the gdUnit4 suite, the anti-slop lint, the telemetry-ingest
+# TypeScript suite and the SQL migration chain applied to a real PostgreSQL, so a
+# broken data edit, a typing regression, a stale code map or an unappliable
+# migration cannot reach main.
 #
 # Actions are pinned to commit SHAs on purpose: a moving major tag is a supply
 # chain risk. The trailing comment records the version each SHA was verified at.
@@ -138,6 +139,38 @@ jobs:
       - name: Telemetry ingest types
         timeout-minutes: 5
         run: deno check Server/supabase/functions/telemetry-ingest/index.ts
+
+      # The migrations were, until this gate existed, only ever *read*. `create or
+      # replace view` cannot add a column in the middle of a view, so 004 never applied
+      # to a fresh database at all - `supabase db push` stops there, before 005 or 006
+      # run. No amount of review surfaces that; executing the chain does.
+      #
+      # This applies 001-006 in order to a real PostgreSQL server and then asserts what
+      # the views answer, using the same fixtures Tools/analyze_telemetry_test.py
+      # covers locally (the lopsided lift, the snapshot-less decision, the abandoned
+      # run). The server is the one the runner image already ships, so there is no
+      # service container, no npm dependency and no Deno. Same script
+      # Tools/preflight.ps1 runs when psql is on PATH.
+      - name: Migration parity (real PostgreSQL)
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql postgresql-contrib
+          fi
+          sudo systemctl start postgresql.service || sudo service postgresql start
+          psql --version
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -d postgres -q \
+            -c 'drop database if exists telemetry_test with (force)'
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -d postgres -q \
+            -c 'create database telemetry_test'
+          for migration in Server/supabase/migrations/*.sql; do
+            echo "applying $migration"
+            sudo -u postgres psql -v ON_ERROR_STOP=1 -d telemetry_test -q < "$migration"
+          done
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -d telemetry_test \
+            < Server/supabase/tests/migrations_test.sql
 
   project:
     name: Scripts and tests
