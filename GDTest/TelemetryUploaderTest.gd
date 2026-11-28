@@ -5,7 +5,10 @@ extends GdUnitTestSuite
 ##
 ## - a batch the server refused outright is quarantined, and the drain carries on
 ##   with the next file instead of retrying the same bad bytes forever,
-## - a transient failure keeps the file queued and backs the retry off,
+## - a transient failure keeps the file queued and backs the retry off (including a
+##   401/403, which is a deployment or key problem rather than a bad batch),
+## - the request carries the anon key as both `apikey` and `Authorization: Bearer`,
+##   which are the two headers Supabase's gateway and JWT check read,
 ## - a run larger than one POST is uploaded in pieces and only then archived,
 ## - an empty file is archived without a request,
 ## - a crash orphan left in the spool is recovered when a server is configured, and
@@ -104,6 +107,18 @@ func _sent_events(body: String) -> Array:
 		return []
 	var listed: Array = events
 	return listed
+
+
+## True when `headers` carries `name: value` (the name compared case-insensitively).
+func _has_header(headers: PackedStringArray, name: String, value: String) -> bool:
+	for header: String in headers:
+		var parts: PackedStringArray = header.split(":", true, 1)
+		if parts.size() < 2:
+			continue
+		if parts[0].strip_edges().to_lower() == name.to_lower() \
+				and parts[1].strip_edges() == value:
+			return true
+	return false
 #endregion
 
 
@@ -161,10 +176,16 @@ func test_a_transient_failure_keeps_the_file_and_backs_the_retry_off() -> void:
 	).is_true()
 
 
-## 408 and 429 are the two 4xx codes a retry *can* fix, so they must not be
-## mistaken for the permanent kind.
-func test_a_timeout_and_a_throttle_are_retried_not_quarantined() -> void:
-	for code: int in [HTTPClient.RESPONSE_REQUEST_TIMEOUT, HTTPClient.RESPONSE_TOO_MANY_REQUESTS]:
+## The 4xx codes a retry *can* fix: 408 and 429 are timing, 401 and 403 are a deployment
+## or key problem. None may be mistaken for the permanent kind - quarantining real player
+## runs over a rotated key would throw the data away for good.
+func test_a_timeout_a_throttle_and_a_credential_error_are_retried_not_quarantined() -> void:
+	for code: int in [
+		HTTPClient.RESPONSE_REQUEST_TIMEOUT,
+		HTTPClient.RESPONSE_TOO_MANY_REQUESTS,
+		HTTPClient.RESPONSE_UNAUTHORIZED,
+		HTTPClient.RESPONSE_FORBIDDEN,
+	]:
 		var calls: Array[String] = []
 		var uploader: TelemetryUploader = _new_uploader([[HTTPRequest.RESULT_SUCCESS, code]], calls)
 		_write_run(uploader.outbox_path(), "run_slow.jsonl", 1)
@@ -174,6 +195,37 @@ func test_a_timeout_and_a_throttle_are_retried_not_quarantined() -> void:
 
 		assert_int(_count_runs(uploader.outbox_path())).is_equal(1)
 		assert_int(_count_runs(uploader.rejected_path())).is_equal(0)
+#endregion
+
+
+#region Credentials
+## Supabase reads the anon key as `apikey` at the gateway and as `Authorization: Bearer`
+## at the Edge function's JWT check. Sending only `apikey` is a 401 on the default
+## deployment, so every batch would be refused (and, with the retry rule above, retried
+## forever instead of being quarantined - correct, but it would never upload).
+func test_requests_carry_the_anon_key_as_a_bearer_token_too() -> void:
+	var calls: Array[String] = []
+	var uploader: TelemetryUploader = _new_uploader([], calls)
+	uploader.anon_key_override = "anon-key-123"
+	_mount(uploader)
+
+	var headers: PackedStringArray = uploader._headers()
+
+	assert_bool(_has_header(headers, "content-type", "application/json")).is_true()
+	assert_bool(_has_header(headers, "apikey", "anon-key-123")).is_true()
+	assert_bool(_has_header(headers, "Authorization", "Bearer anon-key-123")).is_true()
+
+
+## With no key configured there is nothing to authenticate with, so no credential header
+## is invented. (A local, endpoint-less build never gets here: `is_enabled()` is false.)
+func test_no_credential_header_is_invented_without_a_key() -> void:
+	var calls: Array[String] = []
+	var uploader: TelemetryUploader = _new_uploader([], calls)
+	_mount(uploader)
+
+	for header: String in uploader._headers():
+		assert_bool(header.begins_with("apikey:")).is_false()
+		assert_bool(header.begins_with("Authorization:")).is_false()
 #endregion
 
 

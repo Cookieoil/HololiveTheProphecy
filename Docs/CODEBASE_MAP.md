@@ -50,7 +50,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 861 | Orchestrates the full game loop. Holds GameState + GameUI references. Al… |
 | [`Managers/SkillContextFactory.gd`](map/Managers/SkillContextFactory.md) | `SkillContextFactory` | 124 | Builds the SkillContext a skill resolves against, with the async callabl… |
 | [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 858 | Records every decision a player makes, for game design and balancing. It… |
-| [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 426 | Drains the telemetry outbox to the metric server, in the background. It… |
+| [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 449 | Drains the telemetry outbox to the metric server, in the background. It… |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 670 | extends GameUI, 2 signal(s), 11 export(s), 46 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 649 | extends Control, 3 signal(s), 28 export(s), 37 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 363 | Catalog for character buff/debuff status icons (separate from CardIconCa… |
@@ -129,7 +129,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/TelemetryDecisionTest.gd`](map/GDTest/TelemetryDecisionTest.md) | `TelemetryDecisionTest` | 194 | Locks Core/Telemetry/TelemetryDecision.gd directly. GDTest/TelemetryTest… |
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData a… |
 | [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 697 | Locks the gameplay recorder end to end: a real battle through GameManage… |
-| [`GDTest/TelemetryUploaderTest.gd`](map/GDTest/TelemetryUploaderTest.md) | `TelemetryUploaderTest` | 256 | Locks the uploader's delivery rules (Managers/TelemetryUploader.gd), whi… |
+| [`GDTest/TelemetryUploaderTest.gd`](map/GDTest/TelemetryUploaderTest.md) | `TelemetryUploaderTest` | 308 | Locks the uploader's delivery rules (Managers/TelemetryUploader.gd), whi… |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIc… |
 | [`GDTest/TriageParserTest.gd`](map/GDTest/TriageParserTest.md) | `TriageParserTest` | 198 | Locks the task-intake rules (Tools/TriageParser.gd): every threshold, th… |
 | [`GDTest/TurnLoopTest.gd`](map/GDTest/TurnLoopTest.md) | `TurnLoopTest` | 750 | Locks the turn machine in Managers/GameManager.gd: the eight round steps… |
