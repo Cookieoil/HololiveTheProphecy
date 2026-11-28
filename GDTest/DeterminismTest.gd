@@ -110,6 +110,15 @@ func _config(seed_value: int) -> Dictionary:
 	}
 
 
+## A minimal board - one ally, no enemies - so a fingerprint or an invariant can be read
+## without playing a battle.
+func _fixture_state() -> GameState:
+	var state: GameState = GameState.new()
+	var ally: Unit = Unit.new(_ally_data("fixture"), 0)
+	state.allies.append(ally)
+	return state
+
+
 ## A simulator already in the tree, so its GameManager and recorder are ready.
 func _simulator() -> BattleSimulator:
 	var sim: BattleSimulator = BattleSimulator.new()
@@ -266,6 +275,73 @@ func test_a_swept_battle_is_a_real_battle() -> void:
 	assert_int(sim.manager.state.turn_number).is_greater(2)
 	assert_int(sim.recorder.trace.size()).is_greater(8)
 	assert_str(BattleSimulator.Recorder.invariant_break(sim.manager.state)).is_equal("")
+#endregion
+
+
+#region What the fingerprint has to describe
+## The fingerprint is only worth comparing if it covers what a later decision depends on. A
+## status that ticks at the end of the round changes the board as much as a hit does, and
+## the bonus a merged Buff is holding changes the next card's value; both used to be
+## invisible here, so a replay that differed only in them looked identical.
+func test_a_status_shows_up_in_the_fingerprint() -> void:
+	var state: GameState = _fixture_state()
+	var before: String = BattleSimulator.Recorder.fingerprint(state)
+
+	state.allies[0].apply_status("gloom")
+
+	var after: String = BattleSimulator.Recorder.fingerprint(state)
+	assert_str(after).is_not_equal(before)
+	assert_str(after).contains("gloom1")
+
+
+func test_a_pending_skill_bonus_shows_up_in_the_fingerprint() -> void:
+	var state: GameState = _fixture_state()
+	var before: String = BattleSimulator.Recorder.fingerprint(state)
+
+	state.next_skill_bonus = 4
+
+	assert_str(BattleSimulator.Recorder.fingerprint(state)).is_not_equal(before)
+
+
+## The order two statuses arrived in is not part of the board, so the digest sorts them:
+## two units holding the same badges must fingerprint the same either way.
+func test_the_status_order_does_not_change_the_fingerprint() -> void:
+	var first: GameState = _fixture_state()
+	first.allies[0].apply_status("gloom")
+	first.allies[0].apply_status("regeneration")
+	var second: GameState = _fixture_state()
+	second.allies[0].apply_status("regeneration")
+	second.allies[0].apply_status("gloom")
+
+	assert_str(BattleSimulator.Recorder.fingerprint(first)).is_equal(
+		BattleSimulator.Recorder.fingerprint(second)
+	)
+
+
+## A badge with nothing left on it is a leak, not a state: it would render, and tick,
+## forever. `tick_round_end_statuses` erases a spent duration status, so 0 is unreachable
+## through play - which is exactly why it is worth asserting.
+func test_a_status_at_zero_stacks_is_a_broken_invariant() -> void:
+	var state: GameState = _fixture_state()
+	state.allies[0].statuses = {"gloom": {"count": 0, "count_mode": "stacks", "is_debuff": true}}
+
+	assert_str(BattleSimulator.Recorder.invariant_break(state)).contains("gloom")
+
+
+func test_a_negative_skill_bonus_is_a_broken_invariant() -> void:
+	var state: GameState = _fixture_state()
+	state.next_skill_bonus = -1
+
+	assert_str(BattleSimulator.Recorder.invariant_break(state)).contains("next_skill_bonus")
+
+
+## The two checks above are only meaningful if the healthy case is quiet, and if a statusless
+## unit says so rather than being assumed healthy.
+func test_a_unit_without_statuses_reads_as_healthy() -> void:
+	var state: GameState = _fixture_state()
+
+	assert_str(BattleSimulator.Recorder.status_digest(state.allies[0])).is_equal("-")
+	assert_str(BattleSimulator.Recorder.invariant_break(state)).is_equal("")
 #endregion
 
 

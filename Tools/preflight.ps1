@@ -58,6 +58,11 @@ $gates = @(
     @{ Name = 'Import project';       Args = @('--headless', '--path', '.', '--import') },
     @{ Name = 'Validate game data';   Args = @('--headless', '--path', '.', 'res://Tools/validator.tscn', '--', '--strict') },
     @{ Name = 'Compile all scripts';  Args = @('--headless', '--path', '.', '--script', 'res://Tools/check_scripts.gd') },
+    # The replay CLI is the command a seed from a telemetry report or a bug report is
+    # reproduced with, and it shares Tools/BattleSimulator.gd with the determinism suite,
+    # so a smoke run of three shipped seeds keeps its argument parsing and the shipped
+    # battle honest. Same command the CI `project` job runs.
+    @{ Name = 'Replay a seed';        Args = @('--headless', '--path', '.', 'res://Tools/simulate_runs.tscn', '--', '--seeds', '3') },
     @{ Name = 'Unit tests (gdUnit4)'; Args = @('--headless', '--path', '.', '-s', 'res://addons/gdUnit4/bin/GdUnitCmdTool.gd', '-a', 'res://GDTest', '-c', '--ignoreHeadlessMode') }
 )
 
@@ -117,8 +122,10 @@ else {
 # The two Python tools are covered by their own dependency-free suites
 # (Tools/<module>_test.py, the same shape as rig_combat_actor_test.py): the lint's rules
 # and the balance report's maths, which is what a wrong number in a design decision would
-# come from. `python` was resolved above for the anti-slop gate; if it is missing, that
-# gate has already reported it, so this one is skipped rather than failed twice.
+# come from. rig_combat_actor_test.py was always in that shape and is run here too - it
+# was the only Python tool in the repository with no gate at all. `python` was resolved
+# above for the anti-slop gate; if it is missing, that gate has already reported it, so
+# this one is skipped rather than failed three times.
 Write-Host ''
 Write-Host '=== Python tooling tests ===' -ForegroundColor Cyan
 if (-not $python) {
@@ -127,7 +134,8 @@ if (-not $python) {
 else {
     $pythonSuites = @(
         @{ Name = 'Anti-slop lint rules'; Script = 'Tools/line_godot_slop_test.py' },
-        @{ Name = 'Telemetry report maths'; Script = 'Tools/analyze_telemetry_test.py' }
+        @{ Name = 'Telemetry report maths'; Script = 'Tools/analyze_telemetry_test.py' },
+        @{ Name = 'Spine rig patcher'; Script = 'Tools/rig_combat_actor_test.py' }
     )
     foreach ($suite in $pythonSuites) {
         $suites = Start-Process -FilePath $python.Source -ArgumentList $suite.Script -NoNewWindow -Wait -PassThru

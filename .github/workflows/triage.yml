@@ -66,7 +66,7 @@ jobs:
         run: godot --headless --path . --import
 
       # Prints the specs and writes tasks.json. Exit code is always 0: intake reports,
-      # the five gates in Tools/preflight.ps1 are what block.
+      # the gates in Tools/preflight.ps1 are what block.
       - name: Collect tasks
         run: |
           godot --headless --path . --script res://Tools/triage.gd -- \

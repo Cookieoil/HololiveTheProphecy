@@ -2,34 +2,25 @@
 
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd from the first-party sources. -->
 
-Refresh after changing any first-party script, scene or data file:
-
 ```powershell
-godot --headless --path . --script res://Tools/gen_code_index.gd
-```
-
-Staleness and correctness gate (run by Tools/preflight.ps1 and CI; it also checks coverage, ranges, links, scenes, signals and data, and prints the read-cost benchmark):
-
-```powershell
-godot --headless --path . --script res://Tools/check_navigation.gd
+godot --headless --path . --script res://Tools/gen_code_index.gd       # regenerate
+godot --headless --path . --script res://Tools/check_navigation.gd  # staleness gate
 ```
 
 ## How to use this map (overview here, details in their own page)
 
-- **Overview:** section 1 lists every game script, section 2 every test, each with `class_name`, size and role.
-- **One script's API with line numbers:** open its page under `Docs/map/` (linked from sections 1 and 2).
-- **One scene's node tree:** open `Docs/map/<scene>.scene.md` (linked from section 4).
+- **Detail:** section 1 lists every game script and section 2 every test - `class_name`, size, role, and a link to a page with the API and line numbers (sections 4's scenes get their node tree).
 - **Find a symbol:** `rg -n '^get_effective_value\t' Docs/symbols.tsv` returns `path:start-end`; drop the `^name\t` anchor to search loosely.
 - **Impact of a change:** the `Uses` / `Used by` lines on a script's page, and the emit/listen table in section 3.
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
-- **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
+- **Measure it:** `check_navigation.gd -- --benchmark` prints what each recipe above costs to read.
 
 ## 1. Game scripts at a glance (67)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
 | [`Core/Card.gd`](map/Core/Card.md) | `Card` | 115 | This class contains the data for the card Card instance is created/destr… |
-| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 563 | Runtime loader for the game data JSON files in res://Data/json/. Those J… |
+| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 575 | Runtime loader for the game data JSON files in res://Data/json/. Those J… |
 | [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 19 | Static utility for dice rolls. Every roll takes the run's generator, so… |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn… |
 | [`Core/FeatureFlags.gd`](map/Core/FeatureFlags.md) | `FeatureFlags` | 261 | Registry and deterministic evaluator for staged feature flags. A flag li… |
@@ -76,7 +67,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 54 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of ef… |
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execu… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 445 | extends RefCounted, 16 function(s) |
-| [`Tools/BattleSimulator.gd`](map/Tools/BattleSimulator.md) | `BattleSimulator` | 335 | Drives a whole battle headlessly through the GameUI contract and reports… |
+| [`Tools/BattleSimulator.gd`](map/Tools/BattleSimulator.md) | `BattleSimulator` | 374 | Drives a whole battle headlessly through the GameUI contract and reports… |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 806 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here t… |
 | [`Tools/DiffReviewFormatter.gd`](map/Tools/DiffReviewFormatter.md) | `DiffReviewFormatter` | 216 | Rendering layer behind Tools/review_diff.gd. Turns the plain Dictionary… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 781 | Pure review layer behind Tools/review_diff.gd. Every function takes a un… |
@@ -89,14 +80,14 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 142 | Headless link and compatibility gate for the spine-godot GDExtension. Pr… |
 | [`Tools/dataBuilder.gd`](map/Tools/dataBuilder.md) | `DataBuilder` | 779 | Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into t… |
 | [`Tools/export_xlsx_to_json.gd`](map/Tools/export_xlsx_to_json.md) | — | 34 | Headless Excel -> JSON exporter for the game data pipeline. Usage: godot… |
-| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 809 | Headless symbol-index generator for this repository. Parses every first-… |
+| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 800 | Headless symbol-index generator for this repository. Parses every first-… |
 | [`Tools/review_diff.gd`](map/Tools/review_diff.md) | — | 159 | Second-pass reviewer for a branch: summarises the diff and flags the thi… |
 | [`Tools/simulate_runs.gd`](map/Tools/simulate_runs.md) | — | 180 | Replays a run seed headlessly, or sweeps a range of seeds, and prints wh… |
 | [`Tools/triage.gd`](map/Tools/triage.md) | — | 222 | Forward pressure: turns evidence into agent-ready task issues. An agent… |
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | `GameDataValidatorRunner` | 394 | Headless, offline validator for the whole game-data pipeline. res://Data… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Ar… |
 
-## 2. Tests at a glance (34)
+## 2. Tests at a glance (35)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -109,10 +100,11 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 122 | Tests for CardUI's runtime card feedback: the delayed value-label refres… |
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 332 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behin… |
+| [`GDTest/DataLoaderTest.gd`](map/GDTest/DataLoaderTest.md) | `DataLoaderTest` | 247 | Locks how DataLoader turns config.json into the runtime config: the defa… |
 | [`GDTest/DebugCommandRunnerTest.gd`](map/GDTest/DebugCommandRunnerTest.md) | `DebugCommandRunnerTest` | 152 | Locks the seams of Managers/DebugCommandRunner.gd that the turn-loop sui… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it r… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 864 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameMana… |
-| [`GDTest/DeterminismTest.gd`](map/GDTest/DeterminismTest.md) | `DeterminismTest` | 327 | Locks the property the whole telemetry story rests on: a battle is repro… |
+| [`GDTest/DeterminismTest.gd`](map/GDTest/DeterminismTest.md) | `DeterminismTest` | 403 | Locks the property the whole telemetry story rests on: a battle is repro… |
 | [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 656 | Fixture tests for the review layer behind Tools/review_diff.gd: the rule… |
 | [`GDTest/EffectBlockMessageTest.gd`](map/GDTest/EffectBlockMessageTest.md) | `EffectBlockMessageTest` | 121 | Locks the colours of the battle-log lines EffectBlock writes. Every numb… |
 | [`GDTest/EnemySkillBalanceTest.gd`](map/GDTest/EnemySkillBalanceTest.md) | `EnemySkillBalanceTest` | 269 | Locks the enemy-skill balance pass: - an enemy threshold matches the par… |
@@ -190,4 +182,4 @@ Top-level keys:
 
 ---
 
-Indexed 101 script(s) (67 game, 34 test), 6 scene(s), 6 data file(s).
+Indexed 102 script(s) (67 game, 35 test), 6 scene(s), 6 data file(s).

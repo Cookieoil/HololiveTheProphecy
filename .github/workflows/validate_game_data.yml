@@ -101,16 +101,18 @@ jobs:
         timeout-minutes: 2
         run: python3 Tools/line_godot_slop.py --strict
 
-      # Both Python tools are covered by their own dependency-free suites, in the same
-      # shape as rig_combat_actor_test.py: the lint's rules (a gate nobody tests is a
-      # gate that silently stops gating) and the balance report's maths, where a wrong
-      # denominator would not crash - it would answer the wrong question convincingly.
-      # Standard library only, so no install step. Same commands Tools/preflight.ps1 runs.
+      # Every Python tool is covered by its own dependency-free suite, in the same shape as
+      # rig_combat_actor_test.py: the lint's rules (a gate nobody tests is a gate that
+      # silently stops gating), the balance report's maths (where a wrong denominator would
+      # not crash - it would answer the wrong question convincingly) and the spine rig
+      # patcher. Standard library only, so no install step. Same commands Tools/preflight.ps1
+      # runs.
       - name: Python tooling tests
         timeout-minutes: 2
         run: |
           python3 Tools/line_godot_slop_test.py
           python3 Tools/analyze_telemetry_test.py
+          python3 Tools/rig_combat_actor_test.py
 
       # The telemetry-ingest Edge Function is TypeScript, and its row shapes, HTTP
       # rules and table write order are unit tested on the Node the runner already
@@ -166,6 +168,15 @@ jobs:
       - name: Compile all scripts
         timeout-minutes: 5
         run: godot --headless --path . --script res://Tools/check_scripts.gd
+
+      # The replay CLI is how a seed from a telemetry report or a bug report is
+      # reproduced, and it shares Tools/BattleSimulator.gd with GDTest/DeterminismTest.gd.
+      # Three shipped seeds smoke-check its argument parsing, the shipped battle and the
+      # board's invariants - and its exit code, which is what a script in a bug report
+      # relies on. Same command Tools/preflight.ps1 runs.
+      - name: Replay a seed
+        timeout-minutes: 5
+        run: godot --headless --path . res://Tools/simulate_runs.tscn -- --seeds 3
 
       # The committed navigation set (Docs/) is what a reader trusts instead of
       # opening files, so it must match the sources: this harness checks coverage,
