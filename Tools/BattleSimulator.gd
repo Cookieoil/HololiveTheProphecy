@@ -197,25 +197,50 @@ class Recorder extends GameUI:
 	## A stable text digest of everything a replay has to reproduce. Card identity is
 	## (value, merge tier) rather than the instance id, so the digest describes the game
 	## rather than the order the objects happened to be allocated in.
+	##
+	## It covers the status badges and the pending skill bonus too: a status that ticks at
+	## the end of the round changes the board as much as a hit does, and the bonus a merged
+	## Buff is holding changes the next card's value, so a replay that differed only there
+	## would otherwise look identical.
 	static func fingerprint(state: GameState) -> String:
 		var parts: PackedStringArray = PackedStringArray()
-		parts.append("t%d/w%d/a%d/m%d" % [
-			state.turn_number, state.current_wave, state.actions_left, state.merges_left
+		parts.append("t%d/w%d/a%d/m%d/b%d" % [
+			state.turn_number, state.current_wave, state.actions_left, state.merges_left,
+			state.next_skill_bonus
 		])
 		parts.append("deck%d/disc%d/played%d" % [
 			state.deck.size(), state.discard.size(), state.played_this_turn.size()
 		])
 		for unit: Unit in state.allies:
-			parts.append("A%s:%d/%d:s%d:m%d" % [
-				unit.data.unit_id, unit.current_hp, unit.max_hp, unit.shield, unit.moxie
+			parts.append("A%s:%d/%d:s%d:m%d:%s" % [
+				unit.data.unit_id, unit.current_hp, unit.max_hp, unit.shield, unit.moxie,
+				status_digest(unit)
 			])
 		for unit: Unit in state.enemies:
-			parts.append("E%s:%d/%d:s%d:m%d" % [
-				unit.data.unit_id, unit.current_hp, unit.max_hp, unit.shield, unit.moxie
+			parts.append("E%s:%d/%d:s%d:m%d:%s" % [
+				unit.data.unit_id, unit.current_hp, unit.max_hp, unit.shield, unit.moxie,
+				status_digest(unit)
 			])
 		for card: Card in state.hand:
 			parts.append("C%d.%d" % [card.get_effective_value(), TelemetrySchema.merge_rank(card)])
 		return "|".join(parts)
+
+
+	## One unit's statuses as `idCOUNT+idCOUNT`, sorted by id, or "-" when it has none.
+	##
+	## Sorted because the order two statuses arrived in is not part of the board: two units
+	## holding the same badges must fingerprint the same either way.
+	static func status_digest(unit: Unit) -> String:
+		var ids: Array[String] = []
+		for raw_id: Variant in unit.statuses.keys():
+			ids.append(str(raw_id))
+		if ids.is_empty():
+			return "-"
+		ids.sort()
+		var parts: PackedStringArray = PackedStringArray()
+		for status_id: String in ids:
+			parts.append("%s%d" % [status_id, unit.get_status_count(status_id)])
+		return "+".join(parts)
 
 
 	## The first broken board invariant as text, or "" when the board is healthy.
@@ -237,6 +262,8 @@ class Recorder extends GameUI:
 			return "actions_left is %d" % state.actions_left
 		if state.merges_left < 0:
 			return "merges_left is %d" % state.merges_left
+		if state.next_skill_bonus < 0:
+			return "next_skill_bonus is %d" % state.next_skill_bonus
 		return ""
 
 
@@ -250,6 +277,18 @@ class Recorder extends GameUI:
 			return "%s has %d shield" % [unit.data.unit_id, unit.shield]
 		if unit.moxie < 0 or unit.moxie > unit.max_moxie:
 			return "%s has %d Moxie of %d" % [unit.data.unit_id, unit.moxie, unit.max_moxie]
+		return status_break(unit)
+
+
+	## A status at 0 stacks is a leak, not a state: `tick_round_end_statuses` erases a
+	## duration status when its last round is spent and a stack status never reaches 0
+	## through play, so a badge sitting at 0 would render and tick forever.
+	static func status_break(unit: Unit) -> String:
+		for raw_id: Variant in unit.statuses.keys():
+			var status_id: String = str(raw_id)
+			var count: int = unit.get_status_count(status_id)
+			if count < 1:
+				return "%s has %s at %d stack(s)" % [unit.data.unit_id, status_id, count]
 		return ""
 
 	## The base cards the run is holding. The deck and the discard pile always hold base

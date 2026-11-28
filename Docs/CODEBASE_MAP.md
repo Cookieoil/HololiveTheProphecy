@@ -67,7 +67,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | [`Skills/SkillData.gd`](map/Skills/SkillData.md) | `SkillData` | 54 | Defines one skill slot (Skill 1 or Skill 2) on a unit Holds arrays of ef… |
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execu… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 445 | extends RefCounted, 16 function(s) |
-| [`Tools/BattleSimulator.gd`](map/Tools/BattleSimulator.md) | `BattleSimulator` | 335 | Drives a whole battle headlessly through the GameUI contract and reports… |
+| [`Tools/BattleSimulator.gd`](map/Tools/BattleSimulator.md) | `BattleSimulator` | 374 | Drives a whole battle headlessly through the GameUI contract and reports… |
 | [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 806 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here t… |
 | [`Tools/DiffReviewFormatter.gd`](map/Tools/DiffReviewFormatter.md) | `DiffReviewFormatter` | 216 | Rendering layer behind Tools/review_diff.gd. Turns the plain Dictionary… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 781 | Pure review layer behind Tools/review_diff.gd. Every function takes a un… |
@@ -104,7 +104,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | [`GDTest/DebugCommandRunnerTest.gd`](map/GDTest/DebugCommandRunnerTest.md) | `DebugCommandRunnerTest` | 152 | Locks the seams of Managers/DebugCommandRunner.gd that the turn-loop sui… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it r… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 864 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameMana… |
-| [`GDTest/DeterminismTest.gd`](map/GDTest/DeterminismTest.md) | `DeterminismTest` | 327 | Locks the property the whole telemetry story rests on: a battle is repro… |
+| [`GDTest/DeterminismTest.gd`](map/GDTest/DeterminismTest.md) | `DeterminismTest` | 403 | Locks the property the whole telemetry story rests on: a battle is repro… |
 | [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 656 | Fixture tests for the review layer behind Tools/review_diff.gd: the rule… |
 | [`GDTest/EffectBlockMessageTest.gd`](map/GDTest/EffectBlockMessageTest.md) | `EffectBlockMessageTest` | 121 | Locks the colours of the battle-log lines EffectBlock writes. Every numb… |
 | [`GDTest/EnemySkillBalanceTest.gd`](map/GDTest/EnemySkillBalanceTest.md) | `EnemySkillBalanceTest` | 269 | Locks the enemy-skill balance pass: - an enemy threshold matches the par… |
