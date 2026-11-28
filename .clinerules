@@ -28,7 +28,7 @@ work through a branch and a pull request:
 5. `git switch main; git pull --ff-only` and confirm `git status -sb` shows no ahead/behind
 
 ## Pre-flight gates (required before every commit)
-Run all seven gates from the repo root — they are exactly the gates CI runs:
+Run all eight gates from the repo root — they are exactly the gates CI runs:
 
 1. Validate game data (errors **and** warnings are fatal):
    `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
@@ -55,6 +55,14 @@ Run all seven gates from the repo root — they are exactly the gates CI runs:
 7. Replay a seed — the CLI a telemetry or bug report's seed is reproduced with, over the
    shipped battle, asserting the board's invariants at every decision:
    `godot --headless --path . res://Tools/simulate_runs.tscn -- --seeds 3`
+8. Migration parity — applies `Server/supabase/migrations/001`–`006` in order to a real
+   PostgreSQL server and then asserts what every view answers, so a migration that
+   cannot be pushed fails here instead of at deploy time. It is how `004`'s
+   `create or replace view` column-order bug was found: `create or replace view` may
+   only *append* columns, so `004` never applied to a fresh database and `supabase db
+   push` stopped there. Skipped with a printed notice when `psql` is absent; CI always
+   runs it:
+   `psql -v ON_ERROR_STOP=1 -d <scratch-db> -f Server/supabase/tests/migrations_test.sql`
 
 Never commit past a red gate. If a gate fails, fix the root cause — do not weaken the gate.
 If gate 3 fails because the index is stale, regenerate it (`Docs/` is generated — never

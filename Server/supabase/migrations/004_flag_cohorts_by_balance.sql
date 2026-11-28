@@ -7,8 +7,22 @@
 --
 -- Replaces the view rather than editing 003, because a migration that has been pushed
 -- is part of the database's history.
+--
+-- `create or replace view` may only *append* columns, and this one inserts
+-- `balance_hash` as the second one, so a plain replace is rejected outright:
+--
+--   ERROR:  cannot change name of view column "runs_on" to "balance_hash"
+--
+-- which means `supabase db push` stopped here, on a fresh database, before 005 or 006
+-- ever ran - so this file has never been applied anywhere and can be corrected rather
+-- than worked around. (`Server/supabase/tests/migrations_test.sql` is the gate that
+-- applies the chain in order against a real server and catches exactly this.)
+-- Dropping and re-creating is the supported way to change a view's shape; nothing
+-- depends on the old one, and a re-run is still idempotent.
 
-create or replace view v_flag_cohorts as
+drop view if exists v_flag_cohorts;
+
+create view v_flag_cohorts as
 with clean as (
     select run_id, balance_hash, victory, jsonb_object_keys(flags) as flag
     from telemetry_runs
