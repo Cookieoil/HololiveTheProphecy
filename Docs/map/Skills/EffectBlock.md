@@ -59,6 +59,6 @@ Private:
 - L650-667 `_describe_value`
 
 Uses: Card, GameState, SkillContext, SkillEffect, Unit
-Used by: Core/DataLoader.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/DeterminismTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryTest.gd, Skills/SkillPreviewFormatter.gd
+Used by: Core/DataLoader.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/DeterminismTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryTest.gd, GDTest/TurnLoopTest.gd, Skills/SkillPreviewFormatter.gd
 Loads: —
 

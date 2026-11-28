@@ -95,7 +95,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | `GameDataValidatorRunner` | 394 | Headless, offline validator for the whole game-data pipeline. res://Data… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Ar… |
 
-## 2. Tests at a glance (32)
+## 2. Tests at a glance (33)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -130,6 +130,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/TelemetryUploaderTest.gd`](map/GDTest/TelemetryUploaderTest.md) | `TelemetryUploaderTest` | 256 | Locks the uploader's delivery rules (Managers/TelemetryUploader.gd), whi… |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIc… |
 | [`GDTest/TriageParserTest.gd`](map/GDTest/TriageParserTest.md) | `TriageParserTest` | 198 | Locks the task-intake rules (Tools/TriageParser.gd): every threshold, th… |
+| [`GDTest/TurnLoopTest.gd`](map/GDTest/TurnLoopTest.md) | `TurnLoopTest` | 750 | Locks the turn machine in Managers/GameManager.gd: the eight round steps… |
 | [`GDTest/UiSnapshotTest.gd`](map/GDTest/UiSnapshotTest.md) | `UiSnapshotTest` | 82 | Locks the seams the UI snapshot pipeline (Tools/snapshot_runner.tscn) re… |
 
 ## 3. Global signals (Managers/EventBus.gd)
@@ -187,4 +188,4 @@ Top-level keys:
 
 ---
 
-Indexed 98 script(s) (66 game, 32 test), 6 scene(s), 6 data file(s).
+Indexed 99 script(s) (66 game, 33 test), 6 scene(s), 6 data file(s).

@@ -27,6 +27,6 @@ Private:
 - L34-37 `_init`
 
 Uses: SkillEffect
-Used by: Core/DataLoader.gd, Core/EnemyIntent.gd, Core/Telemetry/TelemetryDecision.gd, Core/Telemetry/TelemetrySchema.gd, Core/UnitData.gd, Data/gameDatabase.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/DebugMenuTest.gd, GDTest/DeterminismTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/TelemetryDecisionTest.gd, GDTest/TelemetryFoundationTest.gd, GDTest/TelemetryTest.gd, GDTest/TooltipIconCatalogTest.gd, Managers/GameManager.gd, Managers/TelemetryManager.gd, Scenes/BattleUnit/UnitUI.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, Core/EnemyIntent.gd, Core/Telemetry/TelemetryDecision.gd, Core/Telemetry/TelemetrySchema.gd, Core/UnitData.gd, Data/gameDatabase.gd, GDTest/AllyKitTest.gd, GDTest/BattleEndTest.gd, GDTest/DebugMenuTest.gd, GDTest/DeterminismTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/EnemyUltAuraTest.gd, GDTest/TelemetryDecisionTest.gd, GDTest/TelemetryFoundationTest.gd, GDTest/TelemetryTest.gd, GDTest/TooltipIconCatalogTest.gd, GDTest/TurnLoopTest.gd, Managers/GameManager.gd, Managers/TelemetryManager.gd, Scenes/BattleUnit/UnitUI.gd, Skills/SkillPreviewFormatter.gd, Tools/validate_gameData.gd
 Loads: —
 
