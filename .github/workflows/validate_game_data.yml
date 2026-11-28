@@ -4,8 +4,9 @@ name: Validate Game Data
 # res://Data/json/ is the single source of truth the game loads at runtime and
 # res://Data/xlsx/game_data.xlsx is only a bulk-entry authoring tool. Both are
 # checked here, together with the GDScript compile gate, the generated symbol
-# index in Docs/ and the gdUnit4 suite, so a broken data edit, a typing
-# regression or a stale code map cannot reach main.
+# index in Docs/, the gdUnit4 suite, the anti-slop lint and the telemetry-ingest
+# TypeScript suite, so a broken data edit, a typing regression or a stale code map
+# cannot reach main.
 #
 # Actions are pinned to commit SHAs on purpose: a moving major tag is a supply
 # chain risk. The trailing comment records the version each SHA was verified at.
@@ -99,6 +100,31 @@ jobs:
       - name: Anti-slop lint
         timeout-minutes: 2
         run: python3 Tools/line_godot_slop.py --strict
+
+      # The telemetry-ingest Edge Function is TypeScript, and its row shapes, HTTP
+      # rules and table write order are unit tested on the Node the runner already
+      # has - no Deno, no network, no database. Same command Tools/preflight.ps1 runs.
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - name: Telemetry ingest tests
+        timeout-minutes: 5
+        run: node --test "Server/supabase/functions/telemetry-ingest/*.test.ts"
+
+      # index.ts is the one file that suite cannot import: it owns the
+      # `https://esm.sh/@supabase/supabase-js@2` import and the `Deno.serve` call.
+      # `deno check` typechecks it against the real client types, so the entrypoint is
+      # verified rather than eyeballed. It is the only job that needs Deno.
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
+      - name: Telemetry ingest types
+        timeout-minutes: 5
+        run: deno check Server/supabase/functions/telemetry-ingest/index.ts
 
   project:
     name: Scripts and tests

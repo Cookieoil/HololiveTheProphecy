@@ -95,6 +95,10 @@ Write-Host ''
 Write-Host '=== Anti-slop lint ===' -ForegroundColor Cyan
 $python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $python) { $python = Get-Command python3 -ErrorAction SilentlyContinue }
+# `py` is the Windows launcher, and it is the only one of the three that survives a
+# detached shell whose PATH has been trimmed (the WindowsApps `python.exe` alias and
+# the Store shim both go missing there).
+if (-not $python) { $python = Get-Command py -ErrorAction SilentlyContinue }
 if (-not $python) {
     Write-Host 'FAILED: python not found (required by Tools/line_godot_slop.py)' -ForegroundColor Red
     $failed += 'Anti-slop lint'
@@ -107,6 +111,54 @@ else {
     }
     else {
         Write-Host 'PASSED: Anti-slop lint' -ForegroundColor Green
+    }
+}
+
+# The telemetry-ingest Edge Function is TypeScript, and its row shapes, HTTP rules and
+# write order are unit tested with the Node the toolchain already has (no Deno, no
+# network, no database). Same command the CI `validate` job runs.
+Write-Host ''
+Write-Host '=== Telemetry ingest tests (Node) ===' -ForegroundColor Cyan
+$node = Get-Command node -ErrorAction SilentlyContinue
+if (-not $node) {
+    Write-Host 'FAILED: node not found (required for the telemetry-ingest suite)' -ForegroundColor Red
+    $failed += 'Telemetry ingest tests'
+}
+else {
+    $nodeArgs = @('--test', 'Server/supabase/functions/telemetry-ingest/*.test.ts')
+    $nodeTests = Start-Process -FilePath $node.Source -ArgumentList $nodeArgs -NoNewWindow -Wait -PassThru
+    if ($nodeTests.ExitCode -ne 0) {
+        Write-Host ('FAILED (exit ' + $nodeTests.ExitCode + '): Telemetry ingest tests') -ForegroundColor Red
+        $failed += 'Telemetry ingest tests'
+    }
+    else {
+        Write-Host 'PASSED: Telemetry ingest tests' -ForegroundColor Green
+    }
+}
+
+# index.ts is the one file the Node suite cannot import: it owns the
+# `https://esm.sh/@supabase/supabase-js@2` import and the `Deno.serve` call. `deno
+# check` typechecks it against the real client types, so the entrypoint is verified
+# rather than eyeballed. Install with:
+#   curl.exe -sSL -o deno.zip https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip
+#   Expand-Archive deno.zip -DestinationPath "$env:USERPROFILE\Tools\bin" -Force
+Write-Host ''
+Write-Host '=== Telemetry ingest types (deno check) ===' -ForegroundColor Cyan
+$deno = Get-Command deno -ErrorAction SilentlyContinue
+if (-not $deno) {
+    Write-Host 'FAILED: deno not found (required for `deno check` on the ingest entrypoint).' -ForegroundColor Red
+    Write-Host '       See the install command in the comment above this gate.' -ForegroundColor DarkGray
+    $failed += 'Telemetry ingest types'
+}
+else {
+    $denoArgs = @('check', 'Server/supabase/functions/telemetry-ingest/index.ts')
+    $denoCheck = Start-Process -FilePath $deno.Source -ArgumentList $denoArgs -NoNewWindow -Wait -PassThru
+    if ($denoCheck.ExitCode -ne 0) {
+        Write-Host ('FAILED (exit ' + $denoCheck.ExitCode + '): Telemetry ingest types') -ForegroundColor Red
+        $failed += 'Telemetry ingest types'
+    }
+    else {
+        Write-Host 'PASSED: Telemetry ingest types' -ForegroundColor Green
     }
 }
 
