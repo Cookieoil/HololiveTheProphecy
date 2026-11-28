@@ -6,7 +6,7 @@
 // erasing the balance hash (detaching the run from its balance patch), or a
 // start-only batch recording a still-running battle as `victory = false`.
 //
-// Run with:  node --test Server/supabase/functions/telemetry-ingest/
+// Run with:  node --test "Server/supabase/functions/telemetry-ingest/*.test.ts"
 
 import assert from "node:assert/strict";
 import { test } from "node:test";

@@ -117,28 +117,36 @@ Connect Metabase / Grafana / Supabase Studio straight to the views above.
 
 ## Testing the ingest
 
-The row-building rules live in `functions/telemetry-ingest/rows.ts` — a pure module
-with no Deno, HTTP or Supabase dependency — so they can be unit tested offline:
+The function is three modules, and that split is what makes it testable:
+
+| file | what it owns | verified by |
+| --- | --- | --- |
+| `functions/telemetry-ingest/rows.ts` | the event → database row shapes | `node --test` (11 tests) |
+| `functions/telemetry-ingest/handler.ts` | the status codes, the envelope validation and the table write order | `node --test` (9 tests) |
+| `functions/telemetry-ingest/index.ts` | the Deno entrypoint: the `esm.sh` import and the `Deno.serve` call | `deno check` |
 
 ```powershell
-node --test Server/supabase/functions/telemetry-ingest/
+node --test "Server/supabase/functions/telemetry-ingest/*.test.ts"   # behaviour
+deno check  Server/supabase/functions/telemetry-ingest/index.ts     # types
 ```
 
-The suite covers the one rule that has bitten this pipeline: a run's events are
+`handler.ts` takes its environment through a two-method seam (`getEnv`, `createDb`), so
+the suite drives the real `Request`/`Response` path against a stateful in-memory
+database that reproduces both `ON CONFLICT DO NOTHING` and a column-level `DO UPDATE`.
+That is what lets it assert the rule this pipeline exists to protect: a run's events are
 POSTed in batches of at most `MAX_EVENTS` (500), so one batch can carry only the
-`run_started` half of a run while a later batch carries only its `run_ended` half.
-Each half therefore writes **only the columns it owns** — start columns are
-insert-only, result columns are a separate update — so a run split across the batch
-boundary is never half-erased. (Before this, a full-row upsert from an end-only
-batch blanked the run's `balance_hash`, `run_seed`, `flags` and `player_anon_id`,
-detaching it from its balance patch, while a start-only batch recorded a battle that
-was still being played as `victory = false` — which is exactly how `v_flag_cohorts`
-and `v_run_overview` tell a finished run from an abandoned one. The same split
-applies to `telemetry_turns`.)
+`run_started` half of a run while a later batch carries only its `run_ended` half. Start
+columns are insert-only and are written **before** the result columns, so neither half
+can blank the other. (Before this, a full-row upsert from an end-only batch blanked the
+run's `balance_hash`, `run_seed`, `flags` and `player_anon_id`, detaching it from its
+balance patch, while a start-only batch recorded a battle that was still being played as
+`victory = false` — exactly the flag `v_flag_cohorts` and `v_run_overview` use to tell a
+finished run from an abandoned one. The same split applies to `telemetry_turns`.)
 
-The suite is not wired into CI yet: it needs a pinned `actions/setup-node`, and this
-repository's action-pinning rule requires a verified SHA for every action. Run it
-locally, or add it to `Tools/preflight.ps1` once a Node version is pinned.
+Both commands are gates: `Tools/preflight.ps1` runs them locally (they need `node` and
+`deno`, and the script prints the Deno install command when it is missing), and the CI
+`validate` job runs them on every pull request with pinned `actions/setup-node` and
+`denoland/setup-deno`.
 
 ## Privacy
 
