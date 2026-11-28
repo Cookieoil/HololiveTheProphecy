@@ -45,8 +45,26 @@ static func repo_path(res_path: String) -> String:
 ## are indexed; function bodies and inner-class members are skipped on purpose,
 ## which keeps the generated pages small enough to be worth reading.
 static func parse_script(res_path: String, text: String) -> Dictionary:
-	var lines: PackedStringArray = normalized_text(text).split("\n")
-	var header_end: int = header_end_index(lines)
+	var scan: ScriptScan = ScriptScan.new()
+	scan.lines = normalized_text(text).split("\n")
+	scan.header_end = header_end_index(scan.lines)
+	while scan.index < scan.lines.size():
+		_parse_script_line(scan)
+	return _script_record(res_path, scan)
+
+
+## Mutable state for one scan. It exists so the loop below can be one function per
+## declaration kind: the four things that outlive a single line - where we are, and the
+## pending doc / annotation that belongs to the declaration on the next line - travel
+## together, and each helper can be read (and unit tested) on its own.
+class ScriptScan:
+	extends RefCounted
+	var lines: PackedStringArray = PackedStringArray()
+	var header_end: int = -1
+	var index: int = 0
+	var pending_doc: PackedStringArray = PackedStringArray()
+	var pending_export: bool = false
+	var pending_onready: bool = false
 	var class_value: String = ""
 	var class_line: int = 0
 	var extends_value: String = ""
@@ -59,135 +77,190 @@ static func parse_script(res_path: String, text: String) -> Dictionary:
 	var onready: Array[Dictionary] = []
 	var variables: Array[Dictionary] = []
 	var functions: Array[Dictionary] = []
-	var pending_doc: PackedStringArray = PackedStringArray()
-	var pending_export: bool = false
-	var pending_onready: bool = false
-	var index: int = 0
-	while index < lines.size():
-		var raw: String = lines[index]
-		var line: String = raw.strip_edges(false, true)
-		index += 1
-		var line_number: int = index
-		if line.is_empty() or raw.begins_with("\t") or raw.begins_with(" "):
-			continue
-		if line.begins_with("##"):
-			if line_number > header_end:
-				pending_doc.append(doc_text(line))
-			continue
-		if line.begins_with("#region"):
-			regions.append(line.substr("#region".length()).strip_edges())
-			continue
-		if line.begins_with("#"):
-			continue
-		if line.begins_with("class_name "):
-			class_value = leading_identifier(line.substr("class_name ".length()))
-			class_line = line_number
-			continue
-		if line.begins_with("extends "):
-			extends_value = line.substr("extends ".length()).strip_edges()
-			continue
-		if line.begins_with("class "):
-			inner_classes.append({
-				"name": leading_identifier(line.substr("class ".length())),
-				"extends": extract_between(line, "extends ", ":"),
-				"line": line_number,
-			})
-			pending_doc.clear()
-			continue
-		if line.begins_with("@export"):
-			pending_export = true
-			if line.contains("var "):
-				var exported: Dictionary = parse_named_declaration(line.substr(line.find("var ")), "var ")
-				exported["line"] = line_number
-				exported["doc"] = join_doc(pending_doc)
-				exports.append(exported)
-				pending_doc.clear()
-				pending_export = false
-			continue
-		if line.begins_with("@onready"):
-			pending_onready = true
-			if line.contains("var "):
-				var wired: Dictionary = parse_named_declaration(line.substr(line.find("var ")), "var ")
-				wired["line"] = line_number
-				wired["doc"] = join_doc(pending_doc)
-				onready.append(wired)
-				pending_doc.clear()
-				pending_onready = false
-			continue
-		if line.begins_with("@"):
-			pending_export = false
-			pending_onready = false
-			continue
-		if line.begins_with("signal "):
-			var signal_entry: Dictionary = parse_signal(line)
-			signal_entry["line"] = line_number
-			signal_entry["doc"] = join_doc(pending_doc)
-			signals.append(signal_entry)
-			pending_doc.clear()
-			continue
-		if line.begins_with("const "):
-			var const_entry: Dictionary = parse_named_declaration(line, "const ")
-			const_entry["line"] = line_number
-			const_entry["doc"] = join_doc(pending_doc)
-			constants.append(const_entry)
-			pending_doc.clear()
-			continue
-		if line.begins_with("enum "):
-			var enum_entry: Dictionary = parse_enum(lines, line_number - 1, line)
-			index = dict_int(enum_entry, "next", index)
-			enum_entry.erase("next")
-			enum_entry["end"] = index
-			enums.append(enum_entry)
-			pending_doc.clear()
-			continue
-		if line.begins_with("var ") or line.begins_with("static var "):
-			var keyword: String = "var " if line.begins_with("var ") else "static var "
-			var variable_entry: Dictionary = parse_named_declaration(line, keyword)
-			variable_entry["line"] = line_number
-			variable_entry["doc"] = join_doc(pending_doc)
-			if pending_export:
-				exports.append(variable_entry)
-			elif pending_onready:
-				onready.append(variable_entry)
-			else:
-				variables.append(variable_entry)
-			pending_export = false
-			pending_onready = false
-			pending_doc.clear()
-			continue
-		if line.begins_with("func ") or line.begins_with("static func "):
-			var signature: String = line
-			while not signature_complete(signature) and index < lines.size():
-				signature = signature + " " + lines[index].strip_edges()
-				index += 1
-			var function_entry: Dictionary = parse_function(signature, line_number)
-			function_entry["end"] = function_end(lines, index, line_number)
-			function_entry["doc"] = join_doc(pending_doc)
-			functions.append(function_entry)
-			pending_doc.clear()
-			pending_export = false
-			pending_onready = false
-			continue
-		pending_doc.clear()
+
+## One line of a script, dispatched to the handler for the kind of declaration it is.
+## The ladder is deliberately short: everything that needs more than a comparison lives
+## in `_parse_preamble_line` / `_parse_member_line` / `_parse_function_line`, so the
+## nesting that made this loop hard to follow is spread across functions that can be
+## read one at a time.
+static func _parse_script_line(scan: ScriptScan) -> void:
+	var raw: String = scan.lines[scan.index]
+	var line: String = raw.strip_edges(false, true)
+	scan.index += 1
+	var line_number: int = scan.index
+	if line.is_empty() or raw.begins_with("\t") or raw.begins_with(" "):
+		return
+	if line.begins_with("##"):
+		_collect_doc(scan, line, line_number)
+		return
+	if line.begins_with("#region"):
+		scan.regions.append(line.substr("#region".length()).strip_edges())
+		return
+	if line.begins_with("#"):
+		return
+	if _parse_preamble_line(scan, line, line_number):
+		return
+	if _parse_member_line(scan, line, line_number):
+		return
+	if _parse_function_line(scan, line, line_number):
+		return
+	scan.pending_doc.clear()
+
+
+## A `##` block at the top of the file is the class summary, not a declaration's doc:
+## `header_end` is where the file's own doc ends and the members begin.
+static func _collect_doc(scan: ScriptScan, line: String, line_number: int) -> void:
+	if line_number > scan.header_end:
+		scan.pending_doc.append(doc_text(line))
+
+## `class_name`, `extends`, an inner `class` or an annotation. Returns false when the line
+## is none of them, so the caller moves on to the declaration kinds.
+static func _parse_preamble_line(scan: ScriptScan, line: String, line_number: int) -> bool:
+	if line.begins_with("class_name "):
+		scan.class_value = leading_identifier(line.substr("class_name ".length()))
+		scan.class_line = line_number
+		return true
+	if line.begins_with("extends "):
+		scan.extends_value = line.substr("extends ".length()).strip_edges()
+		return true
+	if line.begins_with("class "):
+		scan.inner_classes.append({
+			"name": leading_identifier(line.substr("class ".length())),
+			"extends": extract_between(line, "extends ", ":"),
+			"line": line_number,
+		})
+		scan.pending_doc.clear()
+		return true
+	if line.begins_with("@"):
+		_parse_annotation_line(scan, line, line_number)
+		return true
+	return false
+
+
+## An annotation is either inline (`@export var speed: float`) or on a line of its own, in
+## which case it owns the declaration below it - which is what `pending_export` /
+## `pending_onready` carry across lines. Any other `@annotation` drops the pending one, so
+## a `@tool` between an `@export` and its `var` cannot smuggle a plain variable into the
+## exports table.
+static func _parse_annotation_line(scan: ScriptScan, line: String, line_number: int) -> void:
+	if line.begins_with("@export") and line.contains("var "):
+		scan.exports.append(_annotated_declaration(line, line_number, scan.pending_doc))
+		scan.pending_doc.clear()
+		scan.pending_export = false
+	elif line.begins_with("@onready") and line.contains("var "):
+		scan.onready.append(_annotated_declaration(line, line_number, scan.pending_doc))
+		scan.pending_doc.clear()
+		scan.pending_onready = false
+	elif line.begins_with("@export"):
+		scan.pending_export = true
+	elif line.begins_with("@onready"):
+		scan.pending_onready = true
+	else:
+		scan.pending_export = false
+		scan.pending_onready = false
+
+
+## The `var` half of an inline annotation, carrying the doc block that came before it.
+static func _annotated_declaration(line: String, line_number: int, doc: PackedStringArray) -> Dictionary:
+	var entry: Dictionary = parse_named_declaration(line.substr(line.find("var ")), "var ")
+	entry["line"] = line_number
+	entry["doc"] = join_doc(doc)
+	return entry
+
+## `signal`, `const`, `enum` and `var` / `static var`. Returns false when the line is none
+## of them, so the caller can try the function forms.
+static func _parse_member_line(scan: ScriptScan, line: String, line_number: int) -> bool:
+	if line.begins_with("signal "):
+		scan.signals.append(_described(parse_signal(line), scan, line_number))
+		return true
+	if line.begins_with("const "):
+		scan.constants.append(_described(parse_named_declaration(line, "const "), scan, line_number))
+		return true
+	if line.begins_with("enum "):
+		_parse_enum_line(scan, line, line_number)
+		return true
+	if line.begins_with("var ") or line.begins_with("static var "):
+		_parse_variable_line(scan, line, line_number)
+		return true
+	return false
+
+
+## Stamps a parsed declaration with where it is and with the doc block above it, and
+## consumes that block so it cannot leak onto the declaration after it.
+static func _described(entry: Dictionary, scan: ScriptScan, line_number: int) -> Dictionary:
+	entry["line"] = line_number
+	entry["doc"] = join_doc(scan.pending_doc)
+	scan.pending_doc.clear()
+	return entry
+
+
+## An enum can be one line or a block, and its extent has to travel back to the caller:
+## `parse_enum` reports the index just past the closing brace as `next`.
+static func _parse_enum_line(scan: ScriptScan, line: String, line_number: int) -> void:
+	var entry: Dictionary = parse_enum(scan.lines, line_number - 1, line)
+	scan.index = dict_int(entry, "next", scan.index)
+	entry.erase("next")
+	entry["end"] = scan.index
+	scan.enums.append(entry)
+	scan.pending_doc.clear()
+
+## A `var` or a `static var`. Which table it lands in is decided by the annotation above
+## it: a bare `@export` on its own line is only resolved here, on the declaration it owns.
+static func _parse_variable_line(scan: ScriptScan, line: String, line_number: int) -> void:
+	var keyword: String = "var " if line.begins_with("var ") else "static var "
+	var entry: Dictionary = _described(parse_named_declaration(line, keyword), scan, line_number)
+	if scan.pending_export:
+		scan.exports.append(entry)
+	elif scan.pending_onready:
+		scan.onready.append(entry)
+	else:
+		scan.variables.append(entry)
+	scan.pending_export = false
+	scan.pending_onready = false
+
+
+## A `func` or `static func`. A signature may be wrapped over several lines, so this is the
+## one handler that consumes more than the line it was handed: it keeps appending until the
+## header is balanced and ends in `:`.
+static func _parse_function_line(scan: ScriptScan, line: String, line_number: int) -> bool:
+	if not line.begins_with("func ") and not line.begins_with("static func "):
+		return false
+	var signature: String = line
+	while not signature_complete(signature) and scan.index < scan.lines.size():
+		signature = signature + " " + scan.lines[scan.index].strip_edges()
+		scan.index += 1
+	var entry: Dictionary = parse_function(signature, line_number)
+	entry["end"] = function_end(scan.lines, scan.index, line_number)
+	entry["doc"] = join_doc(scan.pending_doc)
+	scan.functions.append(entry)
+	scan.pending_doc.clear()
+	scan.pending_export = false
+	scan.pending_onready = false
+	return true
+
+## The flat record every consumer reads. `refs` and `uses` start empty because they are
+## filled in later by `apply_dependencies`, once every script has been parsed.
+static func _script_record(res_path: String, scan: ScriptScan) -> Dictionary:
 	return {
 		"path": repo_path(res_path),
-		"class_name": class_value,
-		"class_line": class_line,
-		"extends": extends_value,
-		"lines": lines.size(),
-		"summary": header_summary(lines, header_end),
-		"regions": regions,
-		"enums": enums,
-		"inner_classes": inner_classes,
-		"signals": signals,
-		"constants": constants,
-		"exports": exports,
-		"onready": onready,
-		"variables": variables,
-		"functions": functions,
+		"class_name": scan.class_value,
+		"class_line": scan.class_line,
+		"extends": scan.extends_value,
+		"lines": scan.lines.size(),
+		"summary": header_summary(scan.lines, scan.header_end),
+		"regions": scan.regions,
+		"enums": scan.enums,
+		"inner_classes": scan.inner_classes,
+		"signals": scan.signals,
+		"constants": scan.constants,
+		"exports": scan.exports,
+		"onready": scan.onready,
+		"variables": scan.variables,
+		"functions": scan.functions,
 		"refs": PackedStringArray(),
 		"uses": PackedStringArray(),
 	}
+
 
 
 ## Parses one .tscn into a summary plus its full node tree, so @onready paths and

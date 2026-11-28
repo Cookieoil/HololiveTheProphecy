@@ -355,9 +355,28 @@ func _parse_table(grid: Array, enums: Dictionary, sheet_name: String, check_dupl
 	if header_index < 0:
 		errors.append("[%s] header row not found (need >=2 cells like 'name:type')" % sheet_name)
 		return rows_out
-	var header: Array = _row_at(grid, header_index)
+	var specs: Array = _parse_column_specs(_row_at(grid, header_index), sheet_name)
+	if specs.is_empty():
+		errors.append("[%s] header row found but no column specs parsed" % sheet_name)
+		return rows_out
+
+	var primary_key: String = _primary_key_of(specs)
+	var seen_ids: Dictionary = {}
+	for row_index: int in range(header_index + 2, grid.size()):  # skip header + title row
+		var entry: Dictionary = _parse_table_row(
+			_row_at(grid, row_index), row_index + 1, specs, enums, sheet_name,
+			seen_ids, primary_key, check_duplicate_ids
+		)
+		if not entry.is_empty():
+			rows_out.append(entry)
+	return rows_out
+
+
+## Turns the header row into one spec per column, in sheet order. A cell with no
+## `name:type` is a warning and is read as a string; a gap column is skipped outright,
+## because a spreadsheet's trailing empties are not columns anybody declared.
+func _parse_column_specs(header: Array, sheet_name: String) -> Array:
 	var specs: Array = []
-	var primary_key: String = ""
 	for column: int in range(header.size()):
 		var raw_header: String = str(header[column]).strip_edges()
 		var spec: Dictionary = _parse_spec(raw_header)
@@ -367,96 +386,157 @@ func _parse_table(grid: Array, enums: Dictionary, sheet_name: String, check_dupl
 			warnings.append("[%s] header cell '%s' has no type (add e.g. '%s:string')" % [sheet_name, raw_header, raw_header])
 			spec = {"name": raw_header, "type": "string", "target": "", "default": "", "has_default": false}
 		spec["_col"] = column
-		if primary_key.is_empty():
-			primary_key = str(spec.get("name", ""))
 		specs.append(spec)
-	if specs.is_empty():
-		errors.append("[%s] header row found but no column specs parsed" % sheet_name)
-		return rows_out
+	return specs
 
-	var seen_ids: Dictionary = {}
-	for row_index: int in range(header_index + 2, grid.size()):  # skip header + title row
-		var row: Array = _row_at(grid, row_index)
-		var entry: Dictionary = {"_row": row_index + 1}
-		var has_value: bool = false
-		for spec: Dictionary in specs:
-			var column_index: int = _to_int(spec.get("_col", -1), -1)
-			var raw: String = ""
-			if column_index >= 0 and column_index < row.size():
-				raw = str(row[column_index]).strip_edges()
-			if not raw.is_empty():
-				has_value = true
-			var field_name: String = str(spec.get("name", ""))
-			if field_name.is_empty():
-				continue
-			entry[field_name] = _coerce(raw, spec, enums, sheet_name, row_index + 1)
-		if not has_value:
+
+## The first named column is the row's id, and therefore the thing duplicate detection
+## keys on.
+func _primary_key_of(specs: Array) -> String:
+	for spec: Dictionary in specs:
+		var name_value: String = str(spec.get("name", ""))
+		if not name_value.is_empty():
+			return name_value
+	return ""
+
+
+## One data row. An all-blank row is not an entry (spreadsheets keep them around), so it
+## comes back empty and the caller skips it.
+func _parse_table_row(
+	row: Array,
+	row_number: int,
+	specs: Array,
+	enums: Dictionary,
+	sheet_name: String,
+	seen_ids: Dictionary,
+	primary_key: String,
+	check_duplicate_ids: bool
+) -> Dictionary:
+	var entry: Dictionary = {"_row": row_number}
+	var has_value: bool = false
+	for spec: Dictionary in specs:
+		var column_index: int = _to_int(spec.get("_col", -1), -1)
+		var raw: String = ""
+		if column_index >= 0 and column_index < row.size():
+			raw = str(row[column_index]).strip_edges()
+		if not raw.is_empty():
+			has_value = true
+		var field_name: String = str(spec.get("name", ""))
+		if field_name.is_empty():
 			continue
-		var id_value: String = str(entry.get(primary_key, "")).strip_edges()
-		if check_duplicate_ids and not id_value.is_empty():
-			if seen_ids.has(id_value):
-				warnings.append("[%s r%d] duplicate id '%s'" % [sheet_name, row_index + 1, id_value])
-			seen_ids[id_value] = true
-		rows_out.append(entry)
-	return rows_out
+		entry[field_name] = _coerce(raw, spec, enums, sheet_name, row_number)
+	if not has_value:
+		return {}
+	_warn_duplicate_id(entry, row_number, primary_key, seen_ids, sheet_name, check_duplicate_ids)
+	return entry
+
+
+## Two rows with the same id mean one of them silently wins in the emitted JSON, which is
+## worth saying out loud even though it is not fatal.
+func _warn_duplicate_id(
+	entry: Dictionary,
+	row_number: int,
+	primary_key: String,
+	seen_ids: Dictionary,
+	sheet_name: String,
+	enabled: bool
+) -> void:
+	if not enabled or primary_key.is_empty():
+		return
+	var id_value: String = str(entry.get(primary_key, "")).strip_edges()
+	if id_value.is_empty():
+		return
+	if seen_ids.has(id_value):
+		warnings.append("[%s r%d] duplicate id '%s'" % [sheet_name, row_number, id_value])
+	seen_ids[id_value] = true
 
 
 ## Converts one raw cell into the JSON value described by its column spec.
 func _coerce(raw: String, spec: Dictionary, enums: Dictionary, sheet: String, row_number: int) -> Variant:
-	var field_name: String = str(spec.get("name", ""))
 	var type_name: String = str(spec.get("type", "string"))
-	var enum_target: String = str(spec.get("target", ""))
-	var default_value: String = str(spec.get("default", ""))
-	var has_default: bool = _to_bool(spec.get("has_default", false), false)
-	var location: String = "[%s r%d %s]" % [sheet, row_number, field_name]
-	var value: String = raw
-	if value.is_empty() and has_default:
-		value = default_value
+	var location: String = "[%s r%d %s]" % [sheet, row_number, str(spec.get("name", ""))]
+	var value: String = _cell_text(raw, spec)
 	match type_name:
 		"int":
-			if value.is_valid_int():
-				return value.to_int()
-			if value.is_valid_float() and value.to_float() == floorf(value.to_float()):
-				return int(value.to_float())
-			if not value.is_empty():
-				errors.append("%s expected int, got '%s'" % [location, value])
-			return 0
+			return _coerce_int(value, location)
 		"float":
-			if value.is_valid_float():
-				return value.to_float()
-			if not value.is_empty():
-				errors.append("%s expected float, got '%s'" % [location, value])
-			return 0.0
+			return _coerce_float(value, location)
 		"bool":
-			var lowered: String = value.to_lower()
-			if lowered in ["true", "1"]:
-				return true
-			if lowered in ["false", "0", ""]:
-				return false
-			errors.append("%s expected TRUE/FALSE, got '%s'" % [location, value])
-			return false
+			return _coerce_bool(value, location)
 		"string", "ref":
 			return value
 		"list", "array":
-			var items: Array = []
-			if value.is_empty():
-				return items
-			var separator: String = ";" if value.find(";") >= 0 else ","
-			for item: String in value.split(separator):
-				var tag: String = item.strip_edges().to_lower()
-				if tag.is_empty():
-					continue
-				if not enum_target.is_empty() and _has_enum(enums, enum_target) and not _enum_contains(enums, enum_target, tag):
-					errors.append("%s '%s' is not a valid %s (see enums sheet)" % [location, tag, enum_target])
-				items.append(tag)
-			return items
+			return _coerce_list(value, spec, enums, location)
 		_:
-			if _has_enum(enums, type_name):
-				if not value.is_empty() and not _enum_contains(enums, type_name, value):
-					errors.append("%s '%s' is not a valid %s (see enums sheet)" % [location, value, type_name])
-				return value
-			errors.append("%s unknown column type '%s'" % [location, type_name])
-			return value
+			return _coerce_enum_or_unknown(value, type_name, enums, location)
+
+
+## An empty cell falls back to the column's declared default, if it has one.
+func _cell_text(raw: String, spec: Dictionary) -> String:
+	if not raw.is_empty():
+		return raw
+	if _to_bool(spec.get("has_default", false), false):
+		return str(spec.get("default", ""))
+	return raw
+
+
+## An `int` column also accepts a float that happens to be whole ("3.0"), because that is
+## what a spreadsheet cell holding 3 often reads as.
+func _coerce_int(value: String, location: String) -> Variant:
+	if value.is_valid_int():
+		return value.to_int()
+	if value.is_valid_float() and value.to_float() == floorf(value.to_float()):
+		return int(value.to_float())
+	if not value.is_empty():
+		errors.append("%s expected int, got '%s'" % [location, value])
+	return 0
+
+
+func _coerce_float(value: String, location: String) -> Variant:
+	if value.is_valid_float():
+		return value.to_float()
+	if not value.is_empty():
+		errors.append("%s expected float, got '%s'" % [location, value])
+	return 0.0
+
+
+func _coerce_bool(value: String, location: String) -> Variant:
+	var lowered: String = value.to_lower()
+	if lowered in ["true", "1"]:
+		return true
+	if lowered in ["false", "0", ""]:
+		return false
+	errors.append("%s expected TRUE/FALSE, got '%s'" % [location, value])
+	return false
+
+
+## A `list`/`array` cell is split on `;` when it has one, otherwise on `,`. When the column
+## names an enum target, every element is checked against it: a typo in the workbook is
+## otherwise only visible as a skill that does nothing at runtime.
+func _coerce_list(value: String, spec: Dictionary, enums: Dictionary, location: String) -> Variant:
+	var items: Array = []
+	if value.is_empty():
+		return items
+	var enum_target: String = str(spec.get("target", ""))
+	var separator: String = ";" if value.find(";") >= 0 else ","
+	for item: String in value.split(separator):
+		var tag: String = item.strip_edges().to_lower()
+		if tag.is_empty():
+			continue
+		if not enum_target.is_empty() and _has_enum(enums, enum_target) and not _enum_contains(enums, enum_target, tag):
+			errors.append("%s '%s' is not a valid %s (see enums sheet)" % [location, tag, enum_target])
+		items.append(tag)
+	return items
+
+
+## A column whose type is an enum declared on the Enums sheet, or a type nobody declared.
+func _coerce_enum_or_unknown(value: String, type_name: String, enums: Dictionary, location: String) -> Variant:
+	if _has_enum(enums, type_name):
+		if not value.is_empty() and not _enum_contains(enums, type_name, value):
+			errors.append("%s '%s' is not a valid %s (see enums sheet)" % [location, value, type_name])
+		return value
+	errors.append("%s unknown column type '%s'" % [location, type_name])
+	return value
 
 
 ## true when the Enums sheet declares this enum column.
@@ -643,12 +723,7 @@ func _read_waves(grid: Array, enums: Dictionary, units: Dictionary) -> Dictionar
 ## Config sheet -> flat JSON object built from its key/value rows.
 func _read_config(grid: Array, units: Dictionary) -> Dictionary:
 	var config: Dictionary = {}
-	var header_index: int = -1
-	for row_index: int in range(grid.size()):
-		var row: Array = _row_at(grid, row_index)
-		if row.size() >= 2 and str(row[1]).strip_edges().to_lower() == "key":
-			header_index = row_index
-			break
+	var header_index: int = _find_config_header(grid)
 	if header_index < 0:
 		errors.append("[config] header row with 'key' not found")
 		return config
@@ -662,31 +737,44 @@ func _read_config(grid: Array, units: Dictionary) -> Dictionary:
 		config[key] = _parse_config_value(str(row[2]).strip_edges())
 	if not config.has("allies"):
 		return config
+	config["allies"] = _normalise_config_allies(config["allies"], units)
+	return config
 
-	# Normalise allies so the runtime always receives an Array of known ids.
+
+## The Config sheet's header is the first row whose second cell says `key`.
+func _find_config_header(grid: Array) -> int:
+	for row_index: int in range(grid.size()):
+		var row: Array = _row_at(grid, row_index)
+		if row.size() >= 2 and str(row[1]).strip_edges().to_lower() == "key":
+			return row_index
+	return -1
+
+
+## Normalises allies so the runtime always receives an Array of known ids, whether the
+## cell held a list or a single id. An unknown id is an error rather than a silent drop:
+## a typo here would otherwise only show up as a shorter roster in game.
+func _normalise_config_allies(raw: Variant, units: Dictionary) -> Array:
 	var allies: Array = []
-	var allies_raw: Variant = config["allies"]
-	if allies_raw is Array:
-		var listed: Array = allies_raw
+	if raw is Array:
+		var listed: Array = raw
 		for item: Variant in listed:
-			var ally_id: String = str(item).strip_edges()
-			if ally_id.is_empty():
+			var listed_id: String = str(item).strip_edges()
+			if listed_id.is_empty():
 				continue
-			if not units.has(ally_id):
-				errors.append("[config] allies references unknown unit '%s'" % ally_id)
+			if not units.has(listed_id):
+				errors.append("[config] allies references unknown unit '%s'" % listed_id)
 				continue
-			allies.append(ally_id)
+			allies.append(listed_id)
 	else:
-		var single_id: String = str(allies_raw).strip_edges()
+		var single_id: String = str(raw).strip_edges()
 		if not single_id.is_empty():
 			if units.has(single_id):
 				allies.append(single_id)
 			else:
 				errors.append("[config] allies references unknown unit '%s'" % single_id)
-	config["allies"] = allies
 	if allies.is_empty():
 		errors.append("[config] allies list is empty")
-	return config
+	return allies
 ## Splits a Config cell into JSON values: ";" = list, ":" = [value, count]
 ## pair, "," = list, anything else = scalar.
 func _parse_config_value(text: String) -> Variant:

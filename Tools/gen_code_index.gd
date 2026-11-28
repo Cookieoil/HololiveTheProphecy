@@ -706,28 +706,41 @@ func _append_functions(out: PackedStringArray, functions: Array) -> void:
 		if CodeIndexParser.dict_bool(record, "private"):
 			private_parts.append("L%s `%s`" % [CodeIndexParser.line_range(record), name_value])
 			continue
-		var text: String = "L%s `" % CodeIndexParser.line_range(record)
-		if CodeIndexParser.dict_bool(record, "static"):
-			text += "static "
-		text += name_value + "(" + CodeIndexParser.dict_string(record, "args") + ")"
-		var returns_value: String = CodeIndexParser.dict_string(record, "returns")
-		if not returns_value.is_empty():
-			text += " -> " + returns_value
-		text += "`"
-		var doc_text: String = CodeIndexParser.dict_string(record, "doc")
-		if not doc_text.is_empty():
-			text += " — " + _cell(doc_text)
-		public_parts.append(text)
-	if not public_parts.is_empty():
-		out.append("")
-		out.append("Public API:")
-		for part: String in public_parts:
-			out.append("- " + part)
-	if not private_parts.is_empty():
-		out.append("")
-		out.append("Private:")
-		for part: String in private_parts:
-			out.append("- " + part)
+		public_parts.append(_public_function_line(record, name_value))
+	_append_section(out, "Public API", public_parts)
+	_append_section(out, "Private", private_parts)
+
+
+## One public entry: the full signature, so a page reader knows what a function takes and
+## returns without opening the script.
+func _public_function_line(record: Dictionary, name_value: String) -> String:
+	var prefix: String = "static " if CodeIndexParser.dict_bool(record, "static") else ""
+	var text: String = "L%s `%s%s(%s)" % [
+		CodeIndexParser.line_range(record),
+		prefix,
+		name_value,
+		CodeIndexParser.dict_string(record, "args"),
+	]
+	var returns_value: String = CodeIndexParser.dict_string(record, "returns")
+	if not returns_value.is_empty():
+		text += " -> " + returns_value
+	text += "`"
+	var doc_text: String = CodeIndexParser.dict_string(record, "doc")
+	if not doc_text.is_empty():
+		text += " — " + _cell(doc_text)
+	return text
+
+
+## A titled bullet list. Skipped entirely when there is nothing to list, so a page never
+## carries an empty heading.
+func _append_section(out: PackedStringArray, title: String, parts: PackedStringArray) -> void:
+	if parts.is_empty():
+		return
+	out.append("")
+	out.append(title + ":")
+	for part: String in parts:
+		out.append("- " + part)
+
 
 
 func _append_signal_table(out: PackedStringArray, global_signals: Array[Dictionary]) -> void:

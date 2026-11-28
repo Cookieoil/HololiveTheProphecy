@@ -68,19 +68,19 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | [`Skills/SkillEffect.gd`](map/Skills/SkillEffect.md) | `SkillEffect` | 20 | Abstract base for all skill effect components. Subclasses override execu… |
 | [`Skills/SkillPreviewFormatter.gd`](map/Skills/SkillPreviewFormatter.md) | `SkillPreviewFormatter` | 445 | extends RefCounted, 16 function(s) |
 | [`Tools/BattleSimulator.gd`](map/Tools/BattleSimulator.md) | `BattleSimulator` | 374 | Drives a whole battle headlessly through the GameUI contract and reports… |
-| [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 806 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here t… |
+| [`Tools/CodeIndexParser.gd`](map/Tools/CodeIndexParser.md) | `CodeIndexParser` | 879 | Pure parsing layer behind Tools/gen_code_index.gd. Every function here t… |
 | [`Tools/DiffReviewFormatter.gd`](map/Tools/DiffReviewFormatter.md) | `DiffReviewFormatter` | 216 | Rendering layer behind Tools/review_diff.gd. Turns the plain Dictionary… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 781 | Pure review layer behind Tools/review_diff.gd. Every function takes a un… |
 | [`Tools/GameDataValidator.gd`](map/Tools/GameDataValidator.md) | `GameDataValidator` | 889 | Pure schema and semantic rules for the game data in res://Data/json/. Sp… |
 | [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 250 | Renders the canonical battle screens to PNGs for the "align visually" lo… |
 | [`Tools/TriageParser.gd`](map/Tools/TriageParser.md) | `TriageParser` | 490 | Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns… |
 | [`Tools/ValidationReporter.gd`](map/Tools/ValidationReporter.md) | `ValidationReporter` | 235 | GitHub Actions reporting for the game-data validator: workflow annotatio… |
-| [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 763 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Ver… |
+| [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 773 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Ver… |
 | [`Tools/check_scripts.gd`](map/Tools/check_scripts.md) | — | 85 | Headless compile gate: loads every project GDScript outside the excluded… |
 | [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 142 | Headless link and compatibility gate for the spine-godot GDExtension. Pr… |
-| [`Tools/dataBuilder.gd`](map/Tools/dataBuilder.md) | `DataBuilder` | 779 | Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into t… |
+| [`Tools/dataBuilder.gd`](map/Tools/dataBuilder.md) | `DataBuilder` | 867 | Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into t… |
 | [`Tools/export_xlsx_to_json.gd`](map/Tools/export_xlsx_to_json.md) | — | 34 | Headless Excel -> JSON exporter for the game data pipeline. Usage: godot… |
-| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 800 | Headless symbol-index generator for this repository. Parses every first-… |
+| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 813 | Headless symbol-index generator for this repository. Parses every first-… |
 | [`Tools/review_diff.gd`](map/Tools/review_diff.md) | — | 159 | Second-pass reviewer for a branch: summarises the diff and flags the thi… |
 | [`Tools/simulate_runs.gd`](map/Tools/simulate_runs.md) | — | 180 | Replays a run seed headlessly, or sweeps a range of seeds, and prints wh… |
 | [`Tools/triage.gd`](map/Tools/triage.md) | — | 222 | Forward pressure: turns evidence into agent-ready task issues. An agent… |
@@ -99,7 +99,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 612 | Locks in the merge: the card the player was carrying is picked up from t… |
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 122 | Tests for CardUI's runtime card feedback: the delayed value-label refres… |
-| [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 332 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behin… |
+| [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 401 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behin… |
 | [`GDTest/DataLoaderTest.gd`](map/GDTest/DataLoaderTest.md) | `DataLoaderTest` | 247 | Locks how DataLoader turns config.json into the runtime config: the defa… |
 | [`GDTest/DebugCommandRunnerTest.gd`](map/GDTest/DebugCommandRunnerTest.md) | `DebugCommandRunnerTest` | 152 | Locks the seams of Managers/DebugCommandRunner.gd that the turn-loop sui… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it r… |

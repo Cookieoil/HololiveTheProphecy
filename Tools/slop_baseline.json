@@ -13,8 +13,7 @@
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 127,
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 140,
     "Scenes/HUD/MoxieOrbUI.gd::_draw": 103,
-    "Scenes/HUD/SkillTooltipPopup.gd::_build_ui": 84,
-    "Tools/CodeIndexParser.gd::parse_script": 146
+    "Scenes/HUD/SkillTooltipPopup.gd::_build_ui": 84
   },
   "complexity": {
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 18,
@@ -22,13 +21,7 @@
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 30,
     "Scenes/HUD/BattleOverlayController.gd::_find_character_texture_in_node": 15,
     "Scenes/HUD/BattleOverlayController.gd::rebuild_for_units": 15,
-    "Scenes/HUD/MoxieOrbUI.gd::_draw": 15,
-    "Tools/CodeIndexParser.gd::parse_script": 23,
-    "Tools/check_navigation.gd::_scan_declarations": 13,
-    "Tools/dataBuilder.gd::_coerce": 16,
-    "Tools/dataBuilder.gd::_parse_table": 15,
-    "Tools/dataBuilder.gd::_read_config": 15,
-    "Tools/gen_code_index.gd::_append_functions": 13
+    "Scenes/HUD/MoxieOrbUI.gd::_draw": 15
   },
   "get_parent": {}
 }
