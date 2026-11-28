@@ -38,6 +38,6 @@ Public API:
 - L295-311 `static to_int(value: Variant, fallback: int = 0) -> int` — Coerces any Variant into an int (dictionaries read back from JSON are floats).
 
 Uses: Card, EnemyIntent, GameState, SkillData, Unit
-Used by: GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, GDTest/TelemetryUploaderTest.gd, Managers/TelemetryManager.gd
+Used by: Core/Telemetry/TelemetryDecision.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryDecisionTest.gd, GDTest/TelemetryTest.gd, GDTest/TelemetryUploaderTest.gd, Managers/GameManager.gd, Managers/TelemetryManager.gd
 Loads: —
 

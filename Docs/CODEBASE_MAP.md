@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (60)
+## 1. Game scripts at a glance (62)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -38,15 +38,17 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Core/Telemetry/HttpBatchSink.gd`](map/Core/Telemetry/HttpBatchSink.md) | `HttpBatchSink` | 54 | Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but the finish… |
 | [`Core/Telemetry/JsonlFileSink.gd`](map/Core/Telemetry/JsonlFileSink.md) | `JsonlFileSink` | 94 | Stage 1 telemetry sink: appends one JSON object per line to a per-run file under user://telemetr… |
 | [`Core/Telemetry/TelemetryConsent.gd`](map/Core/Telemetry/TelemetryConsent.md) | `TelemetryConsent` | 201 | Explicit opt-in gate for gameplay telemetry. The player is asked on every launch, before the fir… |
+| [`Core/Telemetry/TelemetryDecision.gd`](map/Core/Telemetry/TelemetryDecision.md) | `TelemetryDecision` | 220 | Pure shapers for one recorded decision: what the player could have done (`offered`) and what the… |
 | [`Core/Telemetry/TelemetrySchema.gd`](map/Core/Telemetry/TelemetrySchema.md) | `TelemetrySchema` | 313 | Pure serialisers that turn live game objects into the plain Dictionaries the telemetry spool sto… |
 | [`Core/Telemetry/TelemetrySink.gd`](map/Core/Telemetry/TelemetrySink.md) | `TelemetrySink` | 33 | Abstract destination for telemetry events. The recorder never cares where an event goes: Stage 1… |
 | [`Core/Unit.gd`](map/Core/Unit.md) | `Unit` | 387 | Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data |
 | [`Core/UnitData.gd`](map/Core/UnitData.md) | `UnitData` | 20 | Template definition for a unit type. |
 | [`Data/gameDatabase.gd`](map/Data/gameDatabase.md) | `GameDatabase` | 36 | Skill definitions keyed by skill_id (effects embedded). |
 | [`Managers/ColorUtils.gd`](map/Managers/ColorUtils.md) | — | 31 | Color definitions for BBCode |
+| [`Managers/DebugCommandRunner.gd`](map/Managers/DebugCommandRunner.md) | `DebugCommandRunner` | 401 | Tester-only mutations behind the in-game Debug menu (Scenes/HUD/DebugMenuPopup.gd). Extracted fr… |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks,… |
-| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1174 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flo… |
-| [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 1021 | Records every decision a player makes, for game design and balancing. It is a passive observer:… |
+| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 885 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flo… |
+| [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 858 | Records every decision a player makes, for game design and balancing. It is a passive observer:… |
 | [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 426 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSO… |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 670 | extends GameUI, 2 signal(s), 11 export(s), 46 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 649 | extends Control, 3 signal(s), 28 export(s), 37 function(s) |
@@ -89,7 +91,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
 
-## 2. Tests at a glance (28)
+## 2. Tests at a glance (30)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -102,6 +104,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 122 | Tests for CardUI's runtime card feedback: the delayed value-label refresh after a skill buff/deb… |
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 332 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behind the generated navigati… |
+| [`GDTest/DebugCommandRunnerTest.gd`](map/GDTest/DebugCommandRunnerTest.md) | `DebugCommandRunnerTest` | 152 | Locks the seams of Managers/DebugCommandRunner.gd that the turn-loop suite cannot reach. GDTest/… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it renders one toggle per st… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 864 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameManager): - the panel is vie… |
 | [`GDTest/DiffReviewTest.gd`](map/GDTest/DiffReviewTest.md) | `DiffReviewTest` | 656 | Fixture tests for the review layer behind Tools/review_diff.gd: the rules in Tools/DiffReviewPar… |
@@ -115,6 +118,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/MessageLogTest.gd`](map/GDTest/MessageLogTest.md) | `MessageLogTest` | 46 | Locks the battle message log: the game authors it in BBCode (`ColorUtils.colorize` and the HOW T… |
 | [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 141 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatalog. |
 | [`GDTest/TelemetryConsentTest.gd`](map/GDTest/TelemetryConsentTest.md) | `TelemetryConsentTest` | 362 | Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Ag… |
+| [`GDTest/TelemetryDecisionTest.gd`](map/GDTest/TelemetryDecisionTest.md) | `TelemetryDecisionTest` | 194 | Locks Core/Telemetry/TelemetryDecision.gd directly. GDTest/TelemetryTest.gd covers the same shap… |
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its… |
 | [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 697 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wav… |
 | [`GDTest/TelemetryUploaderTest.gd`](map/GDTest/TelemetryUploaderTest.md) | `TelemetryUploaderTest` | 256 | Locks the uploader's delivery rules (Managers/TelemetryUploader.gd), which decide whether a fini… |
@@ -132,16 +136,16 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | `card_played` | card: Card, ally: Unit | Managers/GameManager.gd | Scenes/Cards/HandBar.gd |
 | `card_drawn` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |
 | `card_discarded` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |
-| `card_value_changed` | card: Card, old_value: int, new_value: int | GDTest/CardUITest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | GDTest/DebugMenuTest.gd, Managers/TelemetryManager.gd, Scenes/Cards/CardUI.gd |
-| `damage_dealt` | source: Unit, target: Unit, amount: int, hp_lost: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `shield_gained` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `shield_reduced` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `unit_healed` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `unit_died` | target: Unit | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `card_value_changed` | card: Card, old_value: int, new_value: int | GDTest/CardUITest.gd, Managers/DebugCommandRunner.gd, Skills/EffectBlock.gd | GDTest/DebugMenuTest.gd, Managers/TelemetryManager.gd, Scenes/Cards/CardUI.gd |
+| `damage_dealt` | source: Unit, target: Unit, amount: int, hp_lost: int | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `shield_gained` | target: Unit, amount: int | Managers/DebugCommandRunner.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `shield_reduced` | target: Unit, amount: int | Managers/DebugCommandRunner.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `unit_healed` | target: Unit, amount: int | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `unit_died` | target: Unit | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
 | `skill_resolved` | caster: Unit, skill_name: String | Managers/GameManager.gd | — |
-| `moxie_changed` | unit: Unit, current: int, maximum: int | Managers/GameManager.gd | — |
+| `moxie_changed` | unit: Unit, current: int, maximum: int | Managers/DebugCommandRunner.gd, Managers/GameManager.gd | — |
 | `ultimate_cast` | caster: Unit, skill_name: String | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
-| `unit_statuses_changed` | unit: Unit | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
+| `unit_statuses_changed` | unit: Unit | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | — |
 
 ## 4. Scenes (5)
 
@@ -176,4 +180,4 @@ Top-level keys:
 
 ---
 
-Indexed 88 script(s) (60 game, 28 test), 5 scene(s), 6 data file(s).
+Indexed 92 script(s) (62 game, 30 test), 5 scene(s), 6 data file(s).

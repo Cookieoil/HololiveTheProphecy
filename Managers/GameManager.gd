@@ -15,6 +15,11 @@ var instructions_shown: bool = false
 ## until the player has agreed to telemetry, so every hook below is safe to call
 ## unconditionally.
 var telemetry: TelemetryManager = TelemetryManager.new()
+## Tester tool table (see Managers/DebugCommandRunner.gd). It holds no board of its
+## own - it is handed `state` and `ui` per command - and it *asks* for the two tools
+## that need the turn loop's own machinery (re-roll the intents, re-spawn the wave)
+## rather than reaching back in here, which would be a cycle.
+var _debug: DebugCommandRunner = DebugCommandRunner.new()
 
 #region Constants
 ## Fraction of an enemy's skill animation that plays before the next enemy may
@@ -23,6 +28,17 @@ var telemetry: TelemetryManager = TelemetryManager.new()
 ## three full animation tails back to back. 1.0 restores strictly sequential
 ## turns. Enemy Ultimates always play in full, so the dramatic beat stays intact.
 const ENEMY_SKILL_OVERLAP_LEAD: float = 0.6
+#endregion
+
+
+#region Lifecycle Methods
+## Wires the runner's two requests. Both handlers read `state` / `ui` when they run
+## rather than when they are connected, so it does not matter that the board is
+## assigned after this node enters the tree - which is exactly what the test suite
+## does (it builds a manager by hand instead of calling setup_game).
+func _ready() -> void:
+	_debug.intents_reroll_requested.connect(_reroll_and_show_intents)
+	_debug.wave_respawn_requested.connect(_respawn_wave_and_show)
 #endregion
 
 
@@ -262,9 +278,9 @@ func _player_action_phase() -> void:
 				_handle_debug_command(action)
 				# A result preview ends the battle right here, through the same exit
 				# a real ending uses (see _finish_battle).
-				if _debug_result_request != DEBUG_RESULT_NONE:
-					var preview_victory: bool = _debug_result_request == DEBUG_RESULT_VICTORY
-					_debug_result_request = DEBUG_RESULT_NONE
+				if _debug.result_request != DebugCommandRunner.RESULT_NONE:
+					var preview_victory: bool = _debug.result_request == DebugCommandRunner.RESULT_VICTORY
+					_debug.result_request = DebugCommandRunner.RESULT_NONE
 					await _finish_battle(preview_victory, TelemetryManager.REASON_DEBUG_PREVIEW)
 					end_phase = true
 				elif _resolve_enemy_clear_after_action():
@@ -448,20 +464,11 @@ func _handle_convert() -> void:
 
 
 #region Debug Commands
-## Highest hand cap the Debug menu's stepper allows, so a stray click cannot set a
-## four-digit cap.
-const DEBUG_HAND_CAP_LIMIT: int = 20
-## Scope values of the Debug menu's target selector. Mirrors DebugMenuPopup.Scope
-## without this manager having to reference a UI class.
-const DEBUG_SCOPE_ALLIES: int = 0
-const DEBUG_SCOPE_ENEMIES: int = 1
-const DEBUG_SCOPE_ALL: int = 2
-## Result-screen preview requested by the Debug menu: 0 = none, 1 = Victory,
-## 2 = Defeat. The panel only asks; the player-action loop applies it, so a preview
-## leaves the battle through exactly the same exit a real ending uses.
-const DEBUG_RESULT_NONE: int = 0
-const DEBUG_RESULT_VICTORY: int = 1
-const DEBUG_RESULT_DEFEAT: int = 2
+## The tester tools themselves live in Managers/DebugCommandRunner.gd, which also owns
+## the constants naming their scopes and their result previews
+## (`DebugCommandRunner.SCOPE_*` / `DebugCommandRunner.RESULT_*`). What stays here is
+## the build-type gate, because the turn loop - not the UI - is what refuses a tool in
+## a release build.
 ## Values for `debug_build_override`: the engine decides, or the suite forces the
 ## release / debug answer so the gate below can be exercised without an export.
 const DEBUG_BUILD_ENGINE: int = -1
@@ -474,9 +481,6 @@ const DEBUG_BUILD_FORCED_ON: int = 1
 ## release build.
 static var debug_build_override: int = DEBUG_BUILD_ENGINE
 
-## Result-screen preview the Debug menu asked for, applied by the player-action
-## loop (see `_player_action_phase`). `DEBUG_RESULT_NONE` when there is none.
-var _debug_result_request: int = DEBUG_RESULT_NONE
 
 ## Build-type gate for every tester tool (the Debug menu, the F1 hotkey and the
 ## "debug" action). Editor runs and debug exports report `true`; a **release** export
@@ -489,327 +493,33 @@ static func debug_tools_enabled() -> bool:
 		return debug_build_override == DEBUG_BUILD_FORCED_ON
 	return OS.is_debug_build()
 
-## Tester-only mutations behind the in-game Debug menu (scenes/HUD/DebugMenuPopup.gd).
-##
-## They are applied *inside* the normal player-action loop rather than by the UI: the
-## loop then refreshes the hand/HUD itself and re-awaits input, exactly like it does
-## for a real action. That is what keeps `current_intents`, the wave machine and the
-## HUD in step — a debug tool never mutates the model behind the loop's back.
-##
-## Command ids are the CMD_* constants on DebugMenuPopup; the two lists stay in sync.
+
+## Applies one tester tool. The tools themselves live in Managers/DebugCommandRunner.gd;
+## this entry point stays here because the turn loop is the authority - a release build
+## refuses every command here, not just in the UI, so hiding the overlay is not the only
+## line of defence. The runner is handed the board and the UI per command, so a debug
+## tool still mutates nothing behind the loop's back.
 ## @param action - { "command": String, "args": Dictionary }
 func _handle_debug_command(action: Dictionary) -> void:
-	# A release build refuses every tool here, not just in the UI: the turn loop is
-	# the authority, so hiding the overlay is not the only line of defence.
 	if not debug_tools_enabled():
-		_debug_log("Debug tools are disabled in release builds.")
+		_debug.log_line(ui, "Debug tools are disabled in release builds.")
 		return
-	var command: String = str(action.get("command", ""))
-	var args: Dictionary = _coerce_dict(action.get("args", {}))
-
-	match command:
-		"spawn_random":
-			_debug_spawn_random(_coerce_int(args.get("count", 1), 1))
-		"spawn_custom":
-			_debug_spawn_custom(
-				_coerce_int(args.get("value", 3), 3),
-				_coerce_int(args.get("tier", 0), 0)
-			)
-		"draw":
-			_debug_draw(state.draw_n_cards(maxi(0, _coerce_int(args.get("count", 1), 1))))
-		"draw_to_max":
-			_debug_draw(state.draw_cards_to_limit())
-		"buff_hand":
-			_debug_buff_hand(_coerce_int(args.get("amount", 1), 1))
-		"discard_random":
-			_debug_discard_random()
-		"clear_hand":
-			_debug_clear_hand()
-		"grant_actions":
-			state.actions_left += _coerce_int(args.get("amount", 1), 1)
-			_debug_log("Actions: %d, Merges: %d" % [state.actions_left, state.merges_left])
-		"grant_merges":
-			state.merges_left += _coerce_int(args.get("amount", 1), 1)
-			_debug_log("Actions: %d, Merges: %d" % [state.actions_left, state.merges_left])
-		"step_max_hand":
-			var cap_delta: int = _coerce_int(args.get("delta", 1), 1)
-			state.max_hand_size = clampi(state.max_hand_size + cap_delta, 1, DEBUG_HAND_CAP_LIMIT)
-			_debug_log("Hand cap: %d card(s)." % state.max_hand_size)
-		"grant_next_bonus":
-			state.next_skill_bonus += _coerce_int(args.get("amount", 1), 1)
-			_debug_log("Next skill bonus: +%d" % state.next_skill_bonus)
-		"step_dice":
-			_debug_step_dice(args)
-		"fill_moxie":
-			_debug_set_moxie(_debug_targets(args), true)
-		"drain_moxie":
-			_debug_set_moxie(_debug_targets(args), false)
-		"heal_full":
-			_debug_heal(_debug_targets(args))
-		"damage":
-			_debug_damage(_debug_targets(args), _coerce_int(args.get("amount", 1), 1), false)
-		"true_damage":
-			_debug_damage(_debug_targets(args), _coerce_int(args.get("amount", 1), 1), true)
-		"add_shield":
-			_debug_shield(_debug_targets(args), _coerce_int(args.get("amount", 1), 1))
-		"clear_shield":
-			_debug_clear_shield(_debug_targets(args))
-		"kill":
-			_debug_kill(_debug_targets(args))
-		"apply_status":
-			_debug_apply_status(
-				_debug_targets(args),
-				str(args.get("status_id", "")),
-				_coerce_int(args.get("amount", 1), 1)
-			)
-		"clear_statuses":
-			_debug_clear_statuses(_debug_targets(args))
-		"reroll_intents":
-			_roll_enemy_intents()
-			ui.show_enemy_intents(current_intents)
-			_debug_log("Rerolled the enemy intents.")
-		"respawn_wave":
-			_spawn_wave(state.current_wave)
-			ui.show_game_state(state)
-			_roll_enemy_intents()
-			ui.show_enemy_intents(current_intents)
-			_debug_log("Respawned wave %d." % (state.current_wave + 1))
-		"clear_wave":
-			# Let the turn loop's own all-enemies-dead check advance the wave or
-			# declare victory, so this needs no wave code of its own.
-			_debug_kill(state.get_living_enemies())
-		"show_victory":
-			_debug_result_request = DEBUG_RESULT_VICTORY
-			_debug_log("Previewing the Victory cutscene.")
-		"show_defeat":
-			_debug_result_request = DEBUG_RESULT_DEFEAT
-			_debug_log("Previewing the Defeat cutscene.")
-		"set_flag":
-			_debug_log(state.debug_set_flag(args))
-		_:
-			_debug_log("Unknown debug command '%s'." % command)
+	_debug.apply(action, state, ui)
 
 
-## Coerces a debug-command argument into an int: the tester tools receive their values
-## from UI controls and dictionaries, either of which can hold a float.
-func _coerce_int(value: Variant, fallback: int) -> int:
-	if value is int:
-		var int_value: int = value
-		return int_value
-	if value is float:
-		var float_value: float = value
-		return int(float_value)
-	if value is bool:
-		var bool_value: bool = value
-		return 1 if bool_value else 0
-	if value is String:
-		var text: String = value
-		if text.is_valid_int():
-			return text.to_int()
-		if text.is_valid_float():
-			return int(text.to_float())
-	return fallback
-
-
-## Coerces a Variant into a Dictionary (payloads cross the UI boundary as Variant).
-func _coerce_dict(value: Variant) -> Dictionary:
-	if value is Dictionary:
-		var dict: Dictionary = value
-		return dict
-	return {}
-
-
-## Resolves a { "scope": int, "slot": int } payload into the affected units.
-## slot >= 0 always means one specific slot of its own row; slot -1 means the whole
-## scope. A payload with no target selects the ally row only, so a malformed command
-## can never sweep the whole board.
-func _debug_targets(args: Dictionary) -> Array[Unit]:
-	var result: Array[Unit] = []
-	var scope: int = _coerce_int(args.get("scope", DEBUG_SCOPE_ALLIES), DEBUG_SCOPE_ALLIES)
-	var slot: int = _coerce_int(args.get("slot", -1), -1)
-
-	if slot >= 0:
-		var row: Array[Unit] = state.allies if scope == DEBUG_SCOPE_ALLIES else state.enemies
-		if slot < row.size():
-			result.append(row[slot])
-		return result
-
-	if scope == DEBUG_SCOPE_ALLIES or scope == DEBUG_SCOPE_ALL:
-		result.append_array(state.allies)
-	if scope == DEBUG_SCOPE_ENEMIES or scope == DEBUG_SCOPE_ALL:
-		result.append_array(state.enemies)
-	return result
-
-
-## One-line confirmation in the message log, so a tester can see what a tool did.
-## Steps the dice size and re-rolls straight away, so the tester sees the new size now
-## instead of having to wait for the next turn.
-func _debug_step_dice(args: Dictionary) -> void:
-	state.dice_size_modifier += _coerce_int(args.get("delta", 1), 1)
-	_debug_log("Dice size modifier: %+d (next rolls use d%d)." % [
-		state.dice_size_modifier, state.get_dice_size(state.turn_number)
-	])
+## The runner asked for the enemy intents to be re-rolled, so a tester sees a new dice
+## size (or a respawned wave's rolls) immediately instead of on the next turn.
+func _reroll_and_show_intents() -> void:
 	_roll_enemy_intents()
 	ui.show_enemy_intents(current_intents)
 
 
-func _debug_log(message: String) -> void:
-	ui.show_message(ColorUtils.colorize("[debug] ", ColorUtils.COLOR_HEADER) + message)
-
-
-## "Striker 12/12, Healer 8/10" — the HP line every unit tool reports.
-func _debug_hp_summary(units: Array[Unit]) -> String:
-	var parts := PackedStringArray()
-	for unit: Unit in units:
-		parts.append("%s %d/%d" % [unit.data.display_name, unit.current_hp, unit.max_hp])
-	return ", ".join(parts)
-
-
-func _debug_spawn_random(count: int) -> void:
-	var spawned: int = 0
-	for _i: int in maxi(0, count):
-		state.hand.append(state.spawn_debug_card(randi_range(1, 6)))
-		spawned += 1
-	if spawned == 0:
-		return
-	_debug_log("Spawned %d random card(s). Hand %d / %d." % [
-		spawned, state.hand.size(), state.max_hand_size
-	])
-
-
-func _debug_spawn_custom(value: int, tier: int) -> void:
-	# tier: 0 = base V, 1 = merged MV, 2 = double-merged DMV
-	var card: Card = state.spawn_debug_card(value, tier >= 1, tier >= 2)
-	state.hand.append(card)
-	_debug_log("Spawned %s%s. Hand %d / %d." % [
-		str(card.get_effective_value()),
-		card.get_suffix(),
-		state.hand.size(),
-		state.max_hand_size,
-	])
-
-
-func _debug_draw(drawn: Array[Card]) -> void:
-	if drawn.is_empty():
-		_debug_log("Nothing left to draw (deck and discard are both empty).")
-		return
-	_debug_log("Drew %d card(s). Hand %d / %d." % [
-		drawn.size(), state.hand.size(), state.max_hand_size
-	])
-
-
-func _debug_buff_hand(amount: int) -> void:
-	if state.hand.is_empty():
-		_debug_log("Hand is empty, nothing to buff.")
-		return
-	for card: Card in state.hand:
-		var before: int = card.get_effective_value()
-		card.value_buff += amount
-		# CardUI re-renders the number on this signal.
-		EventBus.card_value_changed.emit(card, before, card.get_effective_value())
-	_debug_log("Buffed %d card(s) by +%d." % [state.hand.size(), amount])
-
-
-func _debug_discard_random() -> void:
-	if state.hand.is_empty():
-		_debug_log("Hand is empty, nothing to discard.")
-		return
-	var index: int = randi_range(0, state.hand.size() - 1)
-	var card: Card = state.hand[index]
-	state.discard_card(card)
-	_debug_log("Discarded %s from hand." % ColorUtils.colorize(
-		str(card.get_effective_value()) + card.get_suffix(), ColorUtils.COLOR_CARD
-	))
-
-
-func _debug_clear_hand() -> void:
-	if state.hand.is_empty():
-		_debug_log("Hand is already empty.")
-		return
-	var cleared: int = state.hand.size()
-	for card: Card in state.hand.duplicate():
-		state.discard_card(card)
-	_debug_log("Discarded %d card(s) from hand." % cleared)
-
-
-func _debug_set_moxie(units: Array[Unit], fill: bool) -> void:
-	for unit: Unit in units:
-		unit.set_moxie(unit.max_moxie if fill else 0)
-		EventBus.moxie_changed.emit(unit, unit.moxie, unit.max_moxie)
-	_debug_log(
-		("Filled Moxie (Ultimates ready) on %d unit(s)." if fill else "Zeroed Moxie on %d unit(s).")
-		% units.size()
-	)
-
-
-func _debug_heal(units: Array[Unit]) -> void:
-	for unit: Unit in units:
-		var restored: int = unit.heal(unit.max_hp)
-		if restored > 0:
-			EventBus.unit_healed.emit(unit, restored)
-	_debug_log("Full heal -> %s" % _debug_hp_summary(units))
-
-
-func _debug_damage(units: Array[Unit], amount: int, true_damage: bool) -> void:
-	for unit: Unit in units:
-		var lost: int = unit.deal_true_damage(amount) if true_damage else unit.take_damage(amount)
-		if lost > 0:
-			EventBus.damage_dealt.emit(unit, unit, amount, lost)
-		if unit.is_dead:
-			EventBus.unit_died.emit(unit)
-	_debug_log("%s %d -> %s" % [
-		"True damage" if true_damage else "Damage", amount, _debug_hp_summary(units)
-	])
-
-
-func _debug_shield(units: Array[Unit], amount: int) -> void:
-	for unit: Unit in units:
-		var gained: int = unit.gain_shield(amount)
-		if gained > 0:
-			EventBus.shield_gained.emit(unit, gained)
-	_debug_log("Shield +%d -> %s" % [amount, _debug_hp_summary(units)])
-
-
-func _debug_clear_shield(units: Array[Unit]) -> void:
-	for unit: Unit in units:
-		var removed: int = unit.reduce_shield(unit.shield)
-		if removed > 0:
-			EventBus.shield_reduced.emit(unit, removed)
-	_debug_log("Cleared shield on %d unit(s)." % units.size())
-
-
-func _debug_kill(units: Array[Unit]) -> void:
-	var killed: int = 0
-	for unit: Unit in units:
-		if unit.is_dead:
-			continue
-		unit.deal_true_damage(unit.current_hp)
-		unit.reset_shield()
-		EventBus.unit_died.emit(unit)
-		killed += 1
-	if killed == 0:
-		_debug_log("Nothing to defeat: the target is already down.")
-		return
-	_debug_log("Defeated %d unit(s)." % killed)
-
-
-func _debug_apply_status(units: Array[Unit], status_id: String, amount: int) -> void:
-	var applied: int = 0
-	for unit: Unit in units:
-		if unit.apply_status(status_id, amount) > 0:
-			EventBus.unit_statuses_changed.emit(unit)
-			applied += 1
-	if applied == 0:
-		_debug_log("No %s applied (defeated units reject statuses)." % status_id)
-		return
-	_debug_log("%s +%d on %d unit(s)." % [status_id.capitalize(), amount, applied])
-
-
-func _debug_clear_statuses(units: Array[Unit]) -> void:
-	for unit: Unit in units:
-		unit.clear_statuses()
-		EventBus.unit_statuses_changed.emit(unit)
-	_debug_log("Cleared statuses on %d unit(s)." % units.size())
+## The runner asked for the current wave to be re-spawned: rebuild the enemy row,
+## redraw the board and roll fresh intents for it.
+func _respawn_wave_and_show() -> void:
+	_spawn_wave(state.current_wave)
+	ui.show_game_state(state)
+	_reroll_and_show_intents()
 #endregion
 
 
@@ -1130,12 +840,13 @@ func _end_of_turn_cleanup() -> void:
 			_log_status_event(unit, event)
 
 
-## Formats one status tick result and mirrors it onto the EventBus.
+## Formats one status tick result and mirrors it onto the EventBus. The tick's numbers
+## are read back out of the event Dictionary, so they arrive as Variants.
 func _log_status_event(unit: Unit, event: Dictionary) -> void:
 	var status_id: String = str(event.get("status_id", ""))
 	var kind: String = str(event.get("kind", ""))
-	var amount: int = _coerce_int(event.get("amount", 0), 0)
-	var count: int = _coerce_int(event.get("count", 0), 0)
+	var amount: int = TelemetrySchema.to_int(event.get("amount", 0))
+	var count: int = TelemetrySchema.to_int(event.get("count", 0))
 	var unit_name: String = ColorUtils.unit_name(unit.data.display_name, unit.is_ally)
 	var label: String = ColorUtils.colorize(status_id.capitalize(), ColorUtils.COLOR_HEADER)
 
