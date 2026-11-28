@@ -101,6 +101,17 @@ jobs:
         timeout-minutes: 2
         run: python3 Tools/line_godot_slop.py --strict
 
+      # Both Python tools are covered by their own dependency-free suites, in the same
+      # shape as rig_combat_actor_test.py: the lint's rules (a gate nobody tests is a
+      # gate that silently stops gating) and the balance report's maths, where a wrong
+      # denominator would not crash - it would answer the wrong question convincingly.
+      # Standard library only, so no install step. Same commands Tools/preflight.ps1 runs.
+      - name: Python tooling tests
+        timeout-minutes: 2
+        run: |
+          python3 Tools/line_godot_slop_test.py
+          python3 Tools/analyze_telemetry_test.py
+
       # The telemetry-ingest Edge Function is TypeScript, and its row shapes, HTTP
       # rules and table write order are unit tested on the Node the runner already
       # has - no Deno, no network, no database. Same command Tools/preflight.ps1 runs.
