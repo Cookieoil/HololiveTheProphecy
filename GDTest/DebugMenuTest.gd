@@ -540,9 +540,9 @@ func test_hand_cap_stepper_clamps_at_both_ends() -> void:
 	_run(manager, "step_max_hand", {"delta": -5})
 	assert_int(manager.state.max_hand_size).is_equal(1)
 
-	manager.state.max_hand_size = GameManager.DEBUG_HAND_CAP_LIMIT - 1
+	manager.state.max_hand_size = DebugCommandRunner.HAND_CAP_LIMIT - 1
 	_run(manager, "step_max_hand", {"delta": 5})
-	assert_int(manager.state.max_hand_size).is_equal(GameManager.DEBUG_HAND_CAP_LIMIT)
+	assert_int(manager.state.max_hand_size).is_equal(DebugCommandRunner.HAND_CAP_LIMIT)
 
 
 func test_next_skill_bonus_accumulates() -> void:
@@ -562,7 +562,7 @@ func test_fill_moxie_makes_the_ultimate_castable() -> void:
 	var ally: Unit = manager.state.allies[0]
 	ally.ult_used_this_turn = true
 
-	_run(manager, "fill_moxie", {"scope": GameManager.DEBUG_SCOPE_ALLIES, "slot": 0})
+	_run(manager, "fill_moxie", {"scope": DebugCommandRunner.SCOPE_ALLIES, "slot": 0})
 
 	assert_int(ally.moxie).is_equal(ally.max_moxie)
 	assert_bool(ally.can_cast_ultimate).is_true()
@@ -573,7 +573,7 @@ func test_zero_moxie_clears_the_gauge_and_the_used_lock() -> void:
 	var ally: Unit = manager.state.allies[0]
 	ally.gain_moxie(10)
 
-	_run(manager, "drain_moxie", {"scope": GameManager.DEBUG_SCOPE_ALLIES, "slot": 0})
+	_run(manager, "drain_moxie", {"scope": DebugCommandRunner.SCOPE_ALLIES, "slot": 0})
 
 	assert_int(ally.moxie).is_equal(0)
 	assert_bool(ally.ult_used_this_turn).is_false()
@@ -585,7 +585,7 @@ func test_damage_tools_absorb_through_shield_then_hp() -> void:
 	enemy.gain_shield(4)
 
 	_run(manager, "damage", {
-		"scope": GameManager.DEBUG_SCOPE_ENEMIES, "slot": 0, "amount": 6,
+		"scope": DebugCommandRunner.SCOPE_ENEMIES, "slot": 0, "amount": 6,
 	})
 
 	assert_int(enemy.shield).is_equal(0)
@@ -598,7 +598,7 @@ func test_true_damage_bypasses_the_shield() -> void:
 	enemy.gain_shield(4)
 
 	_run(manager, "true_damage", {
-		"scope": GameManager.DEBUG_SCOPE_ENEMIES, "slot": 0, "amount": 6,
+		"scope": DebugCommandRunner.SCOPE_ENEMIES, "slot": 0, "amount": 6,
 	})
 
 	assert_int(enemy.shield).is_equal(4)
@@ -612,7 +612,7 @@ func test_heal_full_restores_the_target_only() -> void:
 	ally.current_hp = 5
 	enemy.current_hp = 5
 
-	_run(manager, "heal_full", {"scope": GameManager.DEBUG_SCOPE_ALLIES, "slot": 0})
+	_run(manager, "heal_full", {"scope": DebugCommandRunner.SCOPE_ALLIES, "slot": 0})
 
 	assert_int(ally.current_hp).is_equal(ally.max_hp)
 	assert_int(enemy.current_hp).is_equal(5)
@@ -623,18 +623,18 @@ func test_shield_tools_add_and_clear() -> void:
 	var ally: Unit = manager.state.allies[0]
 
 	_run(manager, "add_shield", {
-		"scope": GameManager.DEBUG_SCOPE_ALLIES, "slot": 0, "amount": 10,
+		"scope": DebugCommandRunner.SCOPE_ALLIES, "slot": 0, "amount": 10,
 	})
 	assert_int(ally.shield).is_equal(10)
 
-	_run(manager, "clear_shield", {"scope": GameManager.DEBUG_SCOPE_ALLIES, "slot": 0})
+	_run(manager, "clear_shield", {"scope": DebugCommandRunner.SCOPE_ALLIES, "slot": 0})
 	assert_int(ally.shield).is_equal(0)
 
 
 func test_kill_defeats_only_the_targeted_slot() -> void:
 	var manager: GameManager = _make_manager()
 
-	_run(manager, "kill", {"scope": GameManager.DEBUG_SCOPE_ENEMIES, "slot": 1})
+	_run(manager, "kill", {"scope": DebugCommandRunner.SCOPE_ENEMIES, "slot": 1})
 
 	assert_bool(manager.state.enemies[1].is_dead).is_true()
 	assert_bool(manager.state.enemies[0].is_dead).is_false()
@@ -644,7 +644,7 @@ func test_kill_defeats_only_the_targeted_slot() -> void:
 func test_scope_all_hits_both_rows() -> void:
 	var manager: GameManager = _make_manager()
 
-	_run(manager, "damage", {"scope": GameManager.DEBUG_SCOPE_ALL, "slot": -1, "amount": 5})
+	_run(manager, "damage", {"scope": DebugCommandRunner.SCOPE_ALL, "slot": -1, "amount": 5})
 
 	assert_int(manager.state.allies[0].current_hp).is_equal(15)
 	assert_int(manager.state.enemies[0].current_hp).is_equal(15)
@@ -666,12 +666,12 @@ func test_status_tools_apply_and_clear() -> void:
 	var ally: Unit = manager.state.allies[0]
 
 	_run(manager, "apply_status", {
-		"scope": GameManager.DEBUG_SCOPE_ALLIES, "slot": 0,
+		"scope": DebugCommandRunner.SCOPE_ALLIES, "slot": 0,
 		"status_id": "regeneration", "amount": 2,
 	})
 	assert_int(ally.get_status_count("regeneration")).is_equal(2)
 
-	_run(manager, "clear_statuses", {"scope": GameManager.DEBUG_SCOPE_ALLIES, "slot": 0})
+	_run(manager, "clear_statuses", {"scope": DebugCommandRunner.SCOPE_ALLIES, "slot": 0})
 	assert_bool(ally.has_status("regeneration")).is_false()
 #endregion
 
@@ -778,7 +778,7 @@ func test_a_release_build_refuses_a_debug_command() -> void:
 	var manager: GameManager = _make_manager()
 	var enemy: Unit = manager.state.enemies[0]
 
-	_run(manager, "kill", {"scope": GameManager.DEBUG_SCOPE_ENEMIES, "slot": 0})
+	_run(manager, "kill", {"scope": DebugCommandRunner.SCOPE_ENEMIES, "slot": 0})
 
 	assert_bool(enemy.is_dead).is_false()
 	assert_int(enemy.current_hp).is_equal(enemy.max_hp)

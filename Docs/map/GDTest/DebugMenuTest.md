@@ -73,7 +73,7 @@ Private:
 - L327-331 `_press_header`
 - L335-338 `_drag_header`
 
-Uses: BattleScene, Card, DebugMenuPopup, EnemyIntent, GameManager, GameState, GameUI, SkillData, Unit, UnitData
+Uses: BattleScene, Card, DebugCommandRunner, DebugMenuPopup, EnemyIntent, GameManager, GameState, GameUI, SkillData, Unit, UnitData
 Used by: —
 Loads: res://Scenes/BattleScene/BattleScene.tscn
 

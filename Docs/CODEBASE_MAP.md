@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (60)
+## 1. Game scripts at a glance (61)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -44,8 +44,9 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Core/UnitData.gd`](map/Core/UnitData.md) | `UnitData` | 20 | Template definition for a unit type. |
 | [`Data/gameDatabase.gd`](map/Data/gameDatabase.md) | `GameDatabase` | 36 | Skill definitions keyed by skill_id (effects embedded). |
 | [`Managers/ColorUtils.gd`](map/Managers/ColorUtils.md) | — | 31 | Color definitions for BBCode |
+| [`Managers/DebugCommandRunner.gd`](map/Managers/DebugCommandRunner.md) | `DebugCommandRunner` | 401 | Tester-only mutations behind the in-game Debug menu (Scenes/HUD/DebugMenuPopup.gd). Extracted fr… |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks,… |
-| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1174 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flo… |
+| [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 885 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flo… |
 | [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 1021 | Records every decision a player makes, for game design and balancing. It is a passive observer:… |
 | [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 426 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSO… |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 670 | extends GameUI, 2 signal(s), 11 export(s), 46 function(s) |
@@ -132,16 +133,16 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | `card_played` | card: Card, ally: Unit | Managers/GameManager.gd | Scenes/Cards/HandBar.gd |
 | `card_drawn` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |
 | `card_discarded` | card: Card | Skills/EffectBlock.gd | Managers/TelemetryManager.gd, Scenes/Cards/HandBar.gd |
-| `card_value_changed` | card: Card, old_value: int, new_value: int | GDTest/CardUITest.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | GDTest/DebugMenuTest.gd, Managers/TelemetryManager.gd, Scenes/Cards/CardUI.gd |
-| `damage_dealt` | source: Unit, target: Unit, amount: int, hp_lost: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `shield_gained` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `shield_reduced` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `unit_healed` | target: Unit, amount: int | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
-| `unit_died` | target: Unit | Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `card_value_changed` | card: Card, old_value: int, new_value: int | GDTest/CardUITest.gd, Managers/DebugCommandRunner.gd, Skills/EffectBlock.gd | GDTest/DebugMenuTest.gd, Managers/TelemetryManager.gd, Scenes/Cards/CardUI.gd |
+| `damage_dealt` | source: Unit, target: Unit, amount: int, hp_lost: int | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `shield_gained` | target: Unit, amount: int | Managers/DebugCommandRunner.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `shield_reduced` | target: Unit, amount: int | Managers/DebugCommandRunner.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `unit_healed` | target: Unit, amount: int | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
+| `unit_died` | target: Unit | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | Managers/TelemetryManager.gd |
 | `skill_resolved` | caster: Unit, skill_name: String | Managers/GameManager.gd | — |
-| `moxie_changed` | unit: Unit, current: int, maximum: int | Managers/GameManager.gd | — |
+| `moxie_changed` | unit: Unit, current: int, maximum: int | Managers/DebugCommandRunner.gd, Managers/GameManager.gd | — |
 | `ultimate_cast` | caster: Unit, skill_name: String | Managers/GameManager.gd | Scenes/HUD/BattleOverlayController.gd |
-| `unit_statuses_changed` | unit: Unit | Managers/GameManager.gd, Skills/EffectBlock.gd | — |
+| `unit_statuses_changed` | unit: Unit | Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Skills/EffectBlock.gd | — |
 
 ## 4. Scenes (5)
 
@@ -176,4 +177,4 @@ Top-level keys:
 
 ---
 
-Indexed 88 script(s) (60 game, 28 test), 5 scene(s), 6 data file(s).
+Indexed 89 script(s) (61 game, 28 test), 5 scene(s), 6 data file(s).
