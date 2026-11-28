@@ -8,7 +8,7 @@
   "files": {
     "Scenes/BattleUnit/UnitUI.gd": 1340,
     "Scenes/Cards/CardUI.gd": 1376,
-    "Tools/validate_gameData.gd": 1262
+    "Tools/validate_gameData.gd": 1160
   },
   "functions": {
     "Managers/GameManager.gd::_run_game_loop": 98,

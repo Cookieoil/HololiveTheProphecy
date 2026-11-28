@@ -1,3 +1,4 @@
+class_name GameDataValidatorRunner
 extends Node
 ## Headless, offline validator for the whole game-data pipeline.
 ##
@@ -31,6 +32,18 @@ const CONFIG_PATH: String = JSON_DIR + "/config.json"
 
 const WORKBOOK_PATH: String = "res://Data/xlsx/game_data.xlsx"
 const DATA_BUILDER_PATH: String = "res://Tools/dataBuilder.gd"
+
+## Diagnostic needle -> the res:// path it belongs to, in the order a message is matched,
+## so Tools/ValidationReporter.gd can attribute a message to a repo file (and locate its
+## line) without knowing this layout. A dict keeps the order: skills first.
+const DIAGNOSTIC_PATHS: Dictionary = {
+	"skills.json": SKILLS_PATH,
+	"allies.json": ALLIES_PATH,
+	"enemies.json": ENEMIES_PATH,
+	"waves.json": WAVES_PATH,
+	"config.json": CONFIG_PATH,
+	"workbook": WORKBOOK_PATH,
+}
 
 const ARG_JSON_ONLY: String = "--json-only"
 const ARG_STRICT: String = "--strict"
@@ -163,6 +176,37 @@ func _parse_arguments() -> void:
 		index += 1
 #endregion
 
+#region Public Methods
+## Runs the JSON rules over an in-memory bundle and returns what they found, instead of
+## printing and quitting. This is the seam GDTest/GameDataValidatorTest.gd drives:
+## `_validate_runtime_json()` reads the five files from disk and calls straight into
+## `_validate_bundle`, so a rule can be exercised against a hand-built bundle with no
+## files, no scene tree and no exit code.
+## @param bundle - {skills, allies, enemies, waves, config} as parsed JSON objects
+## @return {errors: PackedStringArray, warnings: PackedStringArray}
+func validate_bundle(bundle: Dictionary) -> Dictionary:
+	reset()
+	_validate_bundle(bundle)
+	return {"errors": _errors.duplicate(), "warnings": _warnings.duplicate()}
+
+
+## Clears every diagnostic and every cross-file registry, so a run starts from a clean
+## slate. The allowlists are re-collected as well, because they are what the rules
+## compare a value against.
+func reset() -> void:
+	_errors = PackedStringArray()
+	_warnings = PackedStringArray()
+	_skill_ids.clear()
+	_ally_ids.clear()
+	_enemy_ids.clear()
+	_used_skill_ids.clear()
+	_enemy_skill_ids.clear()
+	_ally_skill_ids.clear()
+	_skill_meta.clear()
+	_collect_allowlists()
+#endregion
+
+
 #region Private Methods
 ## Prints the report and quits with the matching exit code.
 func _report() -> void:
@@ -186,7 +230,7 @@ func _report() -> void:
 		print("VALIDATION PASSED with %d warning(s):" % _warnings.size())
 		for message: String in _warnings:
 			print("  WARNING %s" % message)
-	_emit_annotations()
+	ValidationReporter.emit_annotations(_errors, _warnings, _raw_text, DIAGNOSTIC_PATHS)
 	_write_step_summary(exit_code)
 	get_tree().quit(exit_code)
 
@@ -431,11 +475,27 @@ func _bundle_count(bundle: Dictionary, key: String) -> int:
 ## Validates the raw JSON files the runtime loader consumes.
 func _validate_runtime_json() -> void:
 	print("--- runtime json: %s ---" % JSON_DIR)
-	_skills_json = _read_json_object(SKILLS_PATH, "skills.json")
-	_allies_json = _read_json_object(ALLIES_PATH, "allies.json")
-	_enemies_json = _read_json_object(ENEMIES_PATH, "enemies.json")
-	_waves_json = _read_json_object(WAVES_PATH, "waves.json")
-	_config_json = _read_json_object(CONFIG_PATH, "config.json")
+	# Deliberately no reset here: the workbook check above may already have recorded
+	# failures, and the reads below append their own before the rules run.
+	var bundle: Dictionary = {
+		"skills": _read_json_object(SKILLS_PATH, "skills.json"),
+		"allies": _read_json_object(ALLIES_PATH, "allies.json"),
+		"enemies": _read_json_object(ENEMIES_PATH, "enemies.json"),
+		"waves": _read_json_object(WAVES_PATH, "waves.json"),
+		"config": _read_json_object(CONFIG_PATH, "config.json"),
+	}
+	_validate_bundle(bundle)
+
+
+## The rule run itself, over an already-parsed bundle. Kept apart from `validate_bundle`
+## so the CLI path can stack its own file-read failures on top of the same rules, and so
+## a test can call the rules with nothing else in the way.
+func _validate_bundle(bundle: Dictionary) -> void:
+	_skills_json = _as_dictionary(bundle.get("skills", {}))
+	_allies_json = _as_dictionary(bundle.get("allies", {}))
+	_enemies_json = _as_dictionary(bundle.get("enemies", {}))
+	_waves_json = _as_dictionary(bundle.get("waves", {}))
+	_config_json = _as_dictionary(bundle.get("config", {}))
 
 	_validate_skills(_skills_json)
 	_validate_units(_allies_json, "allies.json", false, _ally_ids)
@@ -997,185 +1057,23 @@ func _print_usage() -> void:
 	print("emitted as a workflow annotation, so it shows up inline on the PR diff.")
 
 
-## Emits GitHub Actions workflow commands so failures annotate the exact file
-## (and, when it can be located, line) inside the pull request.
-func _emit_annotations() -> void:
-	if OS.get_environment(ENV_GITHUB_ACTIONS) != "true":
-		return
-	for message: String in _errors:
-		_emit_annotation("error", message)
-	for message: String in _warnings:
-		_emit_annotation("warning", message)
-
-
-func _emit_annotation(severity: String, message: String) -> void:
-	var text: String = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-	var file: String = _diagnostic_file(message)
-	var line: int = _diagnostic_line(message)
-	if file.is_empty():
-		print("::%s title=Game data::%s" % [severity, text])
-	elif line > 0:
-		print("::%s file=%s,line=%d,title=Game data::%s" % [severity, file, line, text])
-	else:
-		print("::%s file=%s,title=Game data::%s" % [severity, file, text])
-
-
-## Maps a diagnostic message to the repo-relative data file it belongs to.
-func _diagnostic_file(message: String) -> String:
-	if message.contains("skills.json"):
-		return _repo_path(SKILLS_PATH)
-	if message.contains("allies.json"):
-		return _repo_path(ALLIES_PATH)
-	if message.contains("enemies.json"):
-		return _repo_path(ENEMIES_PATH)
-	if message.contains("waves.json"):
-		return _repo_path(WAVES_PATH)
-	if message.contains("config.json"):
-		return _repo_path(CONFIG_PATH)
-	if message.contains("workbook"):
-		return _repo_path(WORKBOOK_PATH)
-	return ""
-
-
-func _repo_path(res_path: String) -> String:
-	if res_path.begins_with("res://"):
-		return res_path.substr("res://".length())
-	return res_path
-
-
-## Best-effort 1-based source line for a diagnostic, 0 when it cannot be located.
-func _diagnostic_line(message: String) -> int:
-	if message.contains("skills.json"):
-		var skill_id: String = _first_quoted(message)
-		if skill_id.is_empty():
-			return 0
-		var skill_line: int = _line_of(SKILLS_PATH, "\"%s\": {" % skill_id, 0)
-		var effect_index: int = _bracket_index(message, "effect[")
-		if effect_index >= 0:
-			var effect_line: int = _line_of(SKILLS_PATH, "\"effect_id\":", effect_index, maxi(0, skill_line - 1))
-			if effect_line > 0:
-				return effect_line
-		return skill_line
-	if message.contains("allies.json") or message.contains("enemies.json"):
-		var unit_path: String = ALLIES_PATH if message.contains("allies.json") else ENEMIES_PATH
-		var unit_id: String = _first_quoted(message)
-		if unit_id.is_empty():
-			return 0
-		return _line_of(unit_path, "\"%s\": {" % unit_id, 0)
-	if message.contains("waves.json"):
-		return _waves_line(message)
-	if message.contains("config.json"):
-		return _config_line(message)
-	return 0
-
-
-func _waves_line(message: String) -> int:
-	var wave_index: int = _bracket_index(message, "wave[")
-	if wave_index < 0:
-		return _line_of(WAVES_PATH, "\"waves\"", 0)
-	var wave_line: int = _line_of(WAVES_PATH, "\"wave_index\"", wave_index)
-	var enemy_index: int = _bracket_index(message, "enemy[")
-	if enemy_index >= 0 and wave_line > 0:
-		var enemy_line: int = _line_of(WAVES_PATH, "\"unit_id\"", enemy_index, wave_line - 1)
-		if enemy_line > 0:
-			return enemy_line
-	return wave_line
-
-
-func _config_line(message: String) -> int:
-	var key: String = _first_quoted(message)
-	if key.is_empty():
-		for candidate: String in ["decklist", "dice_progression", "allies", "hand_size", "actions_per_turn", "merges_per_turn", "wave_transition_mode"]:
-			if message.contains(candidate):
-				key = candidate
-				break
-	if key.is_empty():
-		return 0
-	return _line_of(CONFIG_PATH, "\"%s\"" % key, 0)
-
-
-## 1-based line of the `occurrence`-th (0-based) line at or after `from_line`
-## that contains `needle`, or 0 when it is not found.
-func _line_of(path: String, needle: String, occurrence: int, from_line: int = 0) -> int:
-	var text: String = str(_raw_text.get(path, ""))
-	if text.is_empty():
-		return 0
-	var lines: PackedStringArray = text.split("\n")
-	var found: int = 0
-	for index: int in lines.size():
-		if index < from_line:
-			continue
-		if lines[index].contains(needle):
-			if found == occurrence:
-				return index + 1
-			found += 1
-	return 0
-
-
-## The first 'single quoted' token of a diagnostic message, or "".
-func _first_quoted(message: String) -> String:
-	var start: int = message.find("'")
-	if start < 0:
-		return ""
-	var end: int = message.find("'", start + 1)
-	if end < 0:
-		return ""
-	return message.substr(start + 1, end - start - 1)
-
-
-## The integer inside the first "<marker>N]" token, or -1 when absent.
-func _bracket_index(message: String, marker: String) -> int:
-	var start: int = message.find(marker)
-	if start < 0:
-		return -1
-	start += marker.length()
-	var end: int = message.find("]", start)
-	if end < 0:
-		return -1
-	var digits: String = message.substr(start, end - start)
-	if not digits.is_valid_int():
-		return -1
-	return digits.to_int()
-
-
-## Appends a Markdown report to the GitHub Actions job summary so the result is
-## readable on the run page without digging through the raw log.
+## Appends the report Tools/ValidationReporter.gd rendered to the GitHub Actions job
+## summary, when a summary path is configured (--summary or GITHUB_STEP_SUMMARY). This
+## wrapper is the only part of the reporting that touches the disk; the formatting and
+## the line locator are pure.
 func _write_step_summary(exit_code: int) -> void:
 	if _summary_path.is_empty():
 		return
-	var lines: PackedStringArray = PackedStringArray()
-	lines.append("## Game data validation")
-	lines.append("")
-	if exit_code == 0:
-		lines.append("Result: **PASSED** (%d warning(s))" % _warnings.size())
-	else:
-		lines.append("Result: **FAILED** (%d error(s), %d warning(s))" % [_errors.size(), _warnings.size()])
-	lines.append("")
-	lines.append("| Skills | Allies | Enemies | Waves |")
-	lines.append("| --- | --- | --- | --- |")
-	lines.append("| %d | %d | %d | %d |" % [
-		_skills_json.size(),
-		_allies_json.size(),
-		_enemies_json.size(),
-		_as_array(_waves_json.get("waves", [])).size(),
-	])
-	lines.append("")
-	if not _errors.is_empty():
-		lines.append("### Errors")
-		lines.append("")
-		for message: String in _errors:
-			lines.append("- `%s`" % message)
-		lines.append("")
-	if not _warnings.is_empty():
-		lines.append("### Warnings")
-		lines.append("")
-		for message: String in _warnings:
-			lines.append("- `%s`" % message)
-		lines.append("")
+	var counts: Dictionary = {
+		"skills": _skills_json.size(),
+		"allies": _allies_json.size(),
+		"enemies": _enemies_json.size(),
+		"waves": _as_array(_waves_json.get("waves", [])).size(),
+	}
 	var file: FileAccess = FileAccess.open(_summary_path, FileAccess.WRITE)
 	if file == null:
 		return
-	file.store_string("\n".join(lines))
+	file.store_string(ValidationReporter.step_summary(exit_code, _errors, _warnings, counts))
 	file.close()
 
 
