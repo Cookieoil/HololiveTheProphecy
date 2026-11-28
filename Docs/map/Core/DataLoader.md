@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Core/DataLoader.gd` — `class_name DataLoader` extends `RefCounted`
 
-`563` lines · [back to the map](../../CODEBASE_MAP.md)
+`575` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Runtime loader for the game data JSON files in res://Data/json/. Those JSON files are the single source of truth; the workbook (res://Data/xlsx/game_data.xlsx)…
 
@@ -56,9 +56,12 @@ Private:
 - L438-471 `_build_waves`
 - L475-486 `_clone_unit`
 - L492-503 `_build_flags`
-- L506-562 `_build_config`
+- L509-526 `_build_config`
+- L531-547 `_build_decklist`
+- L551-557 `_build_dice_progression`
+- L562-574 `_build_config_allies`
 
 Uses: EffectBlock, FeatureFlags, GameDatabase, GameState, SkillData, UnitData
-Used by: GDTest/AllyKitTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryFoundationTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/BattleSimulator.gd, Tools/GameDataValidator.gd, Tools/validate_gameData.gd
+Used by: GDTest/AllyKitTest.gd, GDTest/DataLoaderTest.gd, GDTest/EffectBlockMessageTest.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryFoundationTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/BattleSimulator.gd, Tools/GameDataValidator.gd, Tools/validate_gameData.gd
 Loads: res://Data/json, res://Data/json/skills.json, res://Data/json/allies.json, res://Data/json/enemies.json, res://Data/json/waves.json, res://Data/json/config.json, res://Data/json/features.json, res://Tools/export_xlsx_to_json.gd
 

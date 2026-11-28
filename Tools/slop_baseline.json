@@ -17,7 +17,6 @@
     "Tools/CodeIndexParser.gd::parse_script": 146
   },
   "complexity": {
-    "Core/DataLoader.gd::_build_config": 15,
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 18,
     "Scenes/BattleUnit/UnitUI.gd::_load_unit_texture": 15,
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 30,

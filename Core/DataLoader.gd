@@ -503,18 +503,34 @@ static func _build_flags(raw: Dictionary) -> Dictionary:
 	return {}
 
 
+## The runtime config, built section by section - each helper owns its own diagnostics - and
+## keeping any key the loader does not know, so a setting can reach the game before the code
+## that reads it exists.
 static func _build_config(config_json: Dictionary, units: Dictionary) -> Dictionary:
-	var config: Dictionary = {}
 	if config_json.is_empty():
 		_errors.append("[DataLoader] config.json is empty")
-		return config
-	config["hand_size"] = maxi(1, _get_int(config_json, "hand_size", GameState.MAX_HAND_SIZE))
-	config["actions_per_turn"] = maxi(0, _get_int(config_json, "actions_per_turn", GameState.ACTIONS_PER_TURN))
-	config["merges_per_turn"] = maxi(0, _get_int(config_json, "merges_per_turn", GameState.MERGES_PER_TURN))
+		return {}
+	var config: Dictionary = {
+		"hand_size": maxi(1, _get_int(config_json, "hand_size", GameState.MAX_HAND_SIZE)),
+		"actions_per_turn": maxi(0, _get_int(config_json, "actions_per_turn", GameState.ACTIONS_PER_TURN)),
+		"merges_per_turn": maxi(0, _get_int(config_json, "merges_per_turn", GameState.MERGES_PER_TURN)),
+		"decklist": _build_decklist(config_json),
+		"dice_progression": _build_dice_progression(config_json),
+		"allies": _build_config_allies(config_json, units),
+		"wave_transition_mode": _get_string(config_json, "wave_transition_mode", "full_turn"),
+	}
+	# Keep unknown keys so new settings work without touching the loader.
+	for key: String in config_json:
+		if not config.has(key):
+			config[key] = config_json[key]
+	return config
 
+
+## The decklist as [value, count] pairs. An entry that is not a pair is a typo in the file
+## and is reported; a count of 0 is a deliberate "no copies" and is dropped silently.
+static func _build_decklist(config_json: Dictionary) -> Array:
 	var decklist: Array = []
-	var raw_decklist: Array = _get_array(config_json, "decklist")
-	for entry: Variant in raw_decklist:
+	for entry: Variant in _get_array(config_json, "decklist"):
 		if not (entry is Array):
 			_errors.append("[DataLoader] config.json decklist entry is not a [value, count] pair")
 			continue
@@ -522,26 +538,30 @@ static func _build_config(config_json: Dictionary, units: Dictionary) -> Diction
 		if pair.size() < 2:
 			_errors.append("[DataLoader] config.json decklist entry needs 2 values")
 			continue
-		var card_value: int = _to_int(pair[0], 0)
 		var card_count: int = _to_int(pair[1], 0)
 		if card_count <= 0:
 			continue
-		decklist.append([card_value, card_count])
-	config["decklist"] = decklist
+		decklist.append([_to_int(pair[0], 0), card_count])
 	if decklist.is_empty():
 		_errors.append("[DataLoader] config.json decklist is empty")
+	return decklist
 
+
+## The die size for each turn, as ints (JSON hands every number over as a float).
+static func _build_dice_progression(config_json: Dictionary) -> Array[int]:
 	var progression: Array[int] = []
-	var raw_progression: Array = _get_array(config_json, "dice_progression")
-	for entry: Variant in raw_progression:
+	for entry: Variant in _get_array(config_json, "dice_progression"):
 		progression.append(_to_int(entry, 0))
-	config["dice_progression"] = progression
 	if progression.is_empty():
 		_errors.append("[DataLoader] config.json dice_progression is empty")
+	return progression
 
+
+## The ally ids the run starts with. A blank entry is padding in the file; an entry that
+## names no unit would be a slot the player cannot use, so that one is reported.
+static func _build_config_allies(config_json: Dictionary, units: Dictionary) -> Array:
 	var allies: Array = []
-	var raw_allies: Array = _get_array(config_json, "allies")
-	for entry: Variant in raw_allies:
+	for entry: Variant in _get_array(config_json, "allies"):
 		var ally_id: String = str(entry).strip_edges()
 		if ally_id.is_empty():
 			continue
@@ -549,15 +569,7 @@ static func _build_config(config_json: Dictionary, units: Dictionary) -> Diction
 			_errors.append("[DataLoader] config.json allies references unknown unit '%s'" % ally_id)
 			continue
 		allies.append(ally_id)
-	config["allies"] = allies
 	if allies.is_empty():
 		_errors.append("[DataLoader] config.json allies list is empty")
-
-	config["wave_transition_mode"] = _get_string(config_json, "wave_transition_mode", "full_turn")
-
-	# Keep unknown keys so new settings work without touching the loader.
-	for key: String in config_json:
-		if not config.has(key):
-			config[key] = config_json[key]
-	return config
+	return allies
 #endregion

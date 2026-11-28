@@ -262,6 +262,7 @@ DRAW_START_YAW	const	Scenes/Cards/CardUI.gd:48-48	: float = 168.0
 DRAW_Z_BASE	const	Scenes/Cards/CardUI.gd:59-59	: int = 30
 DataBuilder	class	Tools/dataBuilder.gd:1-1	extends RefCounted
 DataLoader	class	Core/DataLoader.gd:1-1	extends RefCounted
+DataLoaderTest	class	GDTest/DataLoaderTest.gd:1-1	extends GdUnitTestSuite
 DebugCommandRunner	class	Managers/DebugCommandRunner.gd:1-1	extends RefCounted
 DebugCommandRunnerTest	class	GDTest/DebugCommandRunnerTest.gd:1-1	extends GdUnitTestSuite
 DebugFlagsTest	class	GDTest/DebugFlagsTest.gd:1-1	extends GdUnitTestSuite
@@ -703,6 +704,7 @@ TRACE_LIMIT	const	Tools/simulate_runs.gd:33-33	: int = 40
 TRUNK_FAN_IN	const	Tools/DiffReviewParser.gd:87-87	: int = 5
 TRUNK_FILES	const	Tools/DiffReviewParser.gd:75-75	: Array[String] = [
 TRUNK_PREFIXES	const	Tools/DiffReviewParser.gd:72-72	: Array[String]
+TURN_BUDGET_KEYS	const	GDTest/DataLoaderTest.gd:54-54	: PackedStringArray
 TargetMode	enum	Skills/EffectBlock.gd:17-26	NONE
 TelemetryConsent	class	Core/Telemetry/TelemetryConsent.gd:1-1	extends RefCounted
 TelemetryConsentPopup	class	Scenes/HUD/TelemetryConsentPopup.gd:1-1	extends Control
@@ -879,14 +881,18 @@ _bool_of	func	GDTest/TelemetryDecisionTest.gd:60-65	(source: Dictionary, key: St
 _bracket_index	func	Tools/ValidationReporter.gd:222-233	static (message: String, marker: String) -> int
 _brand_tween	var	Scenes/Cards/CardUI.gd:172-172	: Tween
 _buff_hand	func	Managers/DebugCommandRunner.gd:288-297	(state: GameState, ui: GameUI, amount: int) -> void
+_build	func	GDTest/DataLoaderTest.gd:67-69	(config_json: Dictionary, units: Dictionary = {}) -> Dictionary
 _build_ally_context	func	Managers/GameManager.gd:589-590	(ally: Unit, card: Card) -> SkillContext
 _build_artifacts	func	Tools/gen_code_index.gd:134-143	(global_signals: Array[Dictionary], scenes: Array[Dictionary], data_files: Array[Dictionary]) -> Dictionary
 _build_body	func	Scenes/HUD/TelemetryConsentPopup.gd:232-250	() -> MarginContainer
 _build_buttons	func	Scenes/HUD/TelemetryConsentPopup.gd:254-269	() -> HBoxContainer
 _build_cards_tab	func	Scenes/HUD/DebugMenuPopup.gd:310-357	(tabs: TabContainer) -> void
 _build_category_fallback_entry	func	Scenes/HUD/TooltipIconCatalog.gd:144-156	(key: String) -> TooltipIconEntry
-_build_config	func	Core/DataLoader.gd:506-562	static (config_json: Dictionary, units: Dictionary) -> Dictionary
+_build_config	func	Core/DataLoader.gd:509-526	static (config_json: Dictionary, units: Dictionary) -> Dictionary
+_build_config_allies	func	Core/DataLoader.gd:562-574	static (config_json: Dictionary, units: Dictionary) -> Array
 _build_debug_targets	func	Scenes/BattleScene/BattleScene.gd:554-563	(state: GameState) -> Array[Dictionary]
+_build_decklist	func	Core/DataLoader.gd:531-547	static (config_json: Dictionary) -> Array
+_build_dice_progression	func	Core/DataLoader.gd:551-557	static (config_json: Dictionary) -> Array[int]
 _build_effect_block	func	Core/DataLoader.gd:355-392	static (data: Dictionary, skill_id: String) -> EffectBlock
 _build_enemy_context	func	Managers/GameManager.gd:593-594	(enemy: Unit, intent: EnemyIntent) -> SkillContext
 _build_fake_3d_rig	func	Scenes/Cards/CardUI.gd:414-474	() -> void
@@ -1016,6 +1022,9 @@ _config_int	func	Core/GameState.gd:574-575	(config: Dictionary, key: String, fal
 _config_int_list	func	Core/GameState.gd:620-628	(config: Dictionary, key: String) -> Array[int]
 _config_line	func	Tools/ValidationReporter.gd:177-189	static (message: String, raw_text: Dictionary, paths: Dictionary) -> int
 _config_text	func	GDTest/GameDataValidatorTest.gd:710-714	() -> String
+_config_with	func	GDTest/DataLoaderTest.gd:32-35	(key: String, value: Variant) -> Dictionary
+_config_without	func	GDTest/DataLoaderTest.gd:39-42	(key: String) -> Dictionary
+_config_without_all	func	GDTest/DataLoaderTest.gd:46-50	(keys: PackedStringArray) -> Dictionary
 _configure	func	Scenes/HUD/BattleResultOverlay.gd:284-299	(victory: bool) -> void
 _connect_bus	func	Managers/TelemetryManager.gd:617-629	() -> void
 _connected	var	Managers/TelemetryManager.gd:76-76	: bool = false
@@ -1139,6 +1148,7 @@ _entry_count	func	Core/Unit.gd:361-365	(entry_raw: Variant) -> int
 _entry_is_debuff	func	Scenes/BattleUnit/StatusIconCatalog.gd:252-259	(entry_raw: Variant, status_id: String) -> bool
 _enum_contains	func	Tools/dataBuilder.gd:468-475	(enums: Dictionary, enum_name: String, value: String) -> bool
 _enum_field	func	Tools/GameDataValidator.gd:314-326	(source: Dictionary, key: String, context: String, allowed: PackedStringArray, default_value: String, required: bool) -> String
+_error_text	func	GDTest/DataLoaderTest.gd:74-76	(config_json: Dictionary, units: Dictionary = {}) -> String
 _errors	func	GDTest/GameDataValidatorTest.gd:109-110	(bundle: Dictionary) -> PackedStringArray
 _errors	var	Core/DataLoader.gd:87-87	: PackedStringArray = PackedStringArray()
 _errors	var	Tools/validate_gameData.gd:60-60	: PackedStringArray = PackedStringArray()
@@ -2021,6 +2031,7 @@ _unit	func	GDTest/GameDataValidatorTest.gd:63-74	(is_enemy: bool, skill_id: Stri
 _unit	func	GDTest/TelemetryDecisionTest.gd:21-31	(unit_id: String, is_enemy: bool) -> Unit
 _unit_keys	var	Tools/GameDataValidator.gd:88-88	: PackedStringArray = PackedStringArray()
 _unit_line	func	Tools/ValidationReporter.gd:155-160	static (message: String, raw_text: Dictionary, paths: Dictionary) -> int
+_units	func	GDTest/DataLoaderTest.gd:58-63	() -> Dictionary
 _units_text	func	GDTest/GameDataValidatorTest.gd:686-693	() -> String
 _units_to_ui	var	Scenes/HUD/BattleOverlayController.gd:28-28	: Dictionary[Unit, UnitUI] = {}      # Unit -> UnitUI
 _unstaged_flags	func	Tools/DiffReviewParser.gd:426-440	static (entries: Array) -> Array[Dictionary]
@@ -2034,6 +2045,7 @@ _upload_endpoint	func	Managers/TelemetryManager.gd:725-726	() -> String
 _used_by_files	func	Tools/check_navigation.gd:726-736	(page_res_path: String) -> Array
 _used_skill_ids	var	Tools/GameDataValidator.gd:94-94	: Dictionary = {}
 _valid_bundle	func	GDTest/GameDataValidatorTest.gd:79-97	() -> Dictionary
+_valid_config	func	GDTest/DataLoaderTest.gd:19-28	() -> Dictionary
 _validate_bundle	func	Tools/validate_gameData.gd:223-224	(bundle: Dictionary) -> void
 _validate_categories	func	Tools/GameDataValidator.gd:414-430	(categories: Array, context: String) -> void
 _validate_config	func	Tools/GameDataValidator.gd:775-798	(config_json: Dictionary) -> void
@@ -2788,6 +2800,7 @@ test_a_banned_pattern_in_a_comment_is_not_flagged	func	GDTest/DiffReviewTest.gd:
 test_a_banned_pattern_inside_a_string_literal_is_not_flagged	func	GDTest/DiffReviewTest.gd:223-243	() -> void
 test_a_batch_the_server_calls_malformed_is_quarantined	func	GDTest/TelemetryUploaderTest.gd:230-233	() -> void
 test_a_battle_started_after_the_answer_uses_it	func	GDTest/TelemetryConsentTest.gd:238-251	() -> void
+test_a_blank_ally_id_is_dropped_without_a_diagnostic	func	GDTest/DataLoaderTest.gd:227-232	() -> void
 test_a_blank_line_inside_a_new_test_does_not_hide_its_assertion	func	GDTest/DiffReviewTest.gd:444-459	() -> void
 test_a_boolean_where_a_number_belongs_is_an_error	func	GDTest/GameDataValidatorTest.gd:212-215	() -> void
 test_a_card_action_ignoring_unit_targets_is_a_warning	func	GDTest/GameDataValidatorTest.gd:375-378	() -> void
@@ -2801,6 +2814,7 @@ test_a_cleared_final_wave_ends_the_player_phase	func	GDTest/BattleEndTest.gd:244
 test_a_collapsible_adversarial_brief_is_wrapped_in_details	func	GDTest/DiffReviewTest.gd:534-537	() -> void
 test_a_comment_mentioning_assert_does_not_count_as_an_assertion	func	GDTest/DiffReviewTest.gd:480-491	() -> void
 test_a_comment_naming_the_flag_api_is_not_a_feature_gate	func	GDTest/DiffReviewTest.gd:581-591	() -> void
+test_a_complete_config_builds_every_key_without_a_diagnostic	func	GDTest/DataLoaderTest.gd:81-91	() -> void
 test_a_corrupt_file_needs_the_prompt_and_never_grants	func	GDTest/TelemetryConsentTest.gd:123-130	() -> void
 test_a_count_the_target_mode_ignores_is_a_warning	func	GDTest/GameDataValidatorTest.gd:361-364	() -> void
 test_a_crash_orphan_in_the_spool_is_promoted_when_a_server_is_configured	func	GDTest/TelemetryUploaderTest.gd:305-313	() -> void
@@ -2809,6 +2823,10 @@ test_a_debug_build_keeps_the_tools_available	func	GDTest/DebugMenuTest.gd:753-75
 test_a_debug_command_taints_the_run	func	GDTest/TelemetryTest.gd:407-421	() -> void
 test_a_deck_smaller_than_a_starting_hand_is_a_warning	func	GDTest/GameDataValidatorTest.gd:616-619	() -> void
 test_a_decklist_count_below_one_is_an_error	func	GDTest/GameDataValidatorTest.gd:610-613	() -> void
+test_a_decklist_count_of_zero_is_dropped_without_a_diagnostic	func	GDTest/DataLoaderTest.gd:175-180	() -> void
+test_a_decklist_entry_that_is_not_a_pair_is_reported	func	GDTest/DataLoaderTest.gd:157-162	() -> void
+test_a_decklist_pair_of_floats_becomes_ints	func	GDTest/DataLoaderTest.gd:191-194	() -> void
+test_a_decklist_pair_with_one_value_is_reported	func	GDTest/DataLoaderTest.gd:165-170	() -> void
 test_a_decklist_pair_with_the_wrong_arity_is_an_error	func	GDTest/GameDataValidatorTest.gd:598-601	() -> void
 test_a_decklist_value_below_one_is_an_error	func	GDTest/GameDataValidatorTest.gd:604-607	() -> void
 test_a_default_recorder_never_collects_headless	func	GDTest/TelemetryConsentTest.gd:351-360	() -> void
@@ -2830,6 +2848,7 @@ test_a_feature_gated_change_is_reported_and_an_unstaged_rollout_is_flagged	func	
 test_a_fixed_value_action_with_no_amount_is_a_warning	func	GDTest/GameDataValidatorTest.gd:405-408	() -> void
 test_a_flag_spreads_across_buckets	func	GDTest/FeatureFlagsTest.gd:71-78	() -> void
 test_a_flag_with_too_few_runs_is_left_alone	func	GDTest/TriageParserTest.gd:116-120	() -> void
+test_a_float_from_json_becomes_an_int	func	GDTest/DataLoaderTest.gd:141-144	() -> void
 test_a_fractional_number_is_an_error	func	GDTest/GameDataValidatorTest.gd:218-221	() -> void
 test_a_full_battle_records_run_wave_turn_and_decision_events	func	GDTest/TelemetryTest.gd:250-287	() -> void
 test_a_full_turn_advance_lets_the_new_wave_act_on_the_next_turn	func	GDTest/TurnLoopTest.gd:538-556	() -> void
@@ -2848,6 +2867,8 @@ test_a_merge_with_no_release_starts_from_the_cards_own_slot	func	GDTest/CardMerg
 test_a_merged_effect_without_a_description_is_a_warning	func	GDTest/GameDataValidatorTest.gd:462-465	() -> void
 test_a_missing_is_enemy_is_a_warning	func	GDTest/GameDataValidatorTest.gd:495-501	() -> void
 test_a_missing_required_effect_key_is_an_error	func	GDTest/GameDataValidatorTest.gd:257-265	() -> void
+test_a_missing_scalar_falls_back_to_the_game_state_default	func	GDTest/DataLoaderTest.gd:109-116	() -> void
+test_a_missing_wave_transition_mode_defaults_to_a_full_turn	func	GDTest/DataLoaderTest.gd:134-137	() -> void
 test_a_multi_batch_run_is_posted_in_pieces_then_archived	func	GDTest/TelemetryUploaderTest.gd:271-283	() -> void
 test_a_mutual_round_end_wipe_resolves_as_a_defeat	func	GDTest/TurnLoopTest.gd:695-712	() -> void
 test_a_nearly_unused_ally_is_reported_and_sorts_first	func	GDTest/TriageParserTest.gd:84-94	() -> void
@@ -2857,10 +2878,12 @@ test_a_negative_order_is_an_error	func	GDTest/GameDataValidatorTest.gd:303-306	(
 test_a_negative_target_count_is_an_error	func	GDTest/GameDataValidatorTest.gd:335-338	() -> void
 test_a_new_disclosure_version_re_asks_everyone	func	GDTest/TelemetryConsentTest.gd:116-120	() -> void
 test_a_new_test_without_an_assertion_is_flagged_and_promoted_by_strict	func	GDTest/DiffReviewTest.gd:647-655	() -> void
+test_a_non_numeric_scalar_falls_back_to_its_default	func	GDTest/DataLoaderTest.gd:147-150	() -> void
 test_a_non_object_skill_entry_is_an_error	func	GDTest/GameDataValidatorTest.gd:239-244	() -> void
 test_a_non_snake_case_unit_id_is_a_warning	func	GDTest/GameDataValidatorTest.gd:526-531	() -> void
 test_a_non_string_description_is_rejected	func	GDTest/FeatureFlagsTest.gd:250-259	() -> void
 test_a_non_string_display_name_is_an_error	func	GDTest/GameDataValidatorTest.gd:247-250	() -> void
+test_a_nonsense_turn_budget_is_clamped	func	GDTest/DataLoaderTest.gd:121-131	() -> void
 test_a_numeric_string_is_a_warning_not_an_error	func	GDTest/GameDataValidatorTest.gd:226-230	() -> void
 test_a_pick_n_mode_without_a_count_is_an_error	func	GDTest/GameDataValidatorTest.gd:355-358	() -> void
 test_a_play_decision_carries_its_alternatives_and_outcome	func	GDTest/TelemetryTest.gd:314-380	() -> void
@@ -2921,11 +2944,16 @@ test_all_skill_tooltips_resolve_without_raw_tokens	func	GDTest/EnemySkillBalance
 test_ally_highlights_are_never_rewritten_as_the_enemy_warning	func	GDTest/EnemyUltAuraTest.gd:122-138	() -> void
 test_an_abandon_spike_is_one_task	func	GDTest/TriageParserTest.gd:104-113	() -> void
 test_an_abandoned_run_is_flagged_and_closed_once	func	GDTest/TelemetryTest.gd:475-501	() -> void
+test_an_ally_id_is_trimmed	func	GDTest/DataLoaderTest.gd:235-238	() -> void
 test_an_ally_shield_survives_the_enemy_turn_and_clears_at_the_next_turn_start	func	GDTest/TurnLoopTest.gd:426-450	() -> void
 test_an_ally_skill_with_a_threshold_is_a_warning	func	GDTest/GameDataValidatorTest.gd:450-453	() -> void
+test_an_empty_ally_list_is_reported	func	GDTest/DataLoaderTest.gd:241-246	() -> void
 test_an_empty_candidate_list_never_prompts	func	GDTest/SkillContextFactoryTest.gd:217-229	() -> void
+test_an_empty_config_reports_it_and_builds_nothing	func	GDTest/DataLoaderTest.gd:102-104	() -> void
 test_an_empty_decklist_is_an_error	func	GDTest/GameDataValidatorTest.gd:592-595	() -> void
+test_an_empty_decklist_is_reported	func	GDTest/DataLoaderTest.gd:183-188	() -> void
 test_an_empty_dice_progression_is_an_error	func	GDTest/GameDataValidatorTest.gd:622-625	() -> void
+test_an_empty_dice_progression_is_reported	func	GDTest/DataLoaderTest.gd:205-210	() -> void
 test_an_empty_registry_leaves_the_tab_without_toggles	func	GDTest/DebugFlagsTest.gd:51-57	() -> void
 test_an_empty_report_produces_nothing	func	GDTest/TriageParserTest.gd:182-183	() -> void
 test_an_empty_run_file_is_archived_without_a_request	func	GDTest/TelemetryUploaderTest.gd:288-297	() -> void
@@ -2944,11 +2972,13 @@ test_an_override_beats_the_rollout	func	GDTest/FeatureFlagsTest.gd:219-228	() ->
 test_an_oversized_target_count_is_a_warning	func	GDTest/GameDataValidatorTest.gd:341-344	() -> void
 test_an_ultimate_that_clears_the_final_wave_ends_the_player_phase	func	GDTest/BattleEndTest.gd:282-298	() -> void
 test_an_undocumented_public_function_is_flagged_only_without_a_doc_line	func	GDTest/DiffReviewTest.gd:140-145	() -> void
+test_an_unknown_ally_is_reported_and_dropped	func	GDTest/DataLoaderTest.gd:217-222	() -> void
 test_an_unknown_card_category_is_a_warning	func	GDTest/GameDataValidatorTest.gd:468-471	() -> void
 test_an_unknown_command_is_reported_instead_of_crashing	func	GDTest/DebugCommandRunnerTest.gd:145-151	() -> void
 test_an_unknown_enum_value_is_an_error	func	GDTest/GameDataValidatorTest.gd:268-271	() -> void
 test_an_unknown_flag_is_off	func	GDTest/FeatureFlagsTest.gd:93-97	() -> void
 test_an_unknown_key_is_a_warning	func	GDTest/GameDataValidatorTest.gd:233-236	() -> void
+test_an_unknown_key_survives_the_build	func	GDTest/DataLoaderTest.gd:96-99	() -> void
 test_an_unknown_starting_ally_is_an_error	func	GDTest/GameDataValidatorTest.gd:652-655	() -> void
 test_an_unknown_top_level_key_is_rejected	func	GDTest/FeatureFlagsTest.gd:240-247	() -> void
 test_an_unknown_wave_transition_mode_is_an_error	func	GDTest/GameDataValidatorTest.gd:658-661	() -> void
@@ -3177,6 +3207,7 @@ test_the_diagnostic_file_maps_a_message_to_its_repo_path	func	GDTest/GameDataVal
 test_the_diagnostic_line_locates_a_config_key	func	GDTest/GameDataValidatorTest.gd:759-765	() -> void
 test_the_diagnostic_line_locates_a_skill_and_its_effect	func	GDTest/GameDataValidatorTest.gd:734-743	() -> void
 test_the_diagnostic_line_locates_a_unit_and_a_wave	func	GDTest/GameDataValidatorTest.gd:746-756	() -> void
+test_the_dice_progression_is_coerced_to_ints	func	GDTest/DataLoaderTest.gd:199-202	() -> void
 test_the_evidence_carries_the_numbers_and_the_seeds	func	GDTest/TriageParserTest.gd:58-67	() -> void
 test_the_flags_tab_lists_a_toggle_per_staged_flag	func	GDTest/DebugFlagsTest.gd:38-48	() -> void
 test_the_hand_cap_stepper_clamps_at_the_limit	func	GDTest/DebugCommandRunnerTest.gd:109-114	() -> void

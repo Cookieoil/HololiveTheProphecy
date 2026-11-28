@@ -29,7 +29,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
 | [`Core/Card.gd`](map/Core/Card.md) | `Card` | 115 | This class contains the data for the card Card instance is created/destr… |
-| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 563 | Runtime loader for the game data JSON files in res://Data/json/. Those J… |
+| [`Core/DataLoader.gd`](map/Core/DataLoader.md) | `DataLoader` | 575 | Runtime loader for the game data JSON files in res://Data/json/. Those J… |
 | [`Core/DiceRoller.gd`](map/Core/DiceRoller.md) | `DiceRoller` | 19 | Static utility for dice rolls. Every roll takes the run's generator, so… |
 | [`Core/EnemyIntent.gd`](map/Core/EnemyIntent.md) | `EnemyIntent` | 38 | Pre-rolled intent for one enemy this turn. Created at step 1 of the turn… |
 | [`Core/FeatureFlags.gd`](map/Core/FeatureFlags.md) | `FeatureFlags` | 261 | Registry and deterministic evaluator for staged feature flags. A flag li… |
@@ -96,7 +96,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | `GameDataValidatorRunner` | 394 | Headless, offline validator for the whole game-data pipeline. res://Data… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Ar… |
 
-## 2. Tests at a glance (34)
+## 2. Tests at a glance (35)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -109,6 +109,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/CardTest.gd`](map/GDTest/CardTest.md) | `CardTest` | 31 | This is the GDUnit test for Card class |
 | [`GDTest/CardUITest.gd`](map/GDTest/CardUITest.md) | `CardUITest` | 122 | Tests for CardUI's runtime card feedback: the delayed value-label refres… |
 | [`GDTest/CodeIndexTest.gd`](map/GDTest/CodeIndexTest.md) | `CodeIndexTest` | 332 | Fixture tests for Tools/CodeIndexParser.gd, the pure parsing layer behin… |
+| [`GDTest/DataLoaderTest.gd`](map/GDTest/DataLoaderTest.md) | `DataLoaderTest` | 247 | Locks how DataLoader turns config.json into the runtime config: the defa… |
 | [`GDTest/DebugCommandRunnerTest.gd`](map/GDTest/DebugCommandRunnerTest.md) | `DebugCommandRunnerTest` | 152 | Locks the seams of Managers/DebugCommandRunner.gd that the turn-loop sui… |
 | [`GDTest/DebugFlagsTest.gd`](map/GDTest/DebugFlagsTest.md) | `DebugFlagsTest` | 87 | Locks the debug palette's Flags tab (Scenes/HUD/DebugMenuPopup.gd): it r… |
 | [`GDTest/DebugMenuTest.gd`](map/GDTest/DebugMenuTest.md) | `DebugMenuTest` | 864 | Locks the tester debug tools (Debug button -> DebugMenuPopup -> GameMana… |
@@ -190,4 +191,4 @@ Top-level keys:
 
 ---
 
-Indexed 101 script(s) (67 game, 34 test), 6 scene(s), 6 data file(s).
+Indexed 102 script(s) (67 game, 35 test), 6 scene(s), 6 data file(s).
