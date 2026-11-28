@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   collectBatch,
+  decisionRow,
   runEndRow,
   runStartRow,
   SCHEMA_VERSION,
@@ -198,4 +199,51 @@ test("a decision carries its event id and the offered set", () => {
   assert.equal(rows.decisions[0].decision_type, "play_card");
   assert.deepEqual(rows.decisions[0].offered_skills, ["striker_1"]);
   assert.equal(rows.decisions[0].card_is_odd, true);
+});
+
+test("a turn-only batch produces the run skeleton its rows point at", () => {
+  // No run_started and no run_ended in this batch: telemetry_turns.run_id would have
+  // nothing to reference, so the parent key is inserted first (see writesFor).
+  const rows = collectBatch([turnStarted(0), decision()]);
+  assert.deepEqual(rows.runSkeletons, [{ run_id: RUN_ID }]);
+  assert.equal(rows.runStarts.length, 0);
+  assert.equal(rows.runEnds.length, 0);
+});
+
+test("a batch that starts or ends the run needs no skeleton", () => {
+  // Those writes create the row themselves, so a skeleton would only add a no-op insert.
+  assert.equal(collectBatch([runStarted()]).runSkeletons.length, 0);
+  assert.equal(collectBatch([runEnded()]).runSkeletons.length, 0);
+  assert.equal(collectBatch([runStarted(), runEnded(), turnStarted(0)]).runSkeletons.length, 0);
+});
+
+test("sub_prompts travel with the offer, at the path the views read", () => {
+  // v_target_priority reads `offered_options -> 'sub_prompts'`, while the recorder writes
+  // `sub_prompts` beside `offered` - dropping the sibling left that view empty.
+  const prompt = {
+    prompt: "pick_target",
+    candidates: [{ unit_id: "boss_enemy" }],
+    picked: [{ unit_id: "boss_enemy" }],
+  };
+  const row = decisionRow({ ...decision(), sub_prompts: [prompt] });
+  const offered = row.offered_options as Event;
+
+  assert.deepEqual(offered.sub_prompts, [prompt]);
+  // ...and the offered set is still there beside it.
+  assert.deepEqual(offered.playable_skill_ids, ["striker_1"]);
+});
+
+test("a decision with no prompts keeps an empty list, never a missing key", () => {
+  const offered = decisionRow(decision()).offered_options as Event;
+  assert.deepEqual(offered.sub_prompts, []);
+});
+
+test("a decision with neither an offer nor prompts stores nothing", () => {
+  const bare: Event = {
+    type: "decision",
+    schema_version: SCHEMA_VERSION,
+    run_id: RUN_ID,
+    event_id: "eeeeeeee-0000-0000-0000-000000000000",
+  };
+  assert.equal(decisionRow(bare).offered_options, null);
 });

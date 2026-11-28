@@ -5,9 +5,12 @@
 // Deno, no network and no database:
 //
 // - every status code (405 / 400 / 413 / 500 / 200),
-// - the exact table and conflict order, and which halves are insert-only,
-// - and the bug the ordering exists for: one run split across two batches must come
-//   out with *both* halves of its record intact.
+// - the exact table and conflict order, and which writes insert vs update,
+// - the two bugs the ordering exists for: one run split across two batches must come out
+//   with *both* halves of its record intact, and a batch that carries only turns (a run
+//   longer than MAX_EVENTS, or a file whose first line was truncated) must still have a
+//   parent row to point at - otherwise the insert fails its foreign key, the client reads
+//   the 500 as transient and retries forever.
 //
 // Run with:  node --test "Server/supabase/functions/telemetry-ingest/*.test.ts"
 
@@ -121,12 +124,32 @@ class FakeDb {
     telemetry_decisions: ["event_id"],
   };
 
+  /** Tables whose `run_id` references telemetry_runs, so an orphan write can fail. */
+  private runChildren: Record<string, boolean> = {
+    telemetry_turns: true,
+    telemetry_decisions: true,
+  };
+
   asClient(): DbClient {
     return {
       from: (table: string) => ({
         upsert: async (rows: Row[], options: UpsertOptions) => {
           this.calls.push({ table, options, rows });
           if (this.failOn === table) return { error: { message: `write failed: ${table}` } };
+          // The real foreign key, and the reason the skeleton write exists: a turn or a
+          // decision whose run row is not there yet is rejected by Postgres (23503), which
+          // reaches the client as a 500 and is retried forever.
+          if (this.runChildren[table]) {
+            const parents = this.tables.telemetry_runs ?? new Map<string, Row>();
+            const orphan = rows.find((row) => !parents.has(String(row.run_id)));
+            if (orphan) {
+              return {
+                error: {
+                  message: `foreign key violation: ${table}.run_id = ${String(orphan.run_id)}`,
+                },
+              };
+            }
+          }
           const store = this.tables[table] ?? (this.tables[table] = new Map<string, Row>());
           for (const row of rows) {
             const key = this.keyOf(table, row);
@@ -232,11 +255,11 @@ test("the tables are written in the documented order", async () => {
     db.calls.map((call) => [call.table, call.options.onConflict, call.options.ignoreDuplicates]),
     [
       ["balance_versions", "balance_hash", true],
-      // The start half is insert-only and must come before the end half, which updates
-      // the row it inserted - otherwise the end half would blank the start columns.
-      ["telemetry_runs", "run_id", true],
+      // Both halves of a run update *their own* columns, so a start that lands after an
+      // end-only batch still fills in, and neither half can blank the other.
       ["telemetry_runs", "run_id", false],
-      ["telemetry_turns", "run_id,turn_number", true],
+      ["telemetry_runs", "run_id", false],
+      ["telemetry_turns", "run_id,turn_number", false],
       ["telemetry_turns", "run_id,turn_number", false],
       ["telemetry_decisions", "event_id", true],
     ],
@@ -299,10 +322,48 @@ test("the response reports what was stored", async () => {
   );
   assert.deepEqual(await stored(response), {
     balance_versions: 1,
+    run_skeletons: 0,
     run_starts: 1,
     run_ends: 1,
     turn_starts: 1,
     turn_ends: 1,
     decisions: 1,
   });
+});
+
+test("a batch of turns with no run start creates the parent row first", async () => {
+  const db = new FakeDb();
+  const response = await createIngestHandler(deps(db))(post([turnStarted(0), decision()]));
+
+  assert.equal(response.status, 200);
+  // Without the skeleton insert the turn would fail its foreign key - which is a 500 to
+  // the client, and therefore an infinite retry that starves every run behind it.
+  assert.deepEqual(db.calls.map((call) => call.table), [
+    "telemetry_runs",
+    "telemetry_turns",
+    "telemetry_decisions",
+  ]);
+  assert.deepEqual(db.calls[0].options, { onConflict: "run_id", ignoreDuplicates: true });
+  assert.deepEqual(db.row("telemetry_runs", RUN_ID), { run_id: RUN_ID });
+  assert.equal(db.row("telemetry_turns", `${RUN_ID}|0`).ally_hp_pct_start, 0.8);
+  assert.equal(db.row("telemetry_decisions", "99999999-8888-7777-6666-555555555555").skill_id, "striker_1");
+});
+
+test("a run start that arrives after the end half still fills in the start columns", async () => {
+  const db = new FakeDb();
+  const handler = createIngestHandler(deps(db));
+
+  await handler(post([runEnded()]));
+  assert.equal(db.row("telemetry_runs", RUN_ID).balance_hash, undefined);
+
+  const late = await handler(post([runStarted()]));
+  assert.equal(late.status, 200);
+  const run = db.row("telemetry_runs", RUN_ID);
+  // The start half heals the row the end-only batch created...
+  assert.equal(run.balance_hash, "hash-a");
+  assert.equal(run.run_seed, 4242);
+  assert.deepEqual(run.flags, { exp: true });
+  // ...without touching the result the end half already wrote.
+  assert.equal(run.victory, true);
+  assert.equal(run.ended_at, 200);
 });

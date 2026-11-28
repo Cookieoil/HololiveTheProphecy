@@ -120,6 +120,26 @@ export const turnEndRow = (runId: string, ended: Event): Row => {
   };
 };
 
+/**
+ * The offer as the analytics views read it: the offered set, plus the prompts the skill
+ * raised inside the decision.
+ *
+ * `sub_prompts` is a *sibling* of `offered` on the event - Managers/TelemetryManager.gd
+ * writes `offered`, `chosen`, `sub_prompts` and `outcome` at the top level - while the
+ * views reach it through `offered_options -> 'sub_prompts'`, because `v_target_priority`
+ * counts focus fire with exactly that path. Writing `event.offered` alone therefore left
+ * `v_target_priority` empty on every hosted deployment, and nothing local caught it:
+ * Tools/analyze_telemetry.py reads the sibling directly.
+ */
+export const offeredOptions = (event: Event): Row | null => {
+  const prompts = list(event.sub_prompts);
+  if (event.offered === null || event.offered === undefined) {
+    return prompts.length > 0 ? { sub_prompts: prompts } : null;
+  }
+  return { ...obj(event.offered), sub_prompts: prompts };
+};
+
+
 /** One player decision row, with the board state *before* it happened. */
 export const decisionRow = (event: Event): Row => {
   const metrics = obj(obj(event.context).metrics);
@@ -150,7 +170,7 @@ export const decisionRow = (event: Event): Row => {
     ally_hp_pct_before: metrics.ally_hp_pct ?? null,
     enemy_hp_pct_before: metrics.enemy_hp_pct ?? null,
     threat_ratio_before: metrics.threat_ratio ?? null,
-    offered_options: event.offered ?? null,
+    offered_options: offeredOptions(event),
     chosen_payload: event.chosen ?? null,
     immediate_outcome: event.outcome ?? null,
     recorded_at: event.t ?? null,
@@ -159,6 +179,8 @@ export const decisionRow = (event: Event): Row => {
 
 export type BatchRows = {
   balance: Row[];
+  /** Insert-only `{ run_id }` parents for runs this batch mentions but does not start. */
+  runSkeletons: Row[];
   runStarts: Row[];
   runEnds: Row[];
   turnStarts: Row[];
@@ -167,23 +189,36 @@ export type BatchRows = {
 };
 
 /**
- * Every row one POST batch produces, grouped by the half of the record that owns it.
+ * Every row one POST batch produces, grouped by the part of the record that owns it.
  *
- * `runStarts` / `turnStarts` are insert-only (start metadata never changes), while
- * `runEnds` / `turnEnds` update the result columns of the row the earlier batch
- * inserted. A batch that carries only one half therefore leaves the other half of
- * the record exactly as it was.
+ * Three shapes, and the difference between them is the whole point:
+ *
+ * - `runSkeletons` are the parent key and nothing else, insert-only. `telemetry_turns`
+ *   and `telemetry_decisions` both declare `run_id ... references telemetry_runs`, so a
+ *   batch that carries only turns or decisions - a run longer than MAX_EVENTS, or a file
+ *   whose first line was truncated and skipped - needs its parent to exist first.
+ *   Without it the insert fails the foreign key, and a 500 reads as transient to the
+ *   client, so the file would retry forever and starve every run queued behind it.
+ * - `runStarts` / `turnStarts` carry the start columns and *update* the row the batch
+ *   above may have created, so a start half that arrives late still lands.
+ * - `runEnds` / `turnEnds` carry the result columns and update the same row.
+ *
+ * Start and end halves own disjoint column sets (pinned by rows.test.ts), which is what
+ * makes an update-on-conflict safe: neither half can blank the other.
  */
 export const collectBatch = (events: Event[]): BatchRows => {
   const balance = new Map<string, Row>();
   const runs = new Map<string, { started?: Event; ended?: Event }>();
   const turns = new Map<string, { started?: Event; ended?: Event }>();
   const decisions: Row[] = [];
+  /** Every run this batch mentions, so a child row can always find its parent. */
+  const referenced = new Set<string>();
 
   for (const event of events) {
     if (num(event.schema_version, 0) !== SCHEMA_VERSION) continue;
     const runId = str(event.run_id);
     if (!runId) continue;
+    referenced.add(runId);
     const type = str(event.type);
     if (type === "run_started") {
       const hash = str(event.balance_hash);
@@ -228,8 +263,19 @@ export const collectBatch = (events: Event[]): BatchRows => {
     if (cell.ended) turnEnds.push(turnEndRow(runId, cell.ended));
   }
 
+  // The parents a turn or a decision write needs, for the runs this batch never starts
+  // or ends on its own. A batch that has a start or an end row for the run needs no
+  // skeleton - that write creates the row itself, and both run before the children.
+  const runSkeletons: Row[] = [];
+  for (const runId of referenced) {
+    const group = runs.get(runId);
+    if (group && (group.started || group.ended)) continue;
+    runSkeletons.push({ run_id: runId });
+  }
+
   return {
     balance: [...balance.values()],
+    runSkeletons,
     runStarts,
     runEnds,
     turnStarts,
