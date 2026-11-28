@@ -15,7 +15,7 @@
 // still being played (which is how `v_flag_cohorts` tells a finished run from an
 // abandoned one).
 //
-// Run with:  node --test Server/supabase/functions/telemetry-ingest/
+// Run with:  node --test "Server/supabase/functions/telemetry-ingest/*.test.ts"
 
 export const SCHEMA_VERSION = 1;
 export const MAX_EVENTS = 500;
