@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/gen_code_index.gd` extends `SceneTree`
 
-`809` lines · [back to the map](../../CODEBASE_MAP.md)
+`800` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Headless symbol-index generator for this repository. Parses every first-party GDScript source and writes the navigation set that replaces reading the sources: D…
 
@@ -66,22 +66,22 @@ Private:
 - L431-461 `_collect_global_signals`
 - L466-470 `_collect_scenes`
 - L473-480 `_collect_data_files`
-- L482-524 `_render_map`
-- L527-528 `_game_infos`
-- L531-532 `_test_infos`
-- L535-540 `_infos_with_tests`
-- L543-561 `_append_script_table`
-- L564-593 `_render_script_page`
-- L596-605 `_append_enum_lines`
-- L608-617 `_append_inner_class_lines`
-- L620-625 `_append_dependencies`
-- L630-664 `_render_scene_page`
-- L667-683 `_append_declarations`
-- L686-698 `_declaration_text`
-- L703-739 `_append_functions`
-- L742-758 `_append_signal_table`
-- L761-782 `_append_scene_table`
-- L785-807 `_append_data_table`
+- L482-515 `_render_map`
+- L518-519 `_game_infos`
+- L522-523 `_test_infos`
+- L526-531 `_infos_with_tests`
+- L534-552 `_append_script_table`
+- L555-584 `_render_script_page`
+- L587-596 `_append_enum_lines`
+- L599-608 `_append_inner_class_lines`
+- L611-616 `_append_dependencies`
+- L621-655 `_render_scene_page`
+- L658-674 `_append_declarations`
+- L677-689 `_declaration_text`
+- L694-730 `_append_functions`
+- L733-749 `_append_signal_table`
+- L752-773 `_append_scene_table`
+- L776-798 `_append_data_table`
 
 Uses: CodeIndexParser
 Used by: —

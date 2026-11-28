@@ -2,27 +2,18 @@
 
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd from the first-party sources. -->
 
-Refresh after changing any first-party script, scene or data file:
-
 ```powershell
-godot --headless --path . --script res://Tools/gen_code_index.gd
-```
-
-Staleness and correctness gate (run by Tools/preflight.ps1 and CI; it also checks coverage, ranges, links, scenes, signals and data, and prints the read-cost benchmark):
-
-```powershell
-godot --headless --path . --script res://Tools/check_navigation.gd
+godot --headless --path . --script res://Tools/gen_code_index.gd       # regenerate
+godot --headless --path . --script res://Tools/check_navigation.gd  # staleness gate
 ```
 
 ## How to use this map (overview here, details in their own page)
 
-- **Overview:** section 1 lists every game script, section 2 every test, each with `class_name`, size and role.
-- **One script's API with line numbers:** open its page under `Docs/map/` (linked from sections 1 and 2).
-- **One scene's node tree:** open `Docs/map/<scene>.scene.md` (linked from section 4).
+- **Detail:** section 1 lists every game script and section 2 every test - `class_name`, size, role, and a link to a page with the API and line numbers (sections 4's scenes get their node tree).
 - **Find a symbol:** `rg -n '^get_effective_value\t' Docs/symbols.tsv` returns `path:start-end`; drop the `^name\t` anchor to search loosely.
 - **Impact of a change:** the `Uses` / `Used by` lines on a script's page, and the emit/listen table in section 3.
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
-- **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
+- **Measure it:** `check_navigation.gd -- --benchmark` prints what each recipe above costs to read.
 
 ## 1. Game scripts at a glance (67)
 
@@ -89,7 +80,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/check_spine_runtime.gd`](map/Tools/check_spine_runtime.md) | — | 142 | Headless link and compatibility gate for the spine-godot GDExtension. Pr… |
 | [`Tools/dataBuilder.gd`](map/Tools/dataBuilder.md) | `DataBuilder` | 779 | Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into t… |
 | [`Tools/export_xlsx_to_json.gd`](map/Tools/export_xlsx_to_json.md) | — | 34 | Headless Excel -> JSON exporter for the game data pipeline. Usage: godot… |
-| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 809 | Headless symbol-index generator for this repository. Parses every first-… |
+| [`Tools/gen_code_index.gd`](map/Tools/gen_code_index.md) | — | 800 | Headless symbol-index generator for this repository. Parses every first-… |
 | [`Tools/review_diff.gd`](map/Tools/review_diff.md) | — | 159 | Second-pass reviewer for a branch: summarises the diff and flags the thi… |
 | [`Tools/simulate_runs.gd`](map/Tools/simulate_runs.md) | — | 180 | Replays a run seed headlessly, or sweeps a range of seeds, and prints wh… |
 | [`Tools/triage.gd`](map/Tools/triage.md) | — | 222 | Forward pressure: turns evidence into agent-ready task issues. An agent… |
