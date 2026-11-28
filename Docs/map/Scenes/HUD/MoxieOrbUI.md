@@ -1,9 +1,9 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/MoxieOrbUI.gd` — `class_name MoxieOrbUI` extends `Control`
 
-`605` lines · [back to the map](../../../CODEBASE_MAP.md)
+`643` lines · [back to the map](../../../CODEBASE_MAP.md)
 
-> extends Control, 3 signal(s), 1 export(s), 22 function(s)
+> extends Control, 3 signal(s), 1 export(s), 28 function(s)
 
 Sections: Helper Methods
 
@@ -125,8 +125,14 @@ Private:
 - L417-418 `_update_cursor`
 - L421-436 `_gui_input`
 - L439-495 `_process`
-- L498-599 `_draw`
-- L602-603 `_tint`
+- L498-525 `_draw`
+- L530-542 `_draw_cast_ripple`
+- L547-558 `_draw_monogram_fallback`
+- L562-571 `_draw_bezels`
+- L576-587 `_bezel_color`
+- L592-595 `_bezel_alpha`
+- L602-637 `_draw_spark_flare`
+- L640-641 `_tint`
 
 Uses: OutlineGlow, Unit
 Used by: GDTest/BattleEndTest.gd, GDTest/EnemyUltAuraTest.gd, Scenes/HUD/BattleOverlayController.gd, Tools/SnapshotRunner.gd

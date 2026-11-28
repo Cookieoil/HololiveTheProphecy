@@ -67,58 +67,70 @@ func setup(
 
 ## Call whenever allies or a new enemy wave spawns, passing active UnitUI nodes.
 func rebuild_for_units(ally_uis: Array[UnitUI], enemy_uis: Array[UnitUI]) -> void:
-	var live_allies: Array[UnitUI] = []
-	var new_ally_units: Array[Unit] = []
-	for uui in ally_uis:
-		if _is_live_unit_ui(uui):
-			live_allies.append(uui)
-			new_ally_units.append(uui.unit)
+	var live_allies: Array[UnitUI] = _live_uis(ally_uis)
+	var live_enemies: Array[UnitUI] = _live_uis(enemy_uis)
 
-	var live_enemies: Array[UnitUI] = []
-	var new_enemy_units: Array[Unit] = []
-	for uui in enemy_uis:
-		if _is_live_unit_ui(uui):
-			live_enemies.append(uui)
-			new_enemy_units.append(uui.unit)
-
-	# Re-bind live UnitUI nodes (and keep orb portraits synced)
+	# Re-bind the live nodes first, so the rails below can read each unit's portrait.
 	_units_to_ui.clear()
-	for uui in live_enemies:
-		_bind_unit_ui(uui)
-		var existing_orb := _get_valid_orb(uui.unit)
-		if existing_orb != null:
-			existing_orb.set_portrait(_extract_unit_portrait(uui, uui.unit))
-	for uui in live_allies:
-		_bind_unit_ui(uui)
-		var existing_orb := _get_valid_orb(uui.unit)
-		if existing_orb != null:
-			existing_orb.set_portrait(_extract_unit_portrait(uui, uui.unit))
+	_rebind_uis(live_enemies)
+	_rebind_uis(live_allies)
 
-	# Only rebuild EnemyMoxieRail orbs if the enemy Unit list changed or an orb was freed
-	if not _same_units_and_valid_orbs(_current_enemy_units, new_enemy_units):
-		for u in _current_enemy_units:
-			_orbs_by_unit.erase(u)
-		_clear_container(_enemy_rail)
-		_current_enemy_units = new_enemy_units
-		for i in range(live_enemies.size()):
-			var uui := live_enemies[i]
-			_orbs_by_unit[uui.unit] = _spawn_orb(_enemy_rail, uui.unit, "E%d" % (i + 1), uui)
-
-	# Only rebuild AllyMoxieRail orbs if the ally Unit list changed or an orb was freed
-	if not _same_units_and_valid_orbs(_current_ally_units, new_ally_units):
-		for u in _current_ally_units:
-			_orbs_by_unit.erase(u)
-		_clear_container(_ally_rail)
-		_current_ally_units = new_ally_units
-		for i in range(live_allies.size()):
-			var uui := live_allies[i]
-			var orb := _spawn_orb(_ally_rail, uui.unit, "A%d" % (i + 1), uui)
-			orb.set_interactable(_player_input_enabled)
-			_orbs_by_unit[uui.unit] = orb
-	else:
-		set_player_turn_interactive(_player_input_enabled)
+	_sync_rail(_enemy_rail, live_enemies, "E", true)
+	_sync_rail(_ally_rail, live_allies, "A", false)
 
 	sync_enemy_intent_previews()
+
+
+## The UnitUI nodes that are still usable. A freed node, one already on its way out, or
+## one that was never bound to a unit is not evidence of who is on the board.
+func _live_uis(candidates: Array[UnitUI]) -> Array[UnitUI]:
+	var live: Array[UnitUI] = []
+	for uui: UnitUI in candidates:
+		if _is_live_unit_ui(uui):
+			live.append(uui)
+	return live
+
+
+## Records which UnitUI draws each unit, and refreshes the portrait the matching orb is
+## already showing so a re-bind never waits for the next rebuild to look right.
+func _rebind_uis(uis: Array[UnitUI]) -> void:
+	for uui: UnitUI in uis:
+		_bind_unit_ui(uui)
+		var orb: MoxieOrbUI = _get_valid_orb(uui.unit)
+		if orb != null:
+			orb.set_portrait(_extract_unit_portrait(uui, uui.unit))
+
+
+func _units_of(uis: Array[UnitUI]) -> Array[Unit]:
+	var units: Array[Unit] = []
+	for uui: UnitUI in uis:
+		units.append(uui.unit)
+	return units
+
+
+## Rebuilds one rail's orbs only when the unit list actually changed or an orb was freed.
+## BattleScene re-enters this after every action, and rebuilding orbs on each of those
+## would restart their animations in the middle of a turn.
+func _sync_rail(rail: VBoxContainer, uis: Array[UnitUI], badge_prefix: String, is_enemy: bool) -> void:
+	var units: Array[Unit] = _units_of(uis)
+	var previous: Array[Unit] = _current_enemy_units if is_enemy else _current_ally_units
+	if _same_units_and_valid_orbs(previous, units):
+		if not is_enemy:
+			set_player_turn_interactive(_player_input_enabled)
+		return
+	for unit: Unit in previous:
+		_orbs_by_unit.erase(unit)
+	_clear_container(rail)
+	if is_enemy:
+		_current_enemy_units = units
+	else:
+		_current_ally_units = units
+	for index: int in range(uis.size()):
+		var uui: UnitUI = uis[index]
+		var orb: MoxieOrbUI = _spawn_orb(rail, uui.unit, "%s%d" % [badge_prefix, index + 1], uui)
+		if not is_enemy:
+			orb.set_interactable(_player_input_enabled)
+		_orbs_by_unit[uui.unit] = orb
 
 
 ## Toggle whether ally Ultimate orbs can be clicked right now (true inside get_player_action).
@@ -395,43 +407,82 @@ func _extract_unit_portrait(uui: UnitUI, unit: Unit) -> Texture2D:
 
 
 func _find_character_texture_in_node(root: Node) -> Texture2D:
-	for child in root.get_children():
-		var nm := child.name.to_lower()
-		if nm.contains("intent") or nm.contains("shield") or nm.contains("status") or nm.contains("icon"):
+	for child: Node in root.get_children():
+		if _is_chrome_node(child):
 			continue
-		if child is AnimatedSprite2D:
-			var anim_sp := child as AnimatedSprite2D
-			if anim_sp.sprite_frames != null:
-				var anim_name: StringName = anim_sp.animation
-				if not anim_sp.sprite_frames.has_animation(anim_name):
-					var names := anim_sp.sprite_frames.get_animation_names()
-					if not names.is_empty():
-						anim_name = names[0]
-				if anim_sp.sprite_frames.has_animation(anim_name) and anim_sp.sprite_frames.get_frame_count(anim_name) > 0:
-					return anim_sp.sprite_frames.get_frame_texture(anim_name, 0)
-		elif child is Sprite2D:
-			var sp := child as Sprite2D
-			if sp.texture != null:
-				if sp.hframes > 1 or sp.vframes > 1 or sp.region_enabled:
-					var at := AtlasTexture.new()
-					at.atlas = sp.texture
-					if sp.region_enabled:
-						at.region = sp.region_rect
-					else:
-						var fw := sp.texture.get_width() / float(maxi(1, sp.hframes))
-						var fh := sp.texture.get_height() / float(maxi(1, sp.vframes))
-						at.region = Rect2(0.0, 0.0, fw, fh)
-					return at
-				return sp.texture
-		elif child is TextureRect:
-			var tr := child as TextureRect
-			if tr.texture != null and tr.size.x >= 32.0 and tr.size.y >= 32.0:
-				return tr.texture
-
-		var nested := _find_character_texture_in_node(child)
+		var own: Texture2D = _texture_of(child)
+		if own != null:
+			return own
+		var nested: Texture2D = _find_character_texture_in_node(child)
 		if nested != null:
 			return nested
 	return null
+
+
+## Chrome whose textures are icons and bars rather than the unit's face. It is skipped by
+## name because the row draws intent, shield and status art with textures that would
+## otherwise be mistaken for a portrait.
+func _is_chrome_node(node: Node) -> bool:
+	var node_name: String = node.name.to_lower()
+	return (
+		node_name.contains("intent") or node_name.contains("shield")
+		or node_name.contains("status") or node_name.contains("icon")
+	)
+
+
+## The texture this node itself draws, if it is the kind a row uses for a portrait.
+func _texture_of(node: Node) -> Texture2D:
+	if node is AnimatedSprite2D:
+		return _animation_frame(node as AnimatedSprite2D)
+	if node is Sprite2D:
+		return _sprite_texture(node as Sprite2D)
+	if node is TextureRect:
+		return _rect_texture(node as TextureRect)
+	return null
+
+
+## Frame 0 of the clip the sprite is playing, falling back to whichever clip the sheet
+## actually has: a unit whose named animation is missing still shows a face.
+func _animation_frame(sprite: AnimatedSprite2D) -> Texture2D:
+	if sprite.sprite_frames == null:
+		return null
+	var animation: StringName = sprite.animation
+	if not sprite.sprite_frames.has_animation(animation):
+		var names: PackedStringArray = sprite.sprite_frames.get_animation_names()
+		if names.is_empty():
+			return null
+		animation = names[0]
+	if not sprite.sprite_frames.has_animation(animation):
+		return null
+	if sprite.sprite_frames.get_frame_count(animation) <= 0:
+		return null
+	return sprite.sprite_frames.get_frame_texture(animation, 0)
+
+
+## A sprite sheet is handed over as a one-frame atlas so the orb shows a face rather than
+## the whole strip; a plain sprite is handed over untouched.
+func _sprite_texture(sprite: Sprite2D) -> Texture2D:
+	if sprite.texture == null:
+		return null
+	if not (sprite.hframes > 1 or sprite.vframes > 1 or sprite.region_enabled):
+		return sprite.texture
+	var atlas: AtlasTexture = AtlasTexture.new()
+	atlas.atlas = sprite.texture
+	if sprite.region_enabled:
+		atlas.region = sprite.region_rect
+	else:
+		var frame_width: float = sprite.texture.get_width() / float(maxi(1, sprite.hframes))
+		var frame_height: float = sprite.texture.get_height() / float(maxi(1, sprite.vframes))
+		atlas.region = Rect2(0.0, 0.0, frame_width, frame_height)
+	return atlas
+
+
+## A TextureRect only counts when it is portrait-sized: the row also draws 16px category
+## icons this way.
+func _rect_texture(rect: TextureRect) -> Texture2D:
+	if rect.texture == null or rect.size.x < 32.0 or rect.size.y < 32.0:
+		return null
+	return rect.texture
 
 
 func _bind_unit_ui(uui: UnitUI) -> void:

@@ -80,6 +80,93 @@ func _tooltip_slab() -> StyleBoxFlat:
 	return theme.get_stylebox(THEME_ITEM, THEME_TYPE) as StyleBoxFlat
 
 
+## `SkillTooltipPopup` builds its whole panel in `_init()`, so its node tree is the thing a
+## refactor of that builder has to preserve: `show_callout` writes into these nodes by
+## reference, and a missing slot would silently drop a line of the skill description.
+## These live in this suite because it is the tooltip suite: what a hover says, and what a
+## callout says, are the same question asked about two different panels.
+func _make_callout() -> SkillTooltipPopup:
+	var popup: SkillTooltipPopup = SkillTooltipPopup.new()
+	add_child(popup)
+	return popup
+
+
+func test_the_callout_builds_one_slot_per_line_of_text() -> void:
+	var popup: SkillTooltipPopup = _make_callout()
+	# The pad holds the column, and nothing else.
+	assert_int(popup.get_child_count()).is_equal(1)
+	assert_object(popup.get_child(0)).is_equal(popup._margin)
+	assert_int(popup._margin.get_child_count()).is_equal(1)
+	assert_object(popup._margin.get_child(0)).is_equal(popup._vbox)
+
+	# In the order the player reads them: title row, subtitle, rule, body, rule, footer.
+	var slots: Array[Node] = popup._vbox.get_children()
+	assert_int(slots.size()).is_equal(6)
+	assert_bool(slots[0] is HBoxContainer).is_true()
+	assert_object(slots[1]).is_equal(popup._subtitle_label)
+	assert_bool(slots[2] is ColorRect).is_true()
+	assert_object(slots[3]).is_equal(popup._body_rtl)
+	assert_object(slots[4]).is_equal(popup._footer_sep)
+	assert_object(slots[5]).is_equal(popup._footer_rtl)
+
+	# The title row holds the header and the (currently hidden) category icons.
+	var title_row: HBoxContainer = slots[0]
+	assert_int(title_row.get_child_count()).is_equal(2)
+	assert_object(title_row.get_child(0)).is_equal(popup._header_label)
+	assert_object(title_row.get_child(1)).is_equal(popup._icons_box)
+	assert_bool(popup._icons_box.visible).is_false()
+
+
+## The two rich-text slots have to stay plain wrappers: no scrollbar, a height that
+## follows the text, and the line spacing that keeps an inline keyword icon off the line
+## above it.
+func test_the_callout_body_wraps_its_text_instead_of_scrolling() -> void:
+	var popup: SkillTooltipPopup = _make_callout()
+	for rtl: RichTextLabel in [popup._body_rtl, popup._footer_rtl]:
+		assert_bool(rtl.bbcode_enabled).is_true()
+		assert_bool(rtl.fit_content).is_true()
+		assert_bool(rtl.scroll_active).is_false()
+		assert_int(rtl.autowrap_mode).is_equal(TextServer.AUTOWRAP_WORD_SMART)
+		assert_bool(rtl.mouse_filter == Control.MOUSE_FILTER_IGNORE).is_true()
+	# The body is the larger of the two, and only it carries the icon breathing room.
+	assert_int(popup._body_rtl.get_theme_font_size("normal_font_size")).is_equal(13)
+	assert_int(popup._body_rtl.get_theme_font_size("bold_font_size")).is_equal(14)
+	assert_int(popup._body_rtl.get_theme_constant("line_separation")).is_equal(3)
+	assert_int(popup._footer_rtl.get_theme_font_size("normal_font_size")).is_equal(12)
+	assert_int(popup._header_label.get_theme_font_size("font_size")).is_equal(14)
+	assert_int(popup._subtitle_label.get_theme_font_size("font_size")).is_equal(12)
+
+
+## Empty optional lines collapse instead of leaving a gap or an orphaned rule, which is
+## what makes the same panel serve a skill with and without a footer.
+func test_an_empty_subtitle_or_footer_collapses_its_slot() -> void:
+	var popup: SkillTooltipPopup = _make_callout()
+	popup.show_callout({
+		"header": "Skill 1 (Odd)",
+		"subtitle": "",
+		"body": "Deal 6 damage.",
+		"footer": "",
+		"accent": Color(1.0, 0.34, 0.32),
+	}, Rect2(Vector2(100.0, 100.0), Vector2(40.0, 40.0)))
+	assert_str(popup._header_label.text).is_equal("Skill 1 (Odd)")
+	assert_bool(popup._subtitle_label.visible).is_false()
+	assert_bool(popup._footer_rtl.visible).is_false()
+	assert_bool(popup._footer_sep.visible).is_false()
+	assert_str(popup._body_rtl.text).is_equal("Deal 6 damage.")
+
+	popup.show_callout({
+		"header": "Ultimate",
+		"subtitle": "20 Moxie",
+		"body": "Deal 13 damage.",
+		"footer": "Moxie: 0 / 20",
+	}, Rect2(Vector2(100.0, 100.0), Vector2(40.0, 40.0)))
+	assert_bool(popup._subtitle_label.visible).is_true()
+	assert_bool(popup._footer_rtl.visible).is_true()
+	assert_bool(popup._footer_sep.visible).is_true()
+	popup.hide_callout()
+	assert_bool(popup.visible).is_false()
+
+
 func test_two_lines_become_a_title_and_a_description() -> void:
 	var content: Control = _make_content("End Turn\nEnd your turn to start the enemy turn.")
 	assert_bool(content is VBoxContainer).is_true()
