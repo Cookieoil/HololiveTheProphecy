@@ -18,10 +18,17 @@ extends Node
 ##   xvfb-run -a godot --audio-driver Dummy --rendering-driver opengl3 --path . \
 ##     res://Tools/snapshot_runner.tscn
 ##
+## Add `--fixed-fps 60` when the shots are going to be compared rather than looked at:
+## the frame delta stops depending on how fast the machine is, which is what makes two
+## captures of the same code comparable pixel for pixel (Tools/compare_snapshots.py).
+##
+## Add `-- --output-dir <path>` to write somewhere other than reports/ui-snapshots/, so a
+## branch can be captured next to its baseline (`.../before`, `.../after`).
+##
 ## Exit code 0 = every shot rendered and passed the sanity checks, 1 otherwise.
 ##
 ## @author TheGreatJellyfish
-## @version 11/27/2026
+## @version 11/28/2026
 
 #region Constants
 const SCENE_PATH: String = "res://Scenes/BattleScene/BattleScene.tscn"
@@ -43,6 +50,15 @@ const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
 ## proves the real renderer drew the screen.
 const MIN_DISTINCT_COLORS: int = 8
 const COLOR_SAMPLE_STEP: int = 24
+## Short settles for the shots that photograph something mid-animation (a cast ripple, a
+## card in flight). At 60 frames a second these are fractions of a second by design.
+const EFFECT_SETTLE_FRAMES: int = 12
+const FLIGHT_SETTLE_FRAMES: int = 16
+## Stagger between two cards leaving the deck, in seconds, for the deal-in shot. Chosen
+## so one frame catches several different points of the flight (see `_capture_card_flight`).
+const FLIGHT_STAGGER: float = 0.08
+const ARG_OUTPUT_DIR: String = "--output-dir"
+
 #endregion
 
 #region Private Variables
@@ -53,7 +69,7 @@ var _failures: PackedStringArray = PackedStringArray()
 
 #region Lifecycle Methods
 func _ready() -> void:
-	_output_abs = ProjectSettings.globalize_path(OUTPUT_DIR)
+	_output_abs = ProjectSettings.globalize_path(_output_dir())
 	var err: Error = DirAccess.make_dir_recursive_absolute(_output_abs)
 	if err != OK:
 		push_error("[snapshots] cannot create %s (%s)" % [_output_abs, error_string(err)])
@@ -63,6 +79,15 @@ func _ready() -> void:
 #endregion
 
 #region Private Methods
+## `--output-dir <path>` when the caller wants the shots somewhere else, else the default.
+## Accepts a `res://` path or an absolute one, like Tools/gen_code_index.gd does.
+func _output_dir() -> String:
+	var args: PackedStringArray = OS.get_cmdline_user_args()
+	for i: int in range(args.size()):
+		if args[i] == ARG_OUTPUT_DIR and i + 1 < args.size():
+			return args[i + 1]
+	return OUTPUT_DIR
+
 func _capture() -> void:
 	var scene: BattleScene = _open_scene()
 	if scene == null:
@@ -101,11 +126,80 @@ func _capture() -> void:
 		_fail("the debug palette has no Flags tab")
 	scene.debug_menu.close_menu()
 
+	# The combat states a normal turn passes through too quickly to photograph. They are
+	# driven from here rather than played out, and they are captured on the live board
+	# because that is where the rails, the auras and the tooltip layer actually are.
+	await _capture_orb_states(scene)
+	await _capture_cast_effects(scene)
+	await _capture_card_flight(scene)
+
 	await scene.show_battle_result(true)
 	await _settle()
-	_shot("06_victory_cutscene.png")
+	_shot("09_victory_cutscene.png")
 
 	_finish()
+
+
+## A charged ally orb (ready bezel, glow, full ring) next to an enemy one roll away from
+## its Ultimate (warning bezel, crimson aura, preview segment). Neither state survives a
+## whole turn of ordinary play, and both are pure `_draw`/shader work - exactly what a
+## refactor of the orb can break without touching a single assertion.
+func _capture_orb_states(scene: BattleScene) -> void:
+	var allies: Array[UnitUI] = _unit_uis(scene, true)
+	var enemies: Array[UnitUI] = _unit_uis(scene, false)
+	if allies.is_empty() or enemies.is_empty():
+		_fail("the board has no UnitUI nodes to charge")
+		return
+
+	_fill_moxie(allies[0])
+	var enemy: UnitUI = enemies[0]
+	# Six short of the gauge, so the pending roll is what would fill it: the orb draws a
+	# preview segment and the character wears the warning aura.
+	enemy.unit.gain_moxie(maxi(0, enemy.unit.max_moxie - 6))
+	var orb: MoxieOrbUI = _orb_for(scene, enemy.unit)
+	if orb != null:
+		orb.set_preview_gain(6)
+	enemy.set_intent_ult_warning(true)
+
+	await _settle()
+	_shot("06_orb_states.png")
+
+
+## The two effects that only exist mid-animation: the cast ripple on every orb, and the
+## callout anchored close enough to the right edge that its beak flips to the far side of
+## the panel. Shot 03 captures the other beak orientation.
+func _capture_cast_effects(scene: BattleScene) -> void:
+	for orb: MoxieOrbUI in _orbs(scene):
+		orb.play_cast_burst()
+	# Placed by hand: the flip is a placement decision, and this is the only way to reach
+	# the other branch of it without moving the battle camera.
+	scene.battle_overlay.get_skill_tooltip().show_callout(
+		_callout_data(), Rect2(Vector2(1230.0, 300.0), Vector2(40.0, 40.0))
+	)
+	await _wait_frames(EFFECT_SETTLE_FRAMES)
+	_shot("07_cast_effects.png")
+	scene.battle_overlay.get_skill_tooltip().hide_callout()
+
+
+## The deal, caught in the air. The stagger is the point: at this frame the cards are at
+## several different points of the flight, so one shot covers the pose math at once
+## instead of photographing the same instant twice.
+func _capture_card_flight(scene: BattleScene) -> void:
+	var cards: Array[CardUI] = []
+	for child: Node in scene.hand_bar.cards_row.get_children():
+		var ui: CardUI = child as CardUI
+		if ui != null:
+			cards.append(ui)
+	if cards.is_empty():
+		_fail("the hand is empty, so there is nothing to deal")
+		return
+	for i: int in range(cards.size()):
+		cards[i].play_draw_animation(Vector2(700.0, -40.0), FLIGHT_STAGGER * float(i), i)
+	await _wait_frames(FLIGHT_SETTLE_FRAMES)
+	_shot("08_card_flight.png")
+	# Let the deal land flat again, so the cutscene above is photographed on a settled
+	# board rather than through a card still in mid-air.
+	await _settle()
 
 
 func _open_scene() -> BattleScene:
@@ -160,6 +254,57 @@ func _show_ultimate_callout(scene: BattleScene) -> bool:
 			return true
 		await RenderingServer.frame_post_draw
 	return false
+
+
+## The UnitUI nodes of one side, read off the row containers the scene already owns.
+func _unit_uis(scene: BattleScene, allies: bool) -> Array[UnitUI]:
+	var found: Array[UnitUI] = []
+	var container: Node = scene.allies_container if allies else scene.enemies_container
+	if container == null:
+		return found
+	for child: Node in container.get_children():
+		var ui: UnitUI = child as UnitUI
+		if ui != null:
+			found.append(ui)
+	return found
+
+
+## Every orb on the board, in tree order. Found by class rather than by walking the
+## overlay's private rails, so the search does not depend on how the rails are built.
+func _orbs(scene: BattleScene) -> Array[MoxieOrbUI]:
+	var found: Array[MoxieOrbUI] = []
+	for node: Node in scene.battle_overlay.find_children("*", "MoxieOrbUI", true, false):
+		var orb: MoxieOrbUI = node as MoxieOrbUI
+		if orb != null:
+			found.append(orb)
+	return found
+
+
+func _orb_for(scene: BattleScene, unit: Unit) -> MoxieOrbUI:
+	for orb: MoxieOrbUI in _orbs(scene):
+		if orb.unit == unit:
+			return orb
+	return null
+
+
+## Fills a unit's gauge, which is what turns its orb "ready" and lights the glow preset.
+func _fill_moxie(ui: UnitUI) -> void:
+	if ui == null or ui.unit == null:
+		return
+	ui.unit.gain_moxie(maxi(0, ui.unit.max_moxie - ui.unit.moxie))
+
+
+## Content for the flipped callout: the same shape the overlay builds for a skill, so the
+## shot shows a real panel rather than an empty one.
+func _callout_data() -> Dictionary:
+	return {
+		"header": "E1 · Normal Enemy",
+		"subtitle": "Ultimate · 20 Moxie",
+		"body": "Deal 6 Damage to all allies and apply [b]Gloom[/b] for 2 turns.",
+		"footer": "Moxie: 14 / 20 (+6 roll preview)",
+		"accent": Color(1.0, 0.34, 0.32),
+	}
+
 
 
 func _shot(file_name: String) -> void:
@@ -241,7 +386,7 @@ func _fail(message: String) -> void:
 func _finish() -> void:
 	_write_manifest()
 	if _failures.is_empty():
-		print("[snapshots] %d shot(s) written to %s" % [_shots.size(), OUTPUT_DIR])
+		print("[snapshots] %d shot(s) written to %s" % [_shots.size(), _output_dir()])
 		get_tree().quit(0)
 		return
 	print("[snapshots] FAILED: %d problem(s)" % _failures.size())

@@ -179,6 +179,6 @@ Private:
 - L1334-1338 `_ignore_mouse_recursively`
 
 Uses: Card, CardDrag, CardIconCatalog, OutlineGlow, SkillData, SpinePortrait, StatusIconCatalog, Unit
-Used by: GDTest/EnemyUltAuraTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd
+Used by: GDTest/EnemyUltAuraTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd, Tools/SnapshotRunner.gd
 Loads: res://Scenes/BattleScene/Assets/icon.svg, res://Scenes/BattleUnit/Spine/, res://Scenes/Textures/sampleUnits/
 

@@ -129,6 +129,6 @@ Private:
 - L602-603 `_tint`
 
 Uses: OutlineGlow, Unit
-Used by: GDTest/BattleEndTest.gd, GDTest/EnemyUltAuraTest.gd, Scenes/HUD/BattleOverlayController.gd
+Used by: GDTest/BattleEndTest.gd, GDTest/EnemyUltAuraTest.gd, Scenes/HUD/BattleOverlayController.gd, Tools/SnapshotRunner.gd
 Loads: res://Scenes/HUD/MoxieOrbPortrait.gdshader, res://Scenes/HUD/MoxieOrbRing.gdshader, res://Scenes/BattleScene/Assets/icon.svg
 

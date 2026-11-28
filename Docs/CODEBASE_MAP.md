@@ -72,7 +72,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | [`Tools/DiffReviewFormatter.gd`](map/Tools/DiffReviewFormatter.md) | `DiffReviewFormatter` | 216 | Rendering layer behind Tools/review_diff.gd. Turns the plain Dictionary… |
 | [`Tools/DiffReviewParser.gd`](map/Tools/DiffReviewParser.md) | `DiffReviewParser` | 781 | Pure review layer behind Tools/review_diff.gd. Every function takes a un… |
 | [`Tools/GameDataValidator.gd`](map/Tools/GameDataValidator.md) | `GameDataValidator` | 889 | Pure schema and semantic rules for the game data in res://Data/json/. Sp… |
-| [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 250 | Renders the canonical battle screens to PNGs for the "align visually" lo… |
+| [`Tools/SnapshotRunner.gd`](map/Tools/SnapshotRunner.md) | — | 395 | Renders the canonical battle screens to PNGs for the "align visually" lo… |
 | [`Tools/TriageParser.gd`](map/Tools/TriageParser.md) | `TriageParser` | 490 | Pure task-intake layer behind Tools/triage.gd: "forward pressure". Turns… |
 | [`Tools/ValidationReporter.gd`](map/Tools/ValidationReporter.md) | `ValidationReporter` | 235 | GitHub Actions reporting for the game-data validator: workflow annotatio… |
 | [`Tools/check_navigation.gd`](map/Tools/check_navigation.md) | — | 773 | Test harness for the generated navigation set in Docs/. Two jobs: 1. Ver… |

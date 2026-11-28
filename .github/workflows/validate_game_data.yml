@@ -114,6 +114,7 @@ jobs:
           python3 Tools/line_godot_slop_test.py
           python3 Tools/analyze_telemetry_test.py
           python3 Tools/rig_combat_actor_test.py
+          python3 Tools/compare_snapshots_test.py
 
       # The telemetry-ingest Edge Function is TypeScript, and its row shapes, HTTP
       # rules and table write order are unit tested on the Node the runner already
@@ -231,13 +232,18 @@ jobs:
       # The headless gates cannot see pixels. This renders the canonical UI screens
       # with the real OpenGL renderer on a virtual framebuffer and sanity-checks
       # the PNGs, so a layout or shader regression is visible on the pull request.
+      #
+      # `--fixed-fps 60` pins the frame delta, which is what makes a capture comparable
+      # with another one: a reviewer can render `before/` and `after/` around a change and
+      # run `python Tools/compare_snapshots.py` on the pair to get a pixel count per
+      # screen instead of an opinion.
       - name: UI snapshots (rendered)
         timeout-minutes: 10
         run: |
           command -v xvfb-run >/dev/null 2>&1 \
             || (sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri)
           xvfb-run -a -s "-screen 0 1280x720x24" godot --audio-driver Dummy \
-            --rendering-driver opengl3 --path . res://Tools/snapshot_runner.tscn
+            --rendering-driver opengl3 --fixed-fps 60 --path . res://Tools/snapshot_runner.tscn
 
       # The images leave the runner as an artifact; reports/ is gitignored.
       - name: Upload UI snapshots
