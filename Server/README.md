@@ -115,6 +115,31 @@ endpoint set, runs spool into `user://telemetry/outbox/` via
 them in background batches; with no endpoint the game stays entirely local.
 Connect Metabase / Grafana / Supabase Studio straight to the views above.
 
+## Testing the ingest
+
+The row-building rules live in `functions/telemetry-ingest/rows.ts` — a pure module
+with no Deno, HTTP or Supabase dependency — so they can be unit tested offline:
+
+```powershell
+node --test Server/supabase/functions/telemetry-ingest/
+```
+
+The suite covers the one rule that has bitten this pipeline: a run's events are
+POSTed in batches of at most `MAX_EVENTS` (500), so one batch can carry only the
+`run_started` half of a run while a later batch carries only its `run_ended` half.
+Each half therefore writes **only the columns it owns** — start columns are
+insert-only, result columns are a separate update — so a run split across the batch
+boundary is never half-erased. (Before this, a full-row upsert from an end-only
+batch blanked the run's `balance_hash`, `run_seed`, `flags` and `player_anon_id`,
+detaching it from its balance patch, while a start-only batch recorded a battle that
+was still being played as `victory = false` — which is exactly how `v_flag_cohorts`
+and `v_run_overview` tell a finished run from an abandoned one. The same split
+applies to `telemetry_turns`.)
+
+The suite is not wired into CI yet: it needs a pinned `actions/setup-node`, and this
+repository's action-pinning rule requires a verified SHA for every action. Run it
+locally, or add it to `Tools/preflight.ps1` once a Node version is pinned.
+
 ## Privacy
 
 - Collection is **opt-in only**. Every launch shows
