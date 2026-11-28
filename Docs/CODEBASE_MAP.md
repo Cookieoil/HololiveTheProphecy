@@ -47,7 +47,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks,… |
 | [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 1174 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flo… |
 | [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 1021 | Records every decision a player makes, for game design and balancing. It is a passive observer:… |
-| [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 238 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSO… |
+| [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 426 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSO… |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 670 | extends GameUI, 2 signal(s), 11 export(s), 46 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 649 | extends Control, 3 signal(s), 28 export(s), 37 function(s) |
 | [`Scenes/BattleUnit/StatusIconCatalog.gd`](map/Scenes/BattleUnit/StatusIconCatalog.md) | `StatusIconCatalog` | 363 | Catalog for character buff/debuff status icons (separate from CardIconCatalog). Provides lookup… |
@@ -89,7 +89,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Tools/validate_gameData.gd`](map/Tools/validate_gameData.md) | — | 1263 | Headless, offline validator for the whole game-data pipeline. res://Data/json/ is the single sou… |
 | [`Tools/xlsx_reader.gd`](map/Tools/xlsx_reader.md) | `XlsxReader` | 181 | Reads an .xlsx workbook (a zip of XML parts) into { sheet_name: Array[Array[String]] }. Every ce… |
 
-## 2. Tests at a glance (27)
+## 2. Tests at a glance (28)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -117,6 +117,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`GDTest/TelemetryConsentTest.gd`](map/GDTest/TelemetryConsentTest.md) | `TelemetryConsentTest` | 362 | Locks the telemetry opt-in gate: - an unanswered consent is UNDECIDED and needs the prompt - "Ag… |
 | [`GDTest/TelemetryFoundationTest.gd`](map/GDTest/TelemetryFoundationTest.md) | `TelemetryFoundationTest` | 60 | Locks the data foundation the telemetry system keys on: every UnitData and SkillData carries its… |
 | [`GDTest/TelemetryTest.gd`](map/GDTest/TelemetryTest.md) | `TelemetryTest` | 697 | Locks the gameplay recorder end to end: a real battle through GameManager must produce run / wav… |
+| [`GDTest/TelemetryUploaderTest.gd`](map/GDTest/TelemetryUploaderTest.md) | `TelemetryUploaderTest` | 256 | Locks the uploader's delivery rules (Managers/TelemetryUploader.gd), which decide whether a fini… |
 | [`GDTest/TooltipIconCatalogTest.gd`](map/GDTest/TooltipIconCatalogTest.md) | `TooltipIconCatalogTest` | 171 | Tests for the inline tooltip icon system (TooltipIconCatalog + TooltipIconEntry). Covers: left-o… |
 | [`GDTest/TriageParserTest.gd`](map/GDTest/TriageParserTest.md) | `TriageParserTest` | 198 | Locks the task-intake rules (Tools/TriageParser.gd): every threshold, the ordering, the per-kind… |
 | [`GDTest/UiSnapshotTest.gd`](map/GDTest/UiSnapshotTest.md) | `UiSnapshotTest` | 82 | Locks the seams the UI snapshot pipeline (Tools/snapshot_runner.tscn) relies on: a fixed seed mu… |
@@ -175,4 +176,4 @@ Top-level keys:
 
 ---
 
-Indexed 87 script(s) (60 game, 27 test), 5 scene(s), 6 data file(s).
+Indexed 88 script(s) (60 game, 28 test), 5 scene(s), 6 data file(s).
