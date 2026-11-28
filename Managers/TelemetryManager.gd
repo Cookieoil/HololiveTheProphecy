@@ -335,7 +335,7 @@ func begin_decision(state: GameState, intents: Array[EnemyIntent]) -> void:
 		"intents": TelemetrySchema.intents_snapshot(intents),
 		"metrics": TelemetrySchema.battlefield_metrics(state, intents),
 	}
-	_decision_offered = _build_offered(state)
+	_decision_offered = TelemetryDecision.offered(state, _intents)
 
 
 ## Marks the moment the player's answer arrived (thinking time ends here, before
@@ -572,129 +572,6 @@ func _append_damage_event(entry: Dictionary) -> void:
 		decision_rows.append(entry.duplicate())
 
 
-## Everything the player could have done at this instant: the full hand, every
-## legal (ally, card) play, every legal merge pair, the ready Ultimates, the living
-## enemies and how threatening their intents are. This is what makes a "pick rate"
-## metric meaningful - the denominator, not just the choice.
-func _build_offered(state: GameState) -> Dictionary:
-	var living_ally_ids: Array = []
-	var dead_ally_ids: Array = []
-	var ready_ultimates: Array = []
-	var ready_ultimate_skills: Array = []
-	for unit: Unit in state.allies:
-		if unit.is_dead:
-			dead_ally_ids.append(TelemetrySchema.unit_id_of(unit))
-			continue
-		living_ally_ids.append(TelemetrySchema.unit_id_of(unit))
-		if unit.can_cast_ultimate:
-			ready_ultimates.append(TelemetrySchema.unit_ref(unit))
-			var ult: SkillData = unit.data.ultimate if unit.data != null else null
-			var ult_id: String = TelemetrySchema.skill_id_of(ult)
-			if not ult_id.is_empty() and not ready_ultimate_skills.has(ult_id):
-				ready_ultimate_skills.append(ult_id)
-
-	var card_keys: Array = []
-	for card: Card in state.hand:
-		if card_keys.size() >= TelemetrySchema.MAX_ROWS:
-			break
-		card_keys.append(TelemetrySchema.card_key(card))
-
-	var options: Array = _playable_skill_options(state)
-	var playable_skill_ids: Array = []
-	for option: Dictionary in options:
-		var skill_id: String = str(option.get("skill_id", ""))
-		if not skill_id.is_empty() and not playable_skill_ids.has(skill_id):
-			playable_skill_ids.append(skill_id)
-
-	var active_enemy_ids: Array = []
-	var intent_max_roll: int = 0
-	var intent_condition_met: bool = false
-	var intent_ult_imminent: bool = false
-	for intent: EnemyIntent in _intents:
-		if intent.enemy == null or intent.enemy.is_dead:
-			continue
-		active_enemy_ids.append(TelemetrySchema.unit_id_of(intent.enemy))
-		intent_max_roll = maxi(intent_max_roll, intent.effective_value)
-		if intent.condition_met:
-			intent_condition_met = true
-		if intent.will_trigger_ultimate():
-			intent_ult_imminent = true
-
-	return {
-		"actions_left": state.actions_left,
-		"merges_left": state.merges_left,
-		"hand_size": state.hand.size(),
-		"cards_in_hand": TelemetrySchema.cards_snapshot(state.hand),
-		"offered_card_keys": card_keys,
-		"living_ally_ids": living_ally_ids,
-		"dead_ally_ids": dead_ally_ids,
-		"playable_skill_ids": playable_skill_ids,
-		"playable_skills": options,
-		"legal_merge_pairs": _legal_merge_pairs(state),
-		"ready_ultimates": ready_ultimates,
-		"ready_ultimate_skills": ready_ultimate_skills,
-		"active_enemy_ids": active_enemy_ids,
-		"intent_max_roll": intent_max_roll,
-		"intent_condition_met": intent_condition_met,
-		"intent_ultimate_imminent": intent_ult_imminent,
-	}
-
-
-## Every (ally, card) play the player could legally make right now. This is the
-## true denominator behind a skill pick rate: "striker_1 was playable on N
-## decisions and was the choice on M of them".
-func _playable_skill_options(state: GameState) -> Array:
-	var options: Array = []
-	for unit: Unit in state.allies:
-		if unit.is_dead or unit.data == null:
-			continue
-		for card: Card in state.hand:
-			if card.costs_action() and state.actions_left <= 0:
-				continue
-			var skill: SkillData = unit.data.skill_1 if card.is_odd() else unit.data.skill_2
-			var skill_id: String = TelemetrySchema.skill_id_of(skill)
-			if skill_id.is_empty():
-				continue
-			if options.size() >= TelemetrySchema.MAX_ROWS:
-				return options
-			options.append({
-				"ally_id": TelemetrySchema.unit_id_of(unit),
-				"slot": unit.slot_index,
-				"skill_id": skill_id,
-				"skill_slot": 1 if card.is_odd() else 2,
-				"card_key": TelemetrySchema.card_key(card),
-				"card_effective_value": card.get_effective_value(),
-				"costs_action": card.costs_action(),
-				"is_merged": card.is_merged,
-				"is_double_merged": card.is_double_merged,
-			})
-	return options
-
-
-func _legal_merge_pairs(state: GameState) -> Array:
-	var pairs: Array = []
-	var hand: Array[Card] = state.hand
-	for i: int in hand.size():
-		for j: int in range(i + 1, hand.size()):
-			if pairs.size() >= TelemetrySchema.MAX_ROWS:
-				return pairs
-			var a: Card = hand[i]
-			var b: Card = hand[j]
-			if not state.can_merge_pair(a, b):
-				continue
-			var is_double: bool = a.is_merged or b.is_merged
-			var result_value: int = a.get_effective_value() + b.get_effective_value()
-			if is_double:
-				result_value += 1
-			pairs.append({
-				"a": a.id, "b": b.id,
-				"kind": "double" if is_double else "cross",
-				"a_value": a.get_effective_value(), "b_value": b.get_effective_value(),
-				"result_value": result_value,
-			})
-	return pairs
-
-
 func _decision_type(action_type: String) -> String:
 	match action_type:
 		"play":
@@ -716,11 +593,11 @@ func _decision_type(action_type: String) -> String:
 func _chosen(action_type: String, action: Dictionary, state: GameState) -> Dictionary:
 	match action_type:
 		"play":
-			return _chosen_play(action, state)
+			return TelemetryDecision.chosen_play(action, state)
 		"merge":
-			return _chosen_merge(action)
+			return TelemetryDecision.chosen_merge(action, _merge_result)
 		"ultimate":
-			return _chosen_ultimate(action)
+			return TelemetryDecision.chosen_ultimate(action)
 		"convert":
 			return {"applied": _int(_decision_ctx.get("actions_left", 0)) > state.actions_left}
 		"end_turn":
@@ -734,46 +611,6 @@ func _chosen(action_type: String, action: Dictionary, state: GameState) -> Dicti
 			return {"applied": true, "command": str(action.get("command", ""))}
 		_:
 			return {"applied": false}
-
-
-func _chosen_play(action: Dictionary, state: GameState) -> Dictionary:
-	var card: Card = action.get("card", null)
-	var ally: Unit = action.get("target_ally", null)
-	var applied: bool = card != null and not state.hand.has(card)
-	var payload: Dictionary = {
-		"applied": applied,
-		"card": TelemetrySchema.card_snapshot(card),
-		"target_ally_id": TelemetrySchema.unit_id_of(ally),
-		"target_slot": ally.slot_index if ally != null else -1,
-	}
-	if applied and ally != null and ally.data != null:
-		var skill: SkillData = ally.data.skill_1 if card.is_odd() else ally.data.skill_2
-		payload["skill_id"] = TelemetrySchema.skill_id_of(skill)
-		payload["skill_slot"] = 1 if card.is_odd() else 2
-	return payload
-
-
-func _chosen_merge(action: Dictionary) -> Dictionary:
-	var card_a: Card = action.get("card_a", null)
-	var card_b: Card = action.get("card_b", null)
-	return {
-		"applied": not _merge_result.is_empty(),
-		"card_a": TelemetrySchema.card_snapshot(card_a),
-		"card_b": TelemetrySchema.card_snapshot(card_b),
-		"result": _merge_result,
-	}
-
-
-func _chosen_ultimate(action: Dictionary) -> Dictionary:
-	var caster: Unit = action.get("caster", null)
-	var payload: Dictionary = {
-		"applied": caster != null and caster.ult_used_this_turn,
-		"caster_id": TelemetrySchema.unit_id_of(caster),
-		"slot": caster.slot_index if caster != null else -1,
-	}
-	if caster != null and caster.data != null:
-		payload["ultimate_skill_id"] = TelemetrySchema.skill_id_of(caster.data.ultimate)
-	return payload
 
 
 ## Subscribes to the combat signals so outcome deltas need no call sites.

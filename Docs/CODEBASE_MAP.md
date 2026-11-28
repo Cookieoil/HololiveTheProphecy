@@ -24,7 +24,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 - **Balancing:** section 5 lists each JSON file's shape, entry count and keys, so the file rarely has to be opened.
 - **Measure it:** `godot --headless --path . --script res://Tools/check_navigation.gd -- --benchmark` prints what each recipe costs to read.
 
-## 1. Game scripts at a glance (61)
+## 1. Game scripts at a glance (62)
 
 | Script | class_name | lines | role |
 | --- | --- | --- | --- |
@@ -38,6 +38,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Core/Telemetry/HttpBatchSink.gd`](map/Core/Telemetry/HttpBatchSink.md) | `HttpBatchSink` | 54 | Stage 2 telemetry sink: the same crash-safe, per-event spooling as JsonlFileSink, but the finish… |
 | [`Core/Telemetry/JsonlFileSink.gd`](map/Core/Telemetry/JsonlFileSink.md) | `JsonlFileSink` | 94 | Stage 1 telemetry sink: appends one JSON object per line to a per-run file under user://telemetr… |
 | [`Core/Telemetry/TelemetryConsent.gd`](map/Core/Telemetry/TelemetryConsent.md) | `TelemetryConsent` | 201 | Explicit opt-in gate for gameplay telemetry. The player is asked on every launch, before the fir… |
+| [`Core/Telemetry/TelemetryDecision.gd`](map/Core/Telemetry/TelemetryDecision.md) | `TelemetryDecision` | 220 | Pure shapers for one recorded decision: what the player could have done (`offered`) and what the… |
 | [`Core/Telemetry/TelemetrySchema.gd`](map/Core/Telemetry/TelemetrySchema.md) | `TelemetrySchema` | 313 | Pure serialisers that turn live game objects into the plain Dictionaries the telemetry spool sto… |
 | [`Core/Telemetry/TelemetrySink.gd`](map/Core/Telemetry/TelemetrySink.md) | `TelemetrySink` | 33 | Abstract destination for telemetry events. The recorder never cares where an event goes: Stage 1… |
 | [`Core/Unit.gd`](map/Core/Unit.md) | `Unit` | 387 | Runtime instance of a unit on the board. Mutable HP/Shield state. This is all just data |
@@ -47,7 +48,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd
 | [`Managers/DebugCommandRunner.gd`](map/Managers/DebugCommandRunner.md) | `DebugCommandRunner` | 401 | Tester-only mutations behind the in-game Debug menu (Scenes/HUD/DebugMenuPopup.gd). Extracted fr… |
 | [`Managers/EventBus.gd`](map/Managers/EventBus.md) | — | 43 | This is used as a global signal bus. Add as an Autoload. Used for UI logging and passive hooks,… |
 | [`Managers/GameManager.gd`](map/Managers/GameManager.md) | `GameManager` | 885 | Orchestrates the full game loop. Holds GameState + GameUI references. All player interaction flo… |
-| [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 1021 | Records every decision a player makes, for game design and balancing. It is a passive observer:… |
+| [`Managers/TelemetryManager.gd`](map/Managers/TelemetryManager.md) | `TelemetryManager` | 858 | Records every decision a player makes, for game design and balancing. It is a passive observer:… |
 | [`Managers/TelemetryUploader.gd`](map/Managers/TelemetryUploader.md) | `TelemetryUploader` | 426 | Drains the telemetry outbox to the metric server, in the background. It picks up the per-run JSO… |
 | [`Scenes/BattleScene/BattleScene.gd`](map/Scenes/BattleScene/BattleScene.md) | `BattleScene` | 670 | extends GameUI, 2 signal(s), 11 export(s), 46 function(s) |
 | [`Scenes/BattleUnit/SpinePortrait.gd`](map/Scenes/BattleUnit/SpinePortrait.md) | `SpinePortrait` | 649 | extends Control, 3 signal(s), 28 export(s), 37 function(s) |
@@ -177,4 +178,4 @@ Top-level keys:
 
 ---
 
-Indexed 89 script(s) (61 game, 28 test), 5 scene(s), 6 data file(s).
+Indexed 90 script(s) (62 game, 28 test), 5 scene(s), 6 data file(s).

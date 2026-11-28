@@ -6,7 +6,6 @@
     "max_complexity": 12
   },
   "files": {
-    "Managers/TelemetryManager.gd": 1020,
     "Scenes/BattleUnit/UnitUI.gd": 1340,
     "Scenes/Cards/CardUI.gd": 1376,
     "Tools/validate_gameData.gd": 1262
@@ -23,7 +22,6 @@
   "complexity": {
     "Core/DataLoader.gd::_build_config": 15,
     "Managers/GameManager.gd::_run_game_loop": 19,
-    "Managers/TelemetryManager.gd::_build_offered": 13,
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 18,
     "Scenes/BattleUnit/UnitUI.gd::_load_unit_texture": 15,
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 30,

@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Managers/TelemetryManager.gd` — `class_name TelemetryManager` extends `RefCounted`
 
-`1021` lines · [back to the map](../../CODEBASE_MAP.md)
+`858` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Records every decision a player makes, for game design and balancing. It is a passive observer: GameManager (or a test) calls the `begin_*` / `record_*` hooks a…
 
@@ -93,37 +93,31 @@ Private:
 - L529-558 `_new_outcome`
 - L561-563 `_accumulate`
 - L566-572 `_append_damage_event`
-- L579-640 `_build_offered`
-- L646-671 `_playable_skill_options`
-- L674-695 `_legal_merge_pairs`
-- L698-713 `_decision_type`
-- L716-736 `_chosen`
-- L739-753 `_chosen_play`
-- L756-764 `_chosen_merge`
-- L767-776 `_chosen_ultimate`
-- L780-792 `_connect_bus`
-- L795-816 `_disconnect_bus`
-- L819-823 `_ally_lineup`
-- L828-833 `_living_enemy_ids`
-- L837-851 `_load_or_create_player_id`
-- L854-855 `_project_version`
-- L861-877 `_load_and_bump_run_number`
-- L882-883 `_run_count_path`
-- L888-889 `_upload_endpoint`
-- L894-896 `_current_balance_hash`
-- L899-900 `_int`
-- L904-934 `_on_damage_dealt`
-- L937-942 `_on_shield_gained`
-- L945-950 `_on_shield_reduced`
-- L953-954 `_on_unit_healed`
-- L957-965 `_on_unit_died`
-- L971-988 `_death_cause`
-- L991-992 `_on_card_drawn`
-- L995-996 `_on_card_discarded`
-- L999-1013 `_on_card_value_changed`
-- L1016-1017 `_on_wave_started`
+- L575-590 `_decision_type`
+- L593-613 `_chosen`
+- L617-629 `_connect_bus`
+- L632-653 `_disconnect_bus`
+- L656-660 `_ally_lineup`
+- L665-670 `_living_enemy_ids`
+- L674-688 `_load_or_create_player_id`
+- L691-692 `_project_version`
+- L698-714 `_load_and_bump_run_number`
+- L719-720 `_run_count_path`
+- L725-726 `_upload_endpoint`
+- L731-733 `_current_balance_hash`
+- L736-737 `_int`
+- L741-771 `_on_damage_dealt`
+- L774-779 `_on_shield_gained`
+- L782-787 `_on_shield_reduced`
+- L790-791 `_on_unit_healed`
+- L794-802 `_on_unit_died`
+- L808-825 `_death_cause`
+- L828-829 `_on_card_drawn`
+- L832-833 `_on_card_discarded`
+- L836-850 `_on_card_value_changed`
+- L853-854 `_on_wave_started`
 
-Uses: Card, DataLoader, EnemyIntent, GameDatabase, GameState, HttpBatchSink, JsonlFileSink, SkillData, TelemetryConsent, TelemetrySchema, TelemetrySink, TelemetryUploader, Unit
+Uses: Card, DataLoader, EnemyIntent, GameDatabase, GameState, HttpBatchSink, JsonlFileSink, SkillData, TelemetryConsent, TelemetryDecision, TelemetrySchema, TelemetrySink, TelemetryUploader, Unit
 Used by: GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, Managers/GameManager.gd
 Loads: —
 
