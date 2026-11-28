@@ -8,15 +8,17 @@ extends Node
 ## it is and tries again later, so nothing is ever lost or uploaded twice.
 ##
 ## A failure is only ever retried when retrying could help. A dropped connection, a
-## timeout, a 408/429 or a 5xx is transient: the file stays in the outbox and the
-## pass is retried with exponential backoff. A 400/413/422 means the batch itself
-## is wrong, so retrying it forever would starve every later run queued behind it:
-## that file is quarantined in user://telemetry/rejected/ instead and the drain
-## carries on with the next one.
+## timeout, a 408/429, a 401/403 or a 5xx is transient: the file stays in the outbox
+## and the pass is retried with exponential backoff. A 401/403 is a deployment or key
+## problem rather than a bad batch, so it must never quarantine the run. A 400/413/422
+## means the batch itself is wrong, so retrying it forever would starve every later run
+## queued behind it: that file is quarantined in user://telemetry/rejected/ instead and
+## the drain carries on with the next one.
 ##
-## Configure with the project settings `telemetry/endpoint` and
-## `telemetry/anon_key`. With no endpoint the game stays local-only and this node
-## does nothing at all.
+## Configure with the project settings `telemetry/endpoint` and `telemetry/anon_key`;
+## the key is sent as both `apikey` and `Authorization: Bearer`, which are the two the
+## Supabase gateway and the Edge function's JWT check read. With no endpoint the game
+## stays local-only and this node does nothing at all.
 ##
 ## @author TheGreatJellyfish
 ## @version 11/27/2026
@@ -51,6 +53,8 @@ const ARCHIVE_KEEP: int = 200
 #region Exports
 ## Overrides the `telemetry/endpoint` project setting when set (tests use this).
 @export var endpoint_override: String = ""
+## Overrides the `telemetry/anon_key` project setting when set (tests use this).
+@export var anon_key_override: String = ""
 #endregion
 
 #region Public Variables
@@ -132,6 +136,8 @@ func endpoint() -> String:
 
 
 func anon_key() -> String:
+	if not anon_key_override.is_empty():
+		return anon_key_override
 	return str(ProjectSettings.get_setting(ANON_KEY_SETTING, ""))
 
 
@@ -256,10 +262,19 @@ func _post_current() -> void:
 		_fail_current()
 
 
+## Supabase reads the anon key twice: `apikey` at the API gateway and
+## `Authorization: Bearer` at the Edge function's JWT check. Sending only `apikey` is a
+## 401 on the default deployment (`supabase functions deploy telemetry-ingest`), which is
+## why both are sent. Both carry the same public, client-safe key - the service role key
+## never leaves the server - so neither header is a secret.
 func _headers() -> PackedStringArray:
+	var key: String = anon_key()
+	if key.is_empty():
+		return PackedStringArray(["Content-Type: application/json"])
 	return PackedStringArray([
 		"Content-Type: application/json",
-		"apikey: " + anon_key(),
+		"apikey: " + key,
+		"Authorization: Bearer " + key,
 	])
 
 
@@ -305,11 +320,19 @@ func _is_success(result: int, code: int) -> bool:
 	return result == HTTPRequest.RESULT_SUCCESS and code >= 200 and code < 300
 
 
-## A retry can help: the connection dropped, the server timed out or throttled, or
-## it is temporarily broken. Any other 4xx cannot be fixed by sending the same bytes
-## again, so it must not be retried.
+## A retry can help: the connection dropped, the server timed out or throttled, or it is
+## temporarily broken.
+##
+## 401/403 belong here rather than with the quarantined codes: they mean *our* credential
+## (or the server's JWT setting) is wrong, not that the batch is bad. A redeploy or a
+## rotated key fixes them, and quarantining real player runs over a deployment mistake
+## would throw the data away for good, so the file stays queued instead.
+##
+## Any other 4xx is the batch itself, and sending the same bytes again cannot help.
 func _is_transient(result: int, code: int) -> bool:
 	if result != HTTPRequest.RESULT_SUCCESS:
+		return true
+	if code == HTTPClient.RESPONSE_UNAUTHORIZED or code == HTTPClient.RESPONSE_FORBIDDEN:
 		return true
 	if code == HTTPClient.RESPONSE_REQUEST_TIMEOUT or code == HTTPClient.RESPONSE_TOO_MANY_REQUESTS:
 		return true

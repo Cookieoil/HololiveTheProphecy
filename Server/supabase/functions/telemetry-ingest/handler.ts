@@ -62,11 +62,19 @@ const json = (body: unknown, status = 200): Response =>
 /**
  * The exact order the tables must be written in.
  *
- * A run's events can straddle the batch boundary, so a batch may hold only one half of
- * a record. Start halves are therefore insert-only (`ignoreDuplicates`) and come
- * *before* the matching end half, which updates only its own columns - that is what
- * stops the later half blanking the earlier one. Writing the start half first also
- * means the row an end half updates always exists, so the foreign keys resolve.
+ * A run's events can straddle the batch boundary, so a batch may hold only one part of
+ * a record - or, for a run longer than MAX_EVENTS, no start or end half at all.
+ *
+ * - The skeleton write comes first and is insert-only: it only guarantees the `run_id`
+ *   its turns and decisions point at, and being insert-only it can never blank a row
+ *   that is already there.
+ * - The start halves then update their own columns (`ignoreDuplicates: false`), so a
+ *   start batch that arrives *after* an end-only batch still fills them in - the failure
+ *   that used to leave a run with a null `balance_hash` and `run_seed`.
+ * - The end halves update theirs. Start and end own disjoint column sets, so neither
+ *   direction can blank the other; rows.test.ts pins that.
+ * - Children last, both so the parent exists (the foreign keys resolve) and so a
+ *   partially applied batch leaves orphans rather than dangling references.
  */
 export const writesFor = (rows: ReturnType<typeof collectBatch>): Write[] => [
   {
@@ -76,8 +84,13 @@ export const writesFor = (rows: ReturnType<typeof collectBatch>): Write[] => [
   },
   {
     table: "telemetry_runs",
-    rows: rows.runStarts,
+    rows: rows.runSkeletons,
     options: { onConflict: "run_id", ignoreDuplicates: true },
+  },
+  {
+    table: "telemetry_runs",
+    rows: rows.runStarts,
+    options: { onConflict: "run_id", ignoreDuplicates: false },
   },
   {
     table: "telemetry_runs",
@@ -87,7 +100,7 @@ export const writesFor = (rows: ReturnType<typeof collectBatch>): Write[] => [
   {
     table: "telemetry_turns",
     rows: rows.turnStarts,
-    options: { onConflict: "run_id,turn_number", ignoreDuplicates: true },
+    options: { onConflict: "run_id,turn_number", ignoreDuplicates: false },
   },
   {
     table: "telemetry_turns",
@@ -139,6 +152,7 @@ export const createIngestHandler =
     return json({
       stored: {
         balance_versions: rows.balance.length,
+        run_skeletons: rows.runSkeletons.length,
         run_starts: rows.runStarts.length,
         run_ends: rows.runEnds.length,
         turn_starts: rows.turnStarts.length,

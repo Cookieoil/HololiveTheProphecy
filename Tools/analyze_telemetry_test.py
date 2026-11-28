@@ -227,9 +227,9 @@ check("an abandoned run is not counted as a loss, even when it was won",
       close(abandoned["rows"]["skill:filler"]["advantage_adjusted_lift"], -0.1),
       str(abandoned["rows"]["skill:filler"]))
 
-## The lift averages the per-stratum deltas over the strata the entry appeared in. One
-## stratum where the baseline was already 100% (delta 0) and one even fight (delta 0.5)
-## average to 0.25 - a single-stratum formula would say 0.5.
+## The lift is the mean over plays, not over strata. Here the counts happen to be equal -
+## one stratum whose baseline was already 100% (delta 0) and one even fight (delta 0.5) -
+## so both formulas say 0.25. The lopsided fixture below separates them.
 MIXED_ROWS = [run_started("w1"), run_ended("w1", victory=True),
               run_started("w2"), run_ended("w2", victory=True),
               run_started("l3"), run_ended("l3", victory=False)]
@@ -243,12 +243,57 @@ mixed = report.match_presence([
     decision("l3", "play_card", {"applied": True, "skill_id": "other", "card": {"key": "3"}},
              {"playable_skill_ids": ["other"]}, metrics(0.6, 0.9, 0.1)),
 ], report.index_runs(MIXED_ROWS))
-check("the lift is the mean of the per-stratum deltas",
+check("a mixed-strata lift averages the plays it appeared in",
       close(mixed["rows"]["skill:mixed"]["advantage_adjusted_lift"], 0.25),
       str(mixed["rows"]["skill:mixed"]))
 check("each stratum keeps its own baseline",
       close(mixed["baselines"]["winning"], 1.0) and close(mixed["baselines"]["even"], 0.5),
       str(mixed["baselines"]))
+
+## Equal counts hide the weighting, so this fixture is lopsided: `heavy` is played three
+## times on an already-winning board (baseline 100%, so delta 0) and once in an even fight
+## (delta 0.5). Weighting the strata equally would report 0.25; averaging per play reports
+## 0.125, which is the number `v_win_loss_presence` computes in SQL.
+WINNING_BOARD = metrics(0.9, 0.1, 0.0)
+LOPSIDED_ROWS = [run_started("a"), run_ended("a", victory=True),
+                 run_started("b"), run_ended("b", victory=True),
+                 run_started("c"), run_ended("c", victory=False),
+                 run_started("d"), run_ended("d", victory=False),
+                 run_started("e"), run_ended("e", victory=False)]
+
+
+def winning_decision(run_id: str, skill_id: str) -> dict:
+    return decision(run_id, "play_card",
+                    {"applied": True, "skill_id": skill_id, "card": {"key": "3"}},
+                    {"playable_skill_ids": [skill_id]}, WINNING_BOARD)
+
+
+lopsided = report.match_presence([
+    # Five even-fight plays (the `heavy` play below is counted in that stratum too), and
+    # three of those six even-fight plays were won: the even baseline is 0.5.
+    even_decision("a", "filler"),
+    even_decision("b", "filler"),
+    even_decision("c", "filler"),
+    even_decision("d", "filler"),
+    even_decision("e", "filler"),
+    winning_decision("a", "heavy"),
+    winning_decision("a", "heavy"),
+    winning_decision("b", "heavy"),
+    even_decision("a", "heavy"),
+], report.index_runs(LOPSIDED_ROWS))
+check("a lopsided mix weights the lift by play, not by stratum",
+      close(lopsided["rows"]["skill:heavy"]["advantage_adjusted_lift"], 0.125),
+      str(lopsided["rows"]["skill:heavy"]))
+check("...which is not the stratum-equal average of 0.25",
+      not close(lopsided["rows"]["skill:heavy"]["advantage_adjusted_lift"], 0.25),
+      str(lopsided["rows"]["skill:heavy"]))
+check("its raw win rate is still 100% - the trap the lift exists to remove",
+      close(lopsided["rows"]["skill:heavy"]["raw_win_rate"], 1.0),
+      str(lopsided["rows"]["skill:heavy"]))
+check("the winning-board baseline is every play on a winning board",
+      close(lopsided["baselines"]["winning"], 1.0), str(lopsided["baselines"]))
+check("the even baseline counts every play in that stratum",
+      close(lopsided["baselines"]["even"], 0.5), str(lopsided["baselines"]))
 
 
 # ------------------------------------------------------------ labels and skips

@@ -336,6 +336,12 @@ def match_presence(decisions: list[dict], runs: dict[str, dict]) -> dict:
     and Y% of losing ones", while `lift` subtracts the win rate of the exact
     advantage stratum the play happened in, so a win-more card does not look
     overpowered (the Madness trap).
+
+    The subtraction is averaged over *plays*, never over strata, because that is what
+    `v_win_loss_presence` in Server/supabase/migrations/002_analytics_views.sql computes
+    (`avg(win - baseline)`) and the hosted dashboard and this report have to agree. It
+    also keeps a rare stratum from carrying half the answer: a card played 99 times in an
+    even fight and once while already winning should not read as a 50/50 blend.
     """
     kinds = ("skill", "ultimate", "card")
     played_matches = {"skill": 0, "ultimate": 0, "card": 0}
@@ -388,20 +394,20 @@ def match_presence(decisions: list[dict], runs: dict[str, dict]) -> dict:
     for kind in kinds:
         for label, count in total[kind].items():
             lift = 0.0
-            strata = 0
             for stratum, sub in entry_total[kind][label].items():
                 if sub <= 0:
                     continue
                 baseline = stratum_wins[stratum] / stratum_total[stratum]
-                lift += (entry_wins[kind][label][stratum] / sub) - baseline
-                strata += 1
+                # Weighted by the plays in that stratum, so `lift / count` is the mean
+                # over plays - the same number v_win_loss_presence reports.
+                lift += ((entry_wins[kind][label][stratum] / sub) - baseline) * sub
             ids = match_ids[kind][label]
             won_ids = sum(1 for rid in ids if rid in runs and runs[rid]["victory"] and not runs[rid]["abandoned"])
             lost_ids = sum(1 for rid in ids if rid in runs and not runs[rid]["victory"] and not runs[rid]["abandoned"])
             rows[kind + ":" + label] = {
                 "casts": count,
                 "raw_win_rate": (wins[kind][label] / count) if count else 0.0,
-                "advantage_adjusted_lift": (lift / strata) if strata else 0.0,
+                "advantage_adjusted_lift": (lift / count) if count else 0.0,
                 "matches": len(ids),
                 "in_wins": won_ids,
                 "in_losses": lost_ids,

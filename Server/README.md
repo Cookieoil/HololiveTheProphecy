@@ -84,6 +84,8 @@ Server/supabase/
   migrations/004_flag_cohorts_by_balance.sql  # v_flag_cohorts scoped per balance patch
   migrations/005_exclude_abandoned_from_flag_cohorts.sql  # ... and never counting an
                                          # abandoned run as a loss
+  migrations/006_view_parity_with_the_local_report.sql  # v_replayable_runs production
+                                         # only, and the missing-metrics stratum
   functions/telemetry-ingest/index.ts    # validated, idempotent batch ingest
 ```
 
@@ -103,10 +105,15 @@ Deploy:
 ```powershell
 cd Server
 supabase link --project-ref <ref>
-supabase db push                                     # applies both migrations
-supabase functions deploy telemetry-ingest
-supabase functions deploy telemetry-ingest --no-verify-jwt   # if you gate client-side
+supabase db push                                     # applies every migration in order
+supabase functions deploy telemetry-ingest           # JWT-verified, the default
+supabase functions deploy telemetry-ingest --no-verify-jwt   # only if you gate client-side
 ```
+
+The client sends the anon key as **both** `apikey` and `Authorization: Bearer`
+(`Managers/TelemetryUploader.gd`), which are the two headers Supabase's gateway and the
+Edge function's JWT check read, so the default JWT-verified deployment accepts it without
+the `--no-verify-jwt` flag.
 
 Point the client at it by setting the project settings `telemetry/endpoint` and
 `telemetry/anon_key` (the `[telemetry]` section of `project.godot`). With an
@@ -121,8 +128,8 @@ The function is three modules, and that split is what makes it testable:
 
 | file | what it owns | verified by |
 | --- | --- | --- |
-| `functions/telemetry-ingest/rows.ts` | the event → database row shapes | `node --test` (11 tests) |
-| `functions/telemetry-ingest/handler.ts` | the status codes, the envelope validation and the table write order | `node --test` (9 tests) |
+| `functions/telemetry-ingest/rows.ts` | the event → database row shapes | `node --test` (16 tests) |
+| `functions/telemetry-ingest/handler.ts` | the status codes, the envelope validation and the table write order | `node --test` (11 tests) |
 | `functions/telemetry-ingest/index.ts` | the Deno entrypoint: the `esm.sh` import and the `Deno.serve` call | `deno check` |
 
 ```powershell
@@ -131,17 +138,25 @@ deno check  Server/supabase/functions/telemetry-ingest/index.ts     # types
 ```
 
 `handler.ts` takes its environment through a two-method seam (`getEnv`, `createDb`), so
-the suite drives the real `Request`/`Response` path against a stateful in-memory
-database that reproduces both `ON CONFLICT DO NOTHING` and a column-level `DO UPDATE`.
-That is what lets it assert the rule this pipeline exists to protect: a run's events are
-POSTed in batches of at most `MAX_EVENTS` (500), so one batch can carry only the
-`run_started` half of a run while a later batch carries only its `run_ended` half. Start
-columns are insert-only and are written **before** the result columns, so neither half
-can blank the other. (Before this, a full-row upsert from an end-only batch blanked the
-run's `balance_hash`, `run_seed`, `flags` and `player_anon_id`, detaching it from its
-balance patch, while a start-only batch recorded a battle that was still being played as
-`victory = false` — exactly the flag `v_flag_cohorts` and `v_run_overview` use to tell a
-finished run from an abandoned one. The same split applies to `telemetry_turns`.)
+the suite drives the real `Request`/`Response` path against a stateful in-memory database
+that reproduces `ON CONFLICT DO NOTHING` and a column-level `DO UPDATE`, and enforces the
+same foreign keys Postgres does. That is what lets it assert the rules this pipeline
+exists to protect:
+
+- A run's events are POSTed in batches of at most `MAX_EVENTS` (500), so one batch can
+  carry only the `run_started` part of a run while a later one carries only its
+  `run_ended` part. Each part writes only the columns it owns, so neither can blank the
+  other. (Before this, a full-row upsert from an end-only batch blanked the run's
+  `balance_hash`, `run_seed`, `flags` and `player_anon_id`, detaching it from its balance
+  patch, while a start-only batch recorded a battle that was still being played as
+  `victory = false` — the flag `v_flag_cohorts` and `v_run_overview` use to tell a
+  finished run from an abandoned one.)
+- A batch that carries only turns or decisions — a run longer than 500 events, or a file
+  whose first line was truncated and skipped — inserts a bare `{ run_id }` parent first,
+  so `telemetry_turns.run_id` and `telemetry_decisions.run_id` resolve. Without it the
+  write fails its foreign key, and a 500 is *transient* to the client, so that file would
+  retry forever and starve every run queued behind it. A start part arriving later updates
+  the row's own columns, so a healing batch still fills the metadata in.
 
 Both commands are gates: `Tools/preflight.ps1` runs them locally (they need `node` and
 `deno`, and the script prints the Deno install command when it is missing), and the CI
