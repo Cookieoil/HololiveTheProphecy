@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/gen_code_index.gd` extends `SceneTree`
 
-`800` lines · [back to the map](../../CODEBASE_MAP.md)
+`813` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Headless symbol-index generator for this repository. Parses every first-party GDScript source and writes the navigation set that replaces reading the sources: D…
 
@@ -78,10 +78,12 @@ Private:
 - L621-655 `_render_scene_page`
 - L658-674 `_append_declarations`
 - L677-689 `_declaration_text`
-- L694-730 `_append_functions`
-- L733-749 `_append_signal_table`
-- L752-773 `_append_scene_table`
-- L776-798 `_append_data_table`
+- L694-711 `_append_functions`
+- L716-731 `_public_function_line`
+- L736-742 `_append_section`
+- L746-762 `_append_signal_table`
+- L765-786 `_append_scene_table`
+- L789-811 `_append_data_table`
 
 Uses: CodeIndexParser
 Used by: —

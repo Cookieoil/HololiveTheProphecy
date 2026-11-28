@@ -39,6 +39,22 @@ const EXCLUDED_DIRS: PackedStringArray = [
 	"res://bin/",
 ]
 const KINDS: PackedStringArray = ["class", "enum", "signal", "const", "var", "export", "onready", "func"]
+## The column-0 declarations the oracle recognises, as `[prefix, kind]`. A table rather
+## than a ladder because this is an independent second opinion on the parser: the whole
+## rule should be readable at a glance, and a missing row is a visible gap rather than a
+## branch that quietly got lost in a refactor.
+const DECLARATION_PREFIXES: Array[Array] = [
+	["class_name ", "class"],
+	["signal ", "signal"],
+	["const ", "const"],
+	["static var ", "var"],
+	["var ", "var"],
+	["static func ", "func"],
+	["func ", "func"],
+	["enum ", "enum"],
+]
+## The two annotations that can carry a declaration (`@export var x` / `@onready var x`).
+const ANNOTATED_VAR_PREFIXES: PackedStringArray = ["@export", "@onready"]
 const ARG_BENCHMARK: String = "--benchmark"
 const ARG_CHECK: String = "--check"
 const ARG_OUTPUT_DIR: String = "--output-dir"
@@ -319,43 +335,37 @@ func _scan_declarations(lines: PackedStringArray) -> Array[Dictionary]:
 		var line: String = lines[i]
 		if line.begins_with("\t") or line.begins_with(" ") or line.begins_with("#"):
 			continue
-		var kind: String = ""
-		var rest: String = ""
-		if line.begins_with("class_name "):
-			kind = "class"
-			rest = line.substr("class_name ".length())
-		elif line.begins_with("signal "):
-			kind = "signal"
-			rest = line.substr("signal ".length())
-		elif line.begins_with("const "):
-			kind = "const"
-			rest = line.substr("const ".length())
-		elif line.begins_with("static var "):
-			kind = "var"
-			rest = line.substr("static var ".length())
-		elif line.begins_with("var "):
-			kind = "var"
-			rest = line.substr("var ".length())
-		elif line.begins_with("static func "):
-			kind = "func"
-			rest = line.substr("static func ".length())
-		elif line.begins_with("func "):
-			kind = "func"
-			rest = line.substr("func ".length())
-		elif line.begins_with("enum "):
-			kind = "enum"
-			rest = line.substr("enum ".length())
-		elif (line.begins_with("@export") or line.begins_with("@onready")) and line.contains("var "):
-			kind = "var"
-			rest = line.substr(line.find("var ") + "var ".length())
-		if kind.is_empty():
+		var rest: String = _declaration_rest(line)
+		if rest.is_empty():
 			continue
 		found.append({
 			"name": CodeIndexParser.leading_identifier(rest),
-			"kind": kind,
+			"kind": _declaration_kind(line),
 			"line": i + 1,
 		})
 	return found
+
+
+## Everything after the declaration keyword, or "" when the line declares nothing.
+func _declaration_rest(line: String) -> String:
+	for pair: Array in DECLARATION_PREFIXES:
+		var prefix: String = str(pair[0])
+		if line.begins_with(prefix):
+			return line.substr(prefix.length())
+	for annotation: String in ANNOTATED_VAR_PREFIXES:
+		if line.begins_with(annotation) and line.contains("var "):
+			return line.substr(line.find("var ") + "var ".length())
+	return ""
+
+
+## The `kind` column for a declaration line. Both annotation forms are `var`, which is how
+## the parser files them too.
+func _declaration_kind(line: String) -> String:
+	for pair: Array in DECLARATION_PREFIXES:
+		var prefix: String = str(pair[0])
+		if line.begins_with(prefix):
+			return str(pair[1])
+	return "var"
 
 
 func _check_links() -> void:

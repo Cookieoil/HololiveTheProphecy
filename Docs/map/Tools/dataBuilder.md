@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Tools/dataBuilder.gd` — `class_name DataBuilder` extends `RefCounted`
 
-`779` lines · [back to the map](../../CODEBASE_MAP.md)
+`867` lines · [back to the map](../../CODEBASE_MAP.md)
 
 > Converts the bulk-entry workbook (res://Data/xlsx/game_data.xlsx) into the JSON files stored in res://Data/json/. Those JSON files are the single source of trut…
 
@@ -45,24 +45,36 @@ Private:
 - L301-308 `_row_at`
 - L312-328 `_to_int`
 - L332-349 `_to_bool`
-- L352-401 `_parse_table`
-- L405-459 `_coerce`
-- L463-464 `_has_enum`
-- L468-475 `_enum_contains`
-- L480-490 `_ordered_record`
-- L494-495 `_row_number`
-- L497-507 `_read_skills`
-- L513-546 `_read_effects`
-- L551-573 `_attach_effects`
-- L578-601 `_read_units`
-- L604-640 `_read_waves`
-- L644-689 `_read_config`
-- L692-709 `_parse_config_value`
-- L713-724 `_scalar`
-- L730-737 `_format_json_value`
-- L740-749 `_format_json_object`
-- L752-765 `_format_json_array`
-- L769-778 `_is_inline_array`
+- L352-372 `_parse_table`
+- L378-390 `_parse_column_specs`
+- L395-400 `_primary_key_of`
+- L405-431 `_parse_table_row`
+- L436-451 `_warn_duplicate_id`
+- L455-471 `_coerce`
+- L475-480 `_cell_text`
+- L485-492 `_coerce_int`
+- L495-500 `_coerce_float`
+- L503-510 `_coerce_bool`
+- L516-529 `_coerce_list`
+- L533-539 `_coerce_enum_or_unknown`
+- L543-544 `_has_enum`
+- L548-555 `_enum_contains`
+- L560-570 `_ordered_record`
+- L574-575 `_row_number`
+- L577-587 `_read_skills`
+- L593-626 `_read_effects`
+- L631-653 `_attach_effects`
+- L658-681 `_read_units`
+- L684-720 `_read_waves`
+- L724-741 `_read_config`
+- L745-750 `_find_config_header`
+- L756-777 `_normalise_config_allies`
+- L780-797 `_parse_config_value`
+- L801-812 `_scalar`
+- L818-825 `_format_json_value`
+- L828-837 `_format_json_object`
+- L840-853 `_format_json_array`
+- L857-866 `_is_inline_array`
 
 Uses: XlsxReader
 Used by: Tools/GameDataValidator.gd, Tools/export_xlsx_to_json.gd, Tools/validate_gameData.gd

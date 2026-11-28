@@ -144,6 +144,75 @@ func test_declarations_are_classified_by_kind() -> void:
 	assert_str(CodeIndexParser.dict_string(cached, "type")).is_equal("Dictionary")
 
 
+## The declaration forms that span two lines: an annotation on its own line followed by
+## the `var` it applies to, a `#region`, and a `##` block that documents the declaration
+## below it rather than the file.
+func _annotation_fixture() -> String:
+	return "\n".join([
+		"class_name Annotated",
+		"extends Node",
+		"#region Signals",
+		"signal pinged",
+		"#endregion",
+		"@export var inline_export: int = 1",
+		"@export",
+		"var split_export: float = 2.0",
+		"@onready",
+		"var split_onready: Label = null",
+		"## Docs the next declaration.",
+		"signal documented",
+	])
+
+
+func test_regions_and_two_line_annotations_are_collected() -> void:
+	var info: Dictionary = CodeIndexParser.parse_script(SCRIPT_PATH, _annotation_fixture())
+	var regions: PackedStringArray = CodeIndexParser.dict_string_array(info, "regions")
+	assert_int(regions.size()).is_equal(1)
+	assert_str(regions[0]).is_equal("Signals")
+
+	# The annotation owns the export, whichever line the `var` itself sits on.
+	assert_int(CodeIndexParser.dict_array(info, "exports").size()).is_equal(2)
+	var inline_export: Dictionary = _entry_at(CodeIndexParser.dict_array(info, "exports"), 0)
+	assert_str(CodeIndexParser.dict_string(inline_export, "name")).is_equal("inline_export")
+	assert_int(CodeIndexParser.dict_int(inline_export, "line")).is_equal(6)
+
+	var split_export: Dictionary = _entry_at(CodeIndexParser.dict_array(info, "exports"), 1)
+	assert_str(CodeIndexParser.dict_string(split_export, "name")).is_equal("split_export")
+	assert_int(CodeIndexParser.dict_int(split_export, "line")).is_equal(8)
+
+	assert_int(CodeIndexParser.dict_array(info, "onready").size()).is_equal(1)
+	assert_int(CodeIndexParser.dict_array(info, "variables").size()).is_equal(0)
+
+
+func test_a_member_doc_block_belongs_to_the_declaration_below_it() -> void:
+	var info: Dictionary = CodeIndexParser.parse_script(SCRIPT_PATH, _annotation_fixture())
+	var signals: Array = CodeIndexParser.dict_array(info, "signals")
+	assert_int(signals.size()).is_equal(2)
+
+	var documented: Dictionary = _entry_at(signals, 1)
+	assert_str(CodeIndexParser.dict_string(documented, "name")).is_equal("documented")
+	assert_str(CodeIndexParser.dict_string(documented, "doc")).is_equal("Docs the next declaration.")
+	# ...and it is not mistaken for the file's own summary.
+	assert_str(CodeIndexParser.dict_string(info, "summary")).is_empty()
+
+
+## An annotation that is neither `@export` nor `@onready` drops whatever was pending, so a
+## `@tool` sitting between the annotation and its `var` leaves a plain variable behind.
+func test_an_unrelated_annotation_cancels_the_pending_export() -> void:
+	var source: String = "\n".join([
+		"class_name Reset",
+		"extends Node",
+		"@export",
+		"@tool",
+		"var not_an_export: int = 1",
+	])
+	var info: Dictionary = CodeIndexParser.parse_script(SCRIPT_PATH, source)
+	assert_int(CodeIndexParser.dict_array(info, "exports").size()).is_equal(0)
+	assert_int(CodeIndexParser.dict_array(info, "variables").size()).is_equal(1)
+	var plain: Dictionary = _entry_at(CodeIndexParser.dict_array(info, "variables"), 0)
+	assert_str(CodeIndexParser.dict_string(plain, "name")).is_equal("not_an_export")
+
+
 func test_wrapped_signature_keeps_arguments_and_return_type() -> void:
 	var info: Dictionary = CodeIndexParser.parse_script(SCRIPT_PATH, _script_fixture())
 	var apply: Dictionary = _function_named(info, "apply")
