@@ -114,6 +114,33 @@ else {
     }
 }
 
+# The two Python tools are covered by their own dependency-free suites
+# (Tools/<module>_test.py, the same shape as rig_combat_actor_test.py): the lint's rules
+# and the balance report's maths, which is what a wrong number in a design decision would
+# come from. `python` was resolved above for the anti-slop gate; if it is missing, that
+# gate has already reported it, so this one is skipped rather than failed twice.
+Write-Host ''
+Write-Host '=== Python tooling tests ===' -ForegroundColor Cyan
+if (-not $python) {
+    Write-Host 'SKIPPED: python not found (reported by the anti-slop gate above)' -ForegroundColor Red
+}
+else {
+    $pythonSuites = @(
+        @{ Name = 'Anti-slop lint rules'; Script = 'Tools/line_godot_slop_test.py' },
+        @{ Name = 'Telemetry report maths'; Script = 'Tools/analyze_telemetry_test.py' }
+    )
+    foreach ($suite in $pythonSuites) {
+        $suites = Start-Process -FilePath $python.Source -ArgumentList $suite.Script -NoNewWindow -Wait -PassThru
+        if ($suites.ExitCode -ne 0) {
+            Write-Host ('FAILED (exit ' + $suites.ExitCode + '): ' + $suite.Name) -ForegroundColor Red
+            $failed += ('Python tooling tests (' + $suite.Name + ')')
+        }
+        else {
+            Write-Host ('PASSED: ' + $suite.Name) -ForegroundColor Green
+        }
+    }
+}
+
 # The telemetry-ingest Edge Function is TypeScript, and its row shapes, HTTP rules and
 # write order are unit tested with the Node the toolchain already has (no Deno, no
 # network, no database). Same command the CI `validate` job runs.
