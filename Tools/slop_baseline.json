@@ -10,7 +10,6 @@
     "Scenes/Cards/CardUI.gd": 1376
   },
   "functions": {
-    "Managers/GameManager.gd::_run_game_loop": 98,
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 127,
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 140,
     "Scenes/HUD/MoxieOrbUI.gd::_draw": 103,
@@ -19,7 +18,6 @@
   },
   "complexity": {
     "Core/DataLoader.gd::_build_config": 15,
-    "Managers/GameManager.gd::_run_game_loop": 19,
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 18,
     "Scenes/BattleUnit/UnitUI.gd::_load_unit_texture": 15,
     "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 30,

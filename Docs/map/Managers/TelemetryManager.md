@@ -118,6 +118,6 @@ Private:
 - L853-854 `_on_wave_started`
 
 Uses: Card, DataLoader, EnemyIntent, GameDatabase, GameState, HttpBatchSink, JsonlFileSink, SkillData, TelemetryConsent, TelemetryDecision, TelemetrySchema, TelemetrySink, TelemetryUploader, Unit
-Used by: GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, Managers/GameManager.gd
+Used by: GDTest/SkillContextFactoryTest.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, GDTest/TurnLoopTest.gd, Managers/GameManager.gd, Managers/SkillContextFactory.gd
 Loads: —
 

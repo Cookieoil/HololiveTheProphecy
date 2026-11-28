@@ -13,6 +13,6 @@ Public API:
 - L31-32 `is_open() -> bool` — True once the destination is ready to accept events.
 
 Uses: —
-Used by: Core/Telemetry/JsonlFileSink.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, Managers/TelemetryManager.gd
+Used by: Core/Telemetry/JsonlFileSink.gd, GDTest/SkillContextFactoryTest.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryTest.gd, GDTest/TurnLoopTest.gd, Managers/TelemetryManager.gd
 Loads: —
 
