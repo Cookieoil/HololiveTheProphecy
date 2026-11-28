@@ -20,6 +20,6 @@ Public API:
 - L31-35 `get_skill(id: String) -> SkillData` — Returns the skill definition for an id, or null when unknown.
 
 Uses: SkillData, UnitData
-Used by: Core/DataLoader.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryFoundationTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/validate_gameData.gd
+Used by: Core/DataLoader.gd, GDTest/EnemySkillBalanceTest.gd, GDTest/TelemetryFoundationTest.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/BattleSimulator.gd, Tools/validate_gameData.gd
 Loads: —
 

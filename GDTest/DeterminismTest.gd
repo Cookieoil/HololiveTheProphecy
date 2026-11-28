@@ -13,282 +13,24 @@ extends GdUnitTestSuite
 ##   state-corrupting path fails loudly instead of quietly changing an outcome;
 ## - a source audit, so a new global-RNG call cannot creep in unnoticed.
 ##
+## The harness lives in Tools/BattleSimulator.gd, shared with Tools/simulate_runs.tscn, so
+## the seed replayed here is the seed that tool replays.
+##
 ## @author TheGreatJellyfish
 ## @version 11/28/2026
-
-
-## A GameUI that plays a policy and records it, or replays a recorded plan.
-##
-## Decisions are recorded as *positions* (hand index, ally index) rather than object
-## references, so they can be replayed against a fresh board: the same seed deals the
-## same hand and the same units, so index 2 is the same card in both runs. It observes
-## the board before every decision, which is the only hook the turn loop offers.
-class ScriptedUI extends GameUI:
-	## The plan to replay. Empty means "play the built-in policy and record what you did".
-	var plan: Array = []
-	var cursor: int = 0
-	## Every decision this run made, in order, as positions.
-	var decisions: Array = []
-	## One board fingerprint per observation, so two runs can be compared step by step.
-	var trace: PackedStringArray = PackedStringArray()
-	## The first broken invariant, or "" when the board stayed healthy all run.
-	var violation: String = ""
-	## True when the plan ran out early or a recorded decision no longer fits the board:
-	## both mean the replay diverged from the run it came from.
-	var diverged: bool = false
-	## The base cards in play at the first observation, so the run can be checked for
-	## conserving them.
-	var starting_cards: int = -1
-	## The first card-conservation break, or "".
-	var card_leak: String = ""
-
-	func show_message(_msg: String) -> void:
-		pass
-
-	func show_game_state(_state: GameState) -> void:
-		pass
-
-	func show_enemy_intents(_intents: Array[EnemyIntent]) -> void:
-		pass
-
-	func show_hand_and_resources(_state: GameState) -> void:
-		pass
-
-	func play_unit_skill(_unit: Unit, _skill_index: int, _rank: int = 0, _lead: float = 1.0) -> void:
-		pass
-
-	func play_unit_ultimate(_unit: Unit) -> void:
-		pass
-
-	func show_battle_result(_victory: bool) -> void:
-		pass
-
-	func clear_unit_intent(_unit: Unit) -> void:
-		pass
-
-	## Deterministic prompt answers: the first N candidates, in board order.
-	func ask_pick_targets(units: Array[Unit], count: int) -> Array[Unit]:
-		var picked: Array[Unit] = []
-		for unit: Unit in units:
-			if picked.size() >= count:
-				break
-			picked.append(unit)
-		return picked
-
-	func ask_pick_cards(cards: Array[Card], count: int) -> Array[Card]:
-		var picked: Array[Card] = []
-		for card: Card in cards:
-			if picked.size() >= count:
-				break
-			picked.append(card)
-		return picked
-
-	func get_player_action(state: GameState) -> Dictionary:
-		_observe(state)
-		if not plan.is_empty():
-			return _replay(state)
-		var decision: Dictionary = _choose(state)
-		decisions.append(decision)
-		return _resolve(state, decision)
-
-
-	## Records the board and checks its invariants. Every decision passes through here,
-	## which is the only observation point the turn loop offers.
-	func _observe(state: GameState) -> void:
-		trace.append(fingerprint(state))
-		if violation.is_empty():
-			violation = invariant_break(state)
-		var held: int = base_card_count(state)
-		if starting_cards < 0:
-			starting_cards = held
-		elif card_leak.is_empty() and held != starting_cards:
-			card_leak = "turn %d holds %d base card(s), started with %d" % [
-				state.turn_number, held, starting_cards
-			]
-
-
-	## The policy: an Ultimate if one is ready, then a merge, then a play, then end the
-	## turn. Always legal, so a battle always terminates.
-	func _choose(state: GameState) -> Dictionary:
-		for index: int in state.allies.size():
-			if state.allies[index].can_cast_ultimate:
-				return {"kind": "ultimate", "ally": index}
-		if state.merges_left > 0:
-			var pair: Array = _first_legal_merge(state)
-			if not pair.is_empty():
-				return {"kind": "merge", "a": pair[0], "b": pair[1]}
-		if state.actions_left > 0 and not state.hand.is_empty():
-			var ally: int = _first_living_ally(state)
-			if ally >= 0:
-				return {"kind": "play", "card": 0, "ally": ally}
-		return {"kind": "end_turn"}
-
-
-	## The first mergeable pair in hand, or [] when there is none.
-	func _first_legal_merge(state: GameState) -> Array:
-		for i: int in state.hand.size():
-			for j: int in range(i + 1, state.hand.size()):
-				if state.can_merge_pair(state.hand[i], state.hand[j]):
-					return [i, j]
-		return []
-
-
-	func _first_living_ally(state: GameState) -> int:
-		for index: int in state.allies.size():
-			if not state.allies[index].is_dead:
-				return index
-		return -1
-
-
-	## Plays one recorded decision against the current board.
-	func _replay(state: GameState) -> Dictionary:
-		if cursor >= plan.size():
-			diverged = true
-			return {"type": "end_turn"}
-		var decision: Dictionary = plan[cursor]
-		cursor += 1
-		if not _fits(state, decision):
-			diverged = true
-			return {"type": "end_turn"}
-		return _resolve(state, decision)
-
-
-	## True when a recorded decision still names something on this board.
-	func _fits(state: GameState, decision: Dictionary) -> bool:
-		match str(decision.get("kind", "")):
-			"play":
-				return _index_fits(decision, "card", state.hand.size()) \
-					and _index_fits(decision, "ally", state.allies.size())
-			"merge":
-				return _index_fits(decision, "a", state.hand.size()) \
-					and _index_fits(decision, "b", state.hand.size())
-			"ultimate":
-				return _index_fits(decision, "ally", state.allies.size())
-			_:
-				return true
-
-
-	static func _index_fits(decision: Dictionary, key: String, size: int) -> bool:
-		var index: int = decision_int(decision, key, -1)
-		return index >= 0 and index < size
-
-
-	## Turns a decision into the action Dictionary the turn loop expects.
-	func _resolve(state: GameState, decision: Dictionary) -> Dictionary:
-		match str(decision.get("kind", "")):
-			"play":
-				return {
-					"type": "play",
-					"card": state.hand[decision_int(decision, "card", 0)],
-					"target_ally": state.allies[decision_int(decision, "ally", 0)],
-				}
-			"merge":
-				return {
-					"type": "merge",
-					"card_a": state.hand[decision_int(decision, "a", 0)],
-					"card_b": state.hand[decision_int(decision, "b", 1)],
-				}
-			"ultimate":
-				return {"type": "ultimate", "caster": state.allies[decision_int(decision, "ally", 0)]}
-			_:
-				return {"type": "end_turn"}
-
-
-	## A stable text digest of everything a replay has to reproduce. Card identity is
-	## (value, merge tier) rather than the instance id, so the digest describes the game
-	## rather than the order the objects happened to be allocated in.
-	static func fingerprint(state: GameState) -> String:
-		var parts: PackedStringArray = PackedStringArray()
-		parts.append("t%d/w%d/a%d/m%d" % [
-			state.turn_number, state.current_wave, state.actions_left, state.merges_left
-		])
-		parts.append("deck%d/disc%d/played%d" % [
-			state.deck.size(), state.discard.size(), state.played_this_turn.size()
-		])
-		for unit: Unit in state.allies:
-			parts.append("A%s:%d/%d:s%d:m%d" % [
-				unit.data.unit_id, unit.current_hp, unit.max_hp, unit.shield, unit.moxie
-			])
-		for unit: Unit in state.enemies:
-			parts.append("E%s:%d/%d:s%d:m%d" % [
-				unit.data.unit_id, unit.current_hp, unit.max_hp, unit.shield, unit.moxie
-			])
-		for card: Card in state.hand:
-			parts.append("C%d.%d" % [card.get_effective_value(), TelemetrySchema.merge_rank(card)])
-		return "|".join(parts)
-
-
-	## The first broken board invariant as text, or "" when the board is healthy.
-	static func invariant_break(state: GameState) -> String:
-		for unit: Unit in state.allies:
-			var ally_break: String = unit_break(unit)
-			if not ally_break.is_empty():
-				return ally_break
-		for unit: Unit in state.enemies:
-			var enemy_break: String = unit_break(unit)
-			if not enemy_break.is_empty():
-				return enemy_break
-		if state.hand.size() > state.max_hand_size:
-			return "hand holds %d card(s) over the cap %d" % [state.hand.size(), state.max_hand_size]
-		if state.actions_left < 0:
-			return "actions_left is %d" % state.actions_left
-		if state.merges_left < 0:
-			return "merges_left is %d" % state.merges_left
-		return ""
-
-
-	## The invariants one unit must hold at every moment.
-	static func unit_break(unit: Unit) -> String:
-		if unit.current_hp < 0:
-			return "%s has %d HP" % [unit.data.unit_id, unit.current_hp]
-		if unit.current_hp > unit.max_hp:
-			return "%s has %d HP over its max %d" % [unit.data.unit_id, unit.current_hp, unit.max_hp]
-		if unit.shield < 0:
-			return "%s has %d shield" % [unit.data.unit_id, unit.shield]
-		if unit.moxie < 0 or unit.moxie > unit.max_moxie:
-			return "%s has %d Moxie of %d" % [unit.data.unit_id, unit.moxie, unit.max_moxie]
-		return ""
-
-
-	## The base cards the run is holding. The deck and the discard pile always hold base
-	## cards (a discarded merge is unpacked), while a card in hand *or played this turn*
-	## may stand for the two or three it was merged from, so both are counted through
-	## `_merged_sources`.
-	static func base_card_count(state: GameState) -> int:
-		var total: int = state.deck.size() + state.discard.size()
-		for card: Card in state.hand:
-			total += source_count(state, card)
-		for card: Card in state.played_this_turn:
-			total += source_count(state, card)
-		return total
-
-
-	## How many base deck cards one hand card stands for: a merged card's recorded
-	## sources, or 1 for a base card. Read through an untyped `Array` because
-	## `_merged_sources` holds typed `Array[Card]` values, which an `is Array` check
-	## rejects.
-	static func source_count(state: GameState, card: Card) -> int:
-		if not state._merged_sources.has(card):
-			return 1
-		var listed: Array = state._merged_sources[card]
-		return listed.size()
-
-
-	## A recorded decision's index, read safely out of a Dictionary.
-	static func decision_int(decision: Dictionary, key: String, fallback: int) -> int:
-		var raw: Variant = decision.get(key, fallback)
-		if raw is int:
-			var value: int = raw
-			return value
-		return fallback
 
 
 #region Constants
 ## The seed every determinism check starts from.
 const SEED: int = 20260101
-## Shipped scripts that may draw from the global RNG, and why. Note that a *seeded*
-## member call (`generator.randi_range(...)`) is not one of these: the audit looks for
-## bare calls, so the run generator seeding itself needs no entry.
+## How many seeds the invariant sweep covers.
+const SWEEP_SEEDS: int = 24
+## How many seeds the shipped-battle sweep covers: fewer, because these are real battles
+## with real skills rather than a two-card fixture.
+const SHIPPED_SEEDS: int = 12
+## Shipped scripts that may draw from the global RNG, and why. A *seeded* member call
+## (`generator.randi_range(...)`) is not one of these: the audit looks for bare calls, so
+## the run generator seeding itself needs no entry.
 const GLOBAL_RNG_ALLOWED: Dictionary = {
 	"Scenes/BattleUnit/UnitUI.gd": "the shield-shatter shard scatter, which is view state only",
 }
@@ -368,19 +110,42 @@ func _config(seed_value: int) -> Dictionary:
 	}
 
 
+## A simulator already in the tree, so its GameManager and recorder are ready.
+func _simulator() -> BattleSimulator:
+	var sim: BattleSimulator = BattleSimulator.new()
+	add_child(sim)
+	auto_free(sim)
+	return sim
+
+
 ## Runs one seeded battle to the end. `plan` replays a recorded run instead of playing
 ## the policy, which is what makes the replay check possible.
-func _run(seed_value: int, ui: ScriptedUI, plan: Array = []) -> GameManager:
-	ui.plan = plan
-	var manager: GameManager = GameManager.new()
-	add_child(manager)
-	auto_free(manager)
-	add_child(ui)
-	auto_free(ui)
-	manager.ui = ui
+func _run(seed_value: int, sim: BattleSimulator, plan: Array = []) -> void:
 	var allies: Array[UnitData] = [_ally_data("striker"), _ally_data("healer")]
-	await manager.setup_game(allies, _waves(), ui, _config(seed_value))
-	return manager
+	await sim.run(allies, _waves(), _config(seed_value), plan)
+
+
+## Runs `count` battles from `seed_value` and returns every invariant break found,
+## prefixed with the seed that produced it. `shipped` runs the real battle from Data/json
+## instead of the fixture.
+func _sweep_seeds(seed_value: int, count: int, shipped: bool) -> PackedStringArray:
+	var broken: PackedStringArray = PackedStringArray()
+	for offset: int in count:
+		var run_seed: int = seed_value + offset
+		var sim: BattleSimulator = _simulator()
+		if shipped:
+			await sim.run_shipped(run_seed)
+		else:
+			await _run(run_seed, sim)
+		if not sim.recorder.violation.is_empty():
+			broken.append("seed %d: %s" % [run_seed, sim.recorder.violation])
+		if not sim.recorder.card_leak.is_empty():
+			broken.append("seed %d: %s" % [run_seed, sim.recorder.card_leak])
+		if sim.manager.game_running:
+			broken.append("seed %d never finished" % run_seed)
+		if sim.recorder.trace.is_empty():
+			broken.append("seed %d produced no decisions" % run_seed)
+	return broken
 
 
 ## Every first-party script that ships, so the RNG audit covers the game and not the
@@ -424,18 +189,18 @@ func _rng_calls(rel: String, path: String) -> PackedStringArray:
 ## runs are fingerprinted at every decision, so a divergence is caught at the step it
 ## happens rather than only at the end.
 func test_the_same_seed_replays_the_same_battle() -> void:
-	var first: ScriptedUI = ScriptedUI.new()
-	var first_manager: GameManager = await _run(SEED, first)
-	var second: ScriptedUI = ScriptedUI.new()
-	var second_manager: GameManager = await _run(SEED, second)
+	var first: BattleSimulator = _simulator()
+	await _run(SEED, first)
+	var second: BattleSimulator = _simulator()
+	await _run(SEED, second)
 
-	assert_int(first.decisions.size()).is_greater(0)
-	assert_str("|".join(first.trace)).is_equal("|".join(second.trace))
-	assert_array(first.decisions).is_equal(second.decisions)
-	assert_bool(first_manager.game_running).is_false()
-	assert_bool(second_manager.game_running).is_false()
-	assert_str(ScriptedUI.fingerprint(first_manager.state)).is_equal(
-		ScriptedUI.fingerprint(second_manager.state)
+	assert_int(first.recorder.decisions.size()).is_greater(0)
+	assert_str("|".join(first.recorder.trace)).is_equal("|".join(second.recorder.trace))
+	assert_array(first.recorder.decisions).is_equal(second.recorder.decisions)
+	assert_bool(first.manager.game_running).is_false()
+	assert_bool(second.manager.game_running).is_false()
+	assert_str(BattleSimulator.Recorder.fingerprint(first.manager.state)).is_equal(
+		BattleSimulator.Recorder.fingerprint(second.manager.state)
 	)
 
 
@@ -444,9 +209,9 @@ func test_the_same_seed_replays_the_same_battle() -> void:
 func test_a_different_seed_deals_a_different_battle() -> void:
 	var distinct: Dictionary = {}
 	for offset: int in 4:
-		var ui: ScriptedUI = ScriptedUI.new()
-		await _run(SEED + offset, ui)
-		distinct["|".join(ui.trace)] = true
+		var sim: BattleSimulator = _simulator()
+		await _run(SEED + offset, sim)
+		distinct["|".join(sim.recorder.trace)] = true
 
 	assert_int(distinct.size()).is_greater(1)
 
@@ -455,17 +220,17 @@ func test_a_different_seed_deals_a_different_battle() -> void:
 ## recorded from one run would not fit a fresh board. Replaying them is what proves the
 ## run really is a function of the seed.
 func test_a_recorded_plan_replays_against_a_fresh_board() -> void:
-	var recorded: ScriptedUI = ScriptedUI.new()
+	var recorded: BattleSimulator = _simulator()
 	await _run(SEED, recorded)
 
-	var replayed: ScriptedUI = ScriptedUI.new()
-	await _run(SEED, replayed, recorded.decisions)
+	var replayed: BattleSimulator = _simulator()
+	await _run(SEED, replayed, recorded.recorder.decisions)
 
-	assert_int(recorded.decisions.size()).is_greater(0)
-	assert_bool(replayed.diverged).is_false()
-	assert_str("|".join(replayed.trace)).is_equal("|".join(recorded.trace))
+	assert_int(recorded.recorder.decisions.size()).is_greater(0)
+	assert_bool(replayed.recorder.diverged).is_false()
+	assert_str("|".join(replayed.recorder.trace)).is_equal("|".join(recorded.recorder.trace))
 	# It replayed the plan rather than falling back to the policy.
-	assert_array(replayed.decisions).is_empty()
+	assert_array(replayed.recorder.decisions).is_empty()
 #endregion
 
 
@@ -473,31 +238,34 @@ func test_a_recorded_plan_replays_against_a_fresh_board() -> void:
 ## A sweep rather than a single battle, because an invariant that only breaks on one
 ## deck order is exactly the bug a single scripted run would miss.
 func test_the_board_holds_its_invariants_across_many_seeds() -> void:
-	var broken: PackedStringArray = PackedStringArray()
-	for offset: int in 24:
-		var seed_value: int = SEED + offset
-		var ui: ScriptedUI = ScriptedUI.new()
-		var manager: GameManager = await _run(seed_value, ui)
-		if not ui.violation.is_empty():
-			broken.append("seed %d: %s" % [seed_value, ui.violation])
-		if not ui.card_leak.is_empty():
-			broken.append("seed %d: %s" % [seed_value, ui.card_leak])
-		if manager.game_running:
-			broken.append("seed %d never finished" % seed_value)
+	var broken: PackedStringArray = await _sweep_seeds(SEED, SWEEP_SEEDS, false)
 
 	assert_str("\n".join(broken)).is_equal("")
+
+
+## The same invariants against the battle the game actually ships, not just the fixture:
+## real skills draw cards, buff values and pick targets in ways a two-card deck never
+## does. This sweep is what showed `max_hand_size` to be a draw *target* rather than a cap
+## (a "Draw 2 cards" skill legitimately ends a turn holding nine), which is why the hand's
+## size is not asserted anywhere.
+func test_the_shipped_battle_holds_its_invariants_across_seeds() -> void:
+	var broken: PackedStringArray = await _sweep_seeds(SEED, SHIPPED_SEEDS, true)
+
+	assert_str("\n".join(broken)).is_equal("")
+
+
 
 
 ## The sweep is only meaningful if the runs are real: a battle that ended on turn one
 ## would satisfy every invariant above by never reaching the interesting states.
 func test_a_swept_battle_is_a_real_battle() -> void:
-	var ui: ScriptedUI = ScriptedUI.new()
-	var manager: GameManager = await _run(SEED, ui)
+	var sim: BattleSimulator = _simulator()
+	await _run(SEED, sim)
 
-	assert_bool(manager.state.all_allies_dead()).is_false()
-	assert_int(manager.state.turn_number).is_greater(2)
-	assert_int(ui.trace.size()).is_greater(8)
-	assert_str(ScriptedUI.invariant_break(manager.state)).is_equal("")
+	assert_bool(sim.manager.state.all_allies_dead()).is_false()
+	assert_int(sim.manager.state.turn_number).is_greater(2)
+	assert_int(sim.recorder.trace.size()).is_greater(8)
+	assert_str(BattleSimulator.Recorder.invariant_break(sim.manager.state)).is_equal("")
 #endregion
 
 
@@ -520,6 +288,7 @@ func test_a_roll_is_reproducible_from_its_generator() -> void:
 	# A one-sided die is still a die, not a zero.
 	assert_int(DiceRoller.roll(0, first)).is_equal(1)
 #endregion
+
 
 
 #region The audit
@@ -554,3 +323,4 @@ func test_every_rng_allowlist_entry_is_still_needed() -> void:
 
 	assert_str("\n".join(stale)).is_equal("")
 #endregion
+

@@ -21,6 +21,6 @@ Private:
 - L31-37 `_to_string`
 
 Uses: SkillData, Unit
-Used by: Core/GameUI.gd, Core/Telemetry/TelemetryDecision.gd, Core/Telemetry/TelemetrySchema.gd, GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/DeterminismTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryDecisionTest.gd, GDTest/TelemetryTest.gd, Managers/GameManager.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd, Skills/SkillPreviewFormatter.gd
+Used by: Core/GameUI.gd, Core/Telemetry/TelemetryDecision.gd, Core/Telemetry/TelemetrySchema.gd, GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/TelemetryConsentTest.gd, GDTest/TelemetryDecisionTest.gd, GDTest/TelemetryTest.gd, Managers/GameManager.gd, Managers/TelemetryManager.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd, Skills/SkillPreviewFormatter.gd, Tools/BattleSimulator.gd
 Loads: —
 

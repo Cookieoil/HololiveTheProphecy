@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/BattleUnit/UnitUI.gd` — `class_name UnitUI` extends `PanelContainer`
 
-`1344` lines · [back to the map](../../../CODEBASE_MAP.md)
+`1341` lines · [back to the map](../../../CODEBASE_MAP.md)
 
 > extends PanelContainer, 6 signal(s), 12 export(s), 58 function(s)
 
@@ -164,19 +164,19 @@ Private:
 - L781-789 `_status_signature`
 - L792-848 `_create_e7_status_badge`
 - L855-992 `_refresh_display`
-- L995-1035 `_trigger_death_shatter`
-- L1038-1162 `_draw_health_bar`
-- L1166-1169 `_bar_rect`
-- L1172-1176 `_get_tick_step`
-- L1179-1190 `_reset_bar_state`
-- L1193-1196 `_clear_pending_hits`
-- L1201-1217 `_on_unit_damaged`
-- L1220-1231 `_get_effective_hit_flash_delay`
-- L1236-1239 `_get_effective_status_delay`
-- L1242-1251 `_get_effective_death_delay`
-- L1258-1275 `_render_skill_preview_icons`
-- L1278-1334 `_load_unit_texture`
-- L1337-1341 `_ignore_mouse_recursively`
+- L995-1032 `_trigger_death_shatter`
+- L1035-1159 `_draw_health_bar`
+- L1163-1166 `_bar_rect`
+- L1169-1173 `_get_tick_step`
+- L1176-1187 `_reset_bar_state`
+- L1190-1193 `_clear_pending_hits`
+- L1198-1214 `_on_unit_damaged`
+- L1217-1228 `_get_effective_hit_flash_delay`
+- L1233-1236 `_get_effective_status_delay`
+- L1239-1248 `_get_effective_death_delay`
+- L1255-1272 `_render_skill_preview_icons`
+- L1275-1331 `_load_unit_texture`
+- L1334-1338 `_ignore_mouse_recursively`
 
 Uses: Card, CardDrag, CardIconCatalog, OutlineGlow, SkillData, SpinePortrait, StatusIconCatalog, Unit
 Used by: GDTest/EnemyUltAuraTest.gd, Scenes/BattleScene/BattleScene.gd, Scenes/HUD/BattleOverlayController.gd

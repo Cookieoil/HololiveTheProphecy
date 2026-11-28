@@ -25,6 +25,6 @@ Public API:
 - L103-104 `show_hand_and_resources(_state: GameState) -> void` — Refresh hand and resource counters (Actions, Merges, Deck, Discard).
 
 Uses: Card, EnemyIntent, GameState, Unit
-Used by: GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugCommandRunnerTest.gd, GDTest/DebugMenuTest.gd, GDTest/DeterminismTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/TelemetryTest.gd, Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd
+Used by: GDTest/BattleEndTest.gd, GDTest/CardFlashPolicyTest.gd, GDTest/DebugCommandRunnerTest.gd, GDTest/DebugMenuTest.gd, GDTest/EnemyTurnOverlapTest.gd, GDTest/TelemetryTest.gd, Managers/DebugCommandRunner.gd, Managers/GameManager.gd, Scenes/BattleScene/BattleScene.gd, Tools/BattleSimulator.gd
 Loads: —
 
