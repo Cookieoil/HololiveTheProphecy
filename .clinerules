@@ -28,7 +28,7 @@ work through a branch and a pull request:
 5. `git switch main; git pull --ff-only` and confirm `git status -sb` shows no ahead/behind
 
 ## Pre-flight gates (required before every commit)
-Run all six gates from the repo root — they are exactly the gates CI runs:
+Run all seven gates from the repo root — they are exactly the gates CI runs:
 
 1. Validate game data (errors **and** warnings are fatal):
    `godot --headless --path . "res://Tools/validator.tscn" -- --strict`
@@ -45,13 +45,16 @@ Run all six gates from the repo root — they are exactly the gates CI runs:
    `get_parent()` calls per file against `Tools/slop_baseline.json` (baseline
    entries may only shrink). `--strict` makes a stale entry fail instead of warn:
    `python Tools/line_godot_slop.py --strict`
-6. Python tooling tests — the lint's own rules and the balance report's maths, each in a
-   dependency-free `Tools/<module>_test.py` suite shaped like
-   `Tools/rig_combat_actor_test.py`. A gate nobody tests is a gate that silently stops
-   gating, and a wrong denominator in the report would not crash — it would answer the
-   wrong question convincingly:
+6. Python tooling tests — one dependency-free `Tools/<module>_test.py` suite per Python
+   tool, each in the shape of `Tools/rig_combat_actor_test.py`. A gate nobody tests is a
+   gate that silently stops gating, and a wrong denominator in the report would not
+   crash — it would answer the wrong question convincingly:
    `python Tools/line_godot_slop_test.py`
    `python Tools/analyze_telemetry_test.py`
+   `python Tools/rig_combat_actor_test.py`
+7. Replay a seed — the CLI a telemetry or bug report's seed is reproduced with, over the
+   shipped battle, asserting the board's invariants at every decision:
+   `godot --headless --path . res://Tools/simulate_runs.tscn -- --seeds 3`
 
 Never commit past a red gate. If a gate fails, fix the root cause — do not weaken the gate.
 If gate 3 fails because the index is stale, regenerate it (`Docs/` is generated — never
