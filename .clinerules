@@ -52,6 +52,7 @@ Run all eight gates from the repo root — they are exactly the gates CI runs:
    `python Tools/line_godot_slop_test.py`
    `python Tools/analyze_telemetry_test.py`
    `python Tools/rig_combat_actor_test.py`
+   `python Tools/compare_snapshots_test.py`
 7. Replay a seed — the CLI a telemetry or bug report's seed is reproduced with, over the
    shipped battle, asserting the board's invariants at every decision:
    `godot --headless --path . res://Tools/simulate_runs.tscn -- --seeds 3`
@@ -70,8 +71,29 @@ hand-edit it); on Windows `pwsh -File Tools/preflight.ps1 -FixIndex` regenerates
 runs every gate.
 
 Before changing UI or scenes, look at the pixels (the headless gates cannot):
-`godot --audio-driver Dummy --position -4000,-4000 --path . res://Tools/snapshot_runner.tscn`
-renders `reports/ui-snapshots/` (seeded battle, real OpenGL, `manifest.json`).
+`godot --audio-driver Dummy --position -4000,-4000 --fixed-fps 60 --path . res://Tools/snapshot_runner.tscn`
+renders nine canonical screens to `reports/ui-snapshots/` (seeded battle, real OpenGL,
+`manifest.json`) — the board, the ultimate callout, the debug palette, a charged orb beside
+an enemy one roll from its Ultimate, a cast ripple with the flipped tooltip, a hand caught
+mid-deal, and the victory cutscene. `--fixed-fps 60` pins the frame delta, so the same code
+produces the same pixels every time (measured: 0 changed pixels across two runs).
+
+For a UI refactor that must not change what the player sees, capture both sides and let the
+comparator prove it instead of asserting it:
+
+```
+godot ... --fixed-fps 60 ... res://Tools/snapshot_runner.tscn -- --output-dir reports/ui-snapshots/before
+# ...refactor...
+godot ... --fixed-fps 60 ... res://Tools/snapshot_runner.tscn -- --output-dir reports/ui-snapshots/after
+python Tools/compare_snapshots.py --before reports/ui-snapshots/before --after reports/ui-snapshots/after --write-diff reports/ui-snapshots/diffs
+```
+
+It prints changed pixels, the worst channel delta, the RMSE and the bounding box per screen,
+writes a red-marked diff image per screen that moved, and exits `1` on any difference (both
+thresholds default to `0`). Paste that table into the PR body — it is the `Visual proof:
+required` line. `Tools/compare_snapshots_test.py` pins its PNG decoder against fixtures
+built by hand, because a comparison whose reader is wrong reports "no change" for images
+that differ.
 
 ## Second-pass review (required before opening a PR)
 Run the diff reviewer and fix what it flags before you push — do not open a PR and let

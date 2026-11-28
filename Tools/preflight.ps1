@@ -138,7 +138,11 @@ else {
     $pythonSuites = @(
         @{ Name = 'Anti-slop lint rules'; Script = 'Tools/line_godot_slop_test.py' },
         @{ Name = 'Telemetry report maths'; Script = 'Tools/analyze_telemetry_test.py' },
-        @{ Name = 'Spine rig patcher'; Script = 'Tools/rig_combat_actor_test.py' }
+        @{ Name = 'Spine rig patcher'; Script = 'Tools/rig_combat_actor_test.py' },
+        # The only tool that can see a UI regression, so its decoder is pinned before it is
+        # trusted: a comparison whose PNG reader is wrong reports "no change" for two
+        # images that differ, which is a green tick over something nobody looked at.
+        @{ Name = 'Snapshot comparator'; Script = 'Tools/compare_snapshots_test.py' }
     )
     foreach ($suite in $pythonSuites) {
         $suites = Start-Process -FilePath $python.Source -ArgumentList $suite.Script -NoNewWindow -Wait -PassThru
@@ -251,11 +255,13 @@ else {
 
 # -Snapshots renders the canonical UI screens with the real OpenGL renderer (the
 # headless gates cannot see pixels) and sanity-checks the PNGs. Off by default:
-# it opens a window and is slower than every other gate together.
+# it opens a window and is slower than every other gate together. `--fixed-fps 60` is
+# deliberate: with a wall-clock delta the shots are not reproducible, so they cannot be
+# compared against a baseline with `python Tools/compare_snapshots.py`.
 if ($Snapshots) {
     Write-Host ''
     Write-Host '=== UI snapshots (rendered) ===' -ForegroundColor Cyan
-    $snapArgs = @('--audio-driver', 'Dummy', '--position', '-4000,-4000', '--path', '.', 'res://Tools/snapshot_runner.tscn')
+    $snapArgs = @('--audio-driver', 'Dummy', '--position', '-4000,-4000', '--fixed-fps', '60', '--path', '.', 'res://Tools/snapshot_runner.tscn')
     $snap = Start-Process -FilePath $godotExe -ArgumentList $snapArgs -NoNewWindow -Wait -PassThru
     if ($snap.ExitCode -ne 0) {
         Write-Host ('FAILED (exit ' + $snap.ExitCode + '): UI snapshots') -ForegroundColor Red

@@ -179,6 +179,6 @@ Private:
 - L1364-1375 `_on_card_value_changed`
 
 Uses: Card, CardDrag, CardIconCatalog, ForgePlate, GameState, HandBar, OutlineGlow
-Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/CardUITest.gd, Scenes/Cards/HandBar.gd
+Used by: GDTest/CardDrawAnimationTest.gd, GDTest/CardMergeAnimationTest.gd, GDTest/CardUITest.gd, Scenes/Cards/HandBar.gd, Tools/SnapshotRunner.gd
 Loads: res://Scenes/BattleScene/Assets/icon.svg, res://Shaders/FakeCard3D.gdshader, res://Scenes/BattleScene/Assets/icon2.png
 
