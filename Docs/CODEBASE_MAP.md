@@ -51,14 +51,14 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | [`Scenes/Cards/CardUI.gd`](map/Scenes/Cards/CardUI.md) | `CardUI` | 1377 | Visual representation of one Card in hand. Drag source (play / merge) an… |
 | [`Scenes/Cards/ForgePlate.gd`](map/Scenes/Cards/ForgePlate.md) | `ForgePlate` | 140 | One of the two cards in a merge, drawn as a real fake-3D quad. A merge h… |
 | [`Scenes/Cards/HandBar.gd`](map/Scenes/Cards/HandBar.md) | `HandBar` | 412 | Bottom-edge hand of cards. View-only: it animates, GameManager validates… |
-| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 555 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer,… |
+| [`Scenes/HUD/BattleOverlayController.gd`](map/Scenes/HUD/BattleOverlayController.md) | `BattleOverlayController` | 606 | Builds E1–E3 on the left, A1–A3 on the right, manages the tooltip layer,… |
 | [`Scenes/HUD/BattleResultOverlay.gd`](map/Scenes/HUD/BattleResultOverlay.md) | `BattleResultOverlay` | 384 | End-of-battle cutscene, staged like a big-budget result screen. The batt… |
 | [`Scenes/HUD/BattleResultPrompt.gd`](map/Scenes/HUD/BattleResultPrompt.md) | `BattleResultPrompt` | 183 | The end screen's action prompt, drawn the way big-budget menus do it: no… |
 | [`Scenes/HUD/DebugMenuPopup.gd`](map/Scenes/HUD/DebugMenuPopup.md) | `DebugMenuPopup` | 704 | Tester-only tool palette for the battle scene. Every button here is a *r… |
 | [`Scenes/HUD/HudTooltip.gd`](map/Scenes/HUD/HudTooltip.md) | `HudTooltip` | 91 | Content of the hover tooltip for one top-bar widget. Every icon in the t… |
-| [`Scenes/HUD/MoxieOrbUI.gd`](map/Scenes/HUD/MoxieOrbUI.md) | `MoxieOrbUI` | 605 | extends Control, 3 signal(s), 1 export(s), 22 function(s) |
+| [`Scenes/HUD/MoxieOrbUI.gd`](map/Scenes/HUD/MoxieOrbUI.md) | `MoxieOrbUI` | 643 | extends Control, 3 signal(s), 1 export(s), 28 function(s) |
 | [`Scenes/HUD/OutlineGlow.gd`](map/Scenes/HUD/OutlineGlow.md) | `OutlineGlow` | 236 | outer light border with scrolling sub-surface energy texture. |
-| [`Scenes/HUD/SkillTooltipPopup.gd`](map/Scenes/HUD/SkillTooltipPopup.md) | `SkillTooltipPopup` | 272 | extends Control, 8 function(s) |
+| [`Scenes/HUD/SkillTooltipPopup.gd`](map/Scenes/HUD/SkillTooltipPopup.md) | `SkillTooltipPopup` | 287 | extends Control, 13 function(s) |
 | [`Scenes/HUD/TelemetryConsentPopup.gd`](map/Scenes/HUD/TelemetryConsentPopup.md) | `TelemetryConsentPopup` | 339 | First-launch disclosure for gameplay telemetry: a full-screen modal that… |
 | [`Scenes/HUD/TooltipIconCatalog.gd`](map/Scenes/HUD/TooltipIconCatalog.md) | `TooltipIconCatalog` | 334 | Inline icon registry for tooltip descriptions (SkillTooltipPopup bodies)… |
 | [`Scenes/HUD/TooltipIconEntry.gd`](map/Scenes/HUD/TooltipIconEntry.md) | `TooltipIconEntry` | 133 | One tooltip keyword/icon rule, consumed by TooltipIconCatalog. DisplayMo… |
@@ -93,7 +93,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | --- | --- | --- | --- |
 | [`GDTest/AllyKitTest.gd`](map/GDTest/AllyKitTest.md) | `AllyKitTest` | 288 | Tests for the MOBA-style pure-skill rework of all ally kits. Covers: shi… |
 | [`GDTest/BattleEndTest.gd`](map/GDTest/BattleEndTest.md) | `BattleEndTest` | 687 | Locks the end of a battle: - a unit that dies never keeps Moxie (or a "U… |
-| [`GDTest/BattleOverlayControllerTest.gd`](map/GDTest/BattleOverlayControllerTest.md) | `BattleOverlayControllerTest` | 62 | Locks how the overlay finds the scene it belongs to. `BattleOverlay` is… |
+| [`GDTest/BattleOverlayControllerTest.gd`](map/GDTest/BattleOverlayControllerTest.md) | `BattleOverlayControllerTest` | 150 | Locks how the overlay finds the scene it belongs to. `BattleOverlay` is… |
 | [`GDTest/CardDrawAnimationTest.gd`](map/GDTest/CardDrawAnimationTest.md) | `CardDrawAnimationTest` | 303 | Locks in the fake-3D card draw: - every CardUI owns its own warp materia… |
 | [`GDTest/CardFlashPolicyTest.gd`](map/GDTest/CardFlashPolicyTest.md) | `CardFlashPolicyTest` | 109 | Locks in *who caused it* when the game reveals hand cards it picked on i… |
 | [`GDTest/CardMergeAnimationTest.gd`](map/GDTest/CardMergeAnimationTest.md) | `CardMergeAnimationTest` | 612 | Locks in the merge: the card the player was carrying is picked up from t… |
@@ -113,7 +113,7 @@ godot --headless --path . --script res://Tools/check_navigation.gd  # staleness 
 | [`GDTest/FeatureFlagsTest.gd`](map/GDTest/FeatureFlagsTest.md) | `FeatureFlagsTest` | 260 | Locks the feature-flag registry (Core/FeatureFlags.gd): deterministic bu… |
 | [`GDTest/GameDataValidatorTest.gd`](map/GDTest/GameDataValidatorTest.md) | `GameDataValidatorTest` | 782 | Locks every rule the game-data gate enforces (Tools/validate_gameData.gd… |
 | [`GDTest/GameStateMergeTest.gd`](map/GDTest/GameStateMergeTest.md) | `GameStateMergeTest` | 89 | Locks in where a merged card lands in hand: it takes the slot of the car… |
-| [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 286 | Locks the top-bar hover tooltips (HudTooltip) and the slab they are draw… |
+| [`GDTest/HudTooltipTest.gd`](map/GDTest/HudTooltipTest.md) | `HudTooltipTest` | 373 | Locks the top-bar hover tooltips (HudTooltip) and the slab they are draw… |
 | [`GDTest/MessageLogTest.gd`](map/GDTest/MessageLogTest.md) | `MessageLogTest` | 46 | Locks the battle message log: the game authors it in BBCode (`ColorUtils… |
 | [`GDTest/SkillContextFactoryTest.gd`](map/GDTest/SkillContextFactoryTest.md) | `SkillContextFactoryTest` | 359 | Locks Managers/SkillContextFactory.gd directly: the callables a skill re… |
 | [`GDTest/StatusCatalogTest.gd`](map/GDTest/StatusCatalogTest.md) | `StatusCatalogTest` | 141 | Tests for the buff/debuff status system: Unit.statuses + StatusIconCatal… |

@@ -1,9 +1,9 @@
 <!-- GENERATED FILE: do not edit by hand. Produced by Tools/gen_code_index.gd. -->
 # `Scenes/HUD/SkillTooltipPopup.gd` — `class_name SkillTooltipPopup` extends `Control`
 
-`272` lines · [back to the map](../../../CODEBASE_MAP.md)
+`287` lines · [back to the map](../../../CODEBASE_MAP.md)
 
-> extends Control, 8 function(s)
+> extends Control, 13 function(s)
 
 Constants:
 - L5 `CARD_WIDTH: float = 310.0`
@@ -30,18 +30,23 @@ State:
 - L28 `_footer_rtl: RichTextLabel`
 
 Public API:
-- L144-206 `show_callout(data: Dictionary, anchor_rect: Rect2) -> void`
-- L209-212 `hide_callout() -> void`
+- L159-221 `show_callout(data: Dictionary, anchor_rect: Rect2) -> void`
+- L224-227 `hide_callout() -> void`
 
 Private:
 - L31-36 `_init`
-- L39-120 `_build_ui`
-- L124-132 `_apply_side_margins`
-- L135-141 `_sync_wrap_widths`
-- L215-233 `_rebuild_category_icons`
-- L236-271 `_draw`
+- L39-57 `_build_ui`
+- L62-79 `_build_header_row`
+- L83-91 `_build_subtitle`
+- L96-101 `_make_separator`
+- L105-120 `_build_body`
+- L124-135 `_build_footer`
+- L139-147 `_apply_side_margins`
+- L150-156 `_sync_wrap_widths`
+- L230-248 `_rebuild_category_icons`
+- L251-286 `_draw`
 
 Uses: CardIconCatalog
-Used by: Scenes/HUD/BattleOverlayController.gd
+Used by: GDTest/HudTooltipTest.gd, Scenes/HUD/BattleOverlayController.gd
 Loads: —
 

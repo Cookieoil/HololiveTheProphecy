@@ -11,17 +11,12 @@
   },
   "functions": {
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 127,
-    "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 140,
-    "Scenes/HUD/MoxieOrbUI.gd::_draw": 103,
-    "Scenes/HUD/SkillTooltipPopup.gd::_build_ui": 84
+    "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 140
   },
   "complexity": {
     "Scenes/BattleUnit/UnitUI.gd::_draw_health_bar": 18,
     "Scenes/BattleUnit/UnitUI.gd::_load_unit_texture": 15,
-    "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 30,
-    "Scenes/HUD/BattleOverlayController.gd::_find_character_texture_in_node": 15,
-    "Scenes/HUD/BattleOverlayController.gd::rebuild_for_units": 15,
-    "Scenes/HUD/MoxieOrbUI.gd::_draw": 15
+    "Scenes/BattleUnit/UnitUI.gd::_refresh_display": 30
   },
   "get_parent": {}
 }

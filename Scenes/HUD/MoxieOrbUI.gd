@@ -496,79 +496,116 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var center := size * 0.5
-	var is_dead := unit == null or unit.is_dead
-	var is_ally := unit != null and unit.is_ally
-	var max_m := maxi(1, unit.max_moxie if unit != null else 20)
-	var cur_m := unit.moxie if unit != null else 0
-	var is_ready := unit != null and unit.can_cast_ultimate
-	var enemy_will_ult := unit != null and not is_ally and not is_dead \
-		and unit.data != null and unit.data.ultimate != null and (cur_m + _preview_gain >= max_m)
-	var glowing := (is_ready or enemy_will_ult) and not is_dead
+	var center: Vector2 = size * 0.5
+	var is_dead: bool = unit == null or unit.is_dead
+	var is_ally: bool = unit != null and unit.is_ally
+	var max_m: int = maxi(1, unit.max_moxie if unit != null else 20)
+	var cur_m: int = unit.moxie if unit != null else 0
+	var is_ready: bool = unit != null and unit.can_cast_ultimate
+	var enemy_will_ult: bool = (
+		unit != null and not is_ally and not is_dead
+		and unit.data != null and unit.data.ultimate != null
+		and (cur_m + _preview_gain >= max_m)
+	)
+	var glowing: bool = (is_ready or enemy_will_ult) and not is_dead
+	var alpha_mul: float = 0.35 if is_dead else 1.0
 
-	var alpha_mul := 0.35 if is_dead else 1.0
-	var ring_mid_r := (ORB_RADIUS + INNER_RADIUS) * 0.5
-	var start_ang := -PI * 0.5
+	# Four passes, in the order that makes them read as one object: the ripple behind
+	# everything, the seat the crystal sits in, the bezels, then the leading-edge spark.
+	_draw_cast_ripple(center, is_ally)
+	_draw_monogram_fallback(center, alpha_mul)
+	_draw_bezels(
+		center,
+		_bezel_color(is_ally, is_ready, enemy_will_ult, is_dead),
+		_bezel_alpha(alpha_mul, is_ready, enemy_will_ult, is_dead),
+		glowing,
+		alpha_mul
+	)
+	_draw_spark_flare(center, (ORB_RADIUS + INNER_RADIUS) * 0.5, -PI * 0.5,
+		is_ally, is_dead, glowing, max_m)
 
-	# 1. Cast ripple
-	if _burst_timer > 0.0:
-		var t := 1.0 - (_burst_timer / 0.50)
-		var ripple_rgb := ALLY_BEZEL_READY if is_ally else ENEMY_BEZEL_WARNING
-		draw_arc(
-			center,
-			lerpf(ORB_RADIUS, ORB_RADIUS + (16.0 * ORB_SCALE), ease(t, 0.35)),
-			0.0, TAU, 40,
-			_tint(ripple_rgb, (1.0 - t) * 0.75),
-			2.2 * ORB_SCALE,
-			true
-		)
 
-	# 2. Fallback dark center + monogram ONLY if no portrait texture was found
-	if not _has_portrait:
-		draw_circle(center, INNER_RADIUS, Color(0.07, 0.09, 0.11, 0.96 * alpha_mul))
-		var font := ThemeDB.fallback_font
-		if font != null:
-			var f_size := int(13 * ORB_SCALE)
-			var tw := font.get_string_size(badge_code, HORIZONTAL_ALIGNMENT_CENTER, -1, f_size).x
-			var tc := Color(0.82, 0.88, 0.95, 0.85 * alpha_mul)
-			draw_string(font, Vector2(center.x - tw * 0.5, center.y + (5.0 * ORB_SCALE)),
-				badge_code, HORIZONTAL_ALIGNMENT_LEFT, -1, f_size, tc)
+## 1. The cast ripple: one ring expanding out of the orb in the unit's own colour,
+## faded as it grows. It is the only thing on the orb that moves of its own accord.
+func _draw_cast_ripple(center: Vector2, is_ally: bool) -> void:
+	if _burst_timer <= 0.0:
+		return
+	var t: float = 1.0 - (_burst_timer / 0.50)
+	var ripple_rgb: Color = ALLY_BEZEL_READY if is_ally else ENEMY_BEZEL_WARNING
+	draw_arc(
+		center,
+		lerpf(ORB_RADIUS, ORB_RADIUS + (16.0 * ORB_SCALE), ease(t, 0.35)),
+		0.0, TAU, 40,
+		_tint(ripple_rgb, (1.0 - t) * 0.75),
+		2.2 * ORB_SCALE,
+		true
+	)
 
-	# 3. Inner & Outer Metallic Bezels (Moxie sockets & crystals render right underneath via _ring_rect)
-	var bezel_rgb: Color
-	var bezel_alpha: float = alpha_mul
-	if is_ally:
-		if is_ready:
-			bezel_rgb = ALLY_BEZEL_READY.lightened(0.25) if (_is_hovered and interactable) else ALLY_BEZEL_READY
-		elif _is_hovered and not is_dead:
-			bezel_rgb = ALLY_BEZEL_HOVER
-		else:
-			bezel_rgb = ALLY_BEZEL_DEFAULT
-			bezel_alpha = BEZEL_DEFAULT_ALPHA * alpha_mul
-	else:
-		if enemy_will_ult:
-			bezel_rgb = ENEMY_BEZEL_WARNING
-		elif _is_hovered and not is_dead:
-			bezel_rgb = ENEMY_BEZEL_HOVER
-		else:
-			bezel_rgb = ENEMY_BEZEL_DEFAULT
-			bezel_alpha = BEZEL_DEFAULT_ALPHA * alpha_mul
+## 2. The fallback centre: a dark seat and the unit's monogram, drawn only when there is
+## no portrait texture to fill the orb with. A unit whose art never loaded still reads as
+## a socket rather than a hole.
+func _draw_monogram_fallback(center: Vector2, alpha_mul: float) -> void:
+	if _has_portrait:
+		return
+	draw_circle(center, INNER_RADIUS, Color(0.07, 0.09, 0.11, 0.96 * alpha_mul))
+	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var f_size: int = int(13 * ORB_SCALE)
+	var tw: float = font.get_string_size(badge_code, HORIZONTAL_ALIGNMENT_CENTER, -1, f_size).x
+	var tc: Color = Color(0.82, 0.88, 0.95, 0.85 * alpha_mul)
+	draw_string(font, Vector2(center.x - tw * 0.5, center.y + (5.0 * ORB_SCALE)),
+		badge_code, HORIZONTAL_ALIGNMENT_LEFT, -1, f_size, tc)
 
+## 3. The two metallic bezels plus the dark seat the crystal sits in. The crystals
+## themselves render underneath, from `_ring_rect`.
+func _draw_bezels(center: Vector2, bezel_rgb: Color, bezel_alpha: float,
+		glowing: bool, alpha_mul: float) -> void:
 	draw_arc(center, ORB_RADIUS + (0.9 * ORB_SCALE), 0.0, TAU, 48,
 		Color(0.03, 0.04, 0.05, 0.85 * alpha_mul), 1.2 * ORB_SCALE, true)
 	draw_arc(center, ORB_RADIUS, 0.0, TAU, 48,
 		_tint(bezel_rgb, bezel_alpha), 1.15 * ORB_SCALE, true)
 
-	var inner_dim := 0.82 if glowing else 0.70
+	var inner_dim: float = 0.82 if glowing else 0.70
 	draw_arc(center, INNER_RADIUS, 0.0, TAU, 48,
 		_tint(bezel_rgb * inner_dim, bezel_alpha * 0.90), 1.0 * ORB_SCALE, true)
 
-	# 4. Leading-Edge Spark Flare (sits on top of bezels & crystals)
+
+## Which colour the bezel wears: ready, hovered, warned, or resting. Allies and enemies
+## have separate palettes because the two rails are read at a glance.
+func _bezel_color(is_ally: bool, is_ready: bool, enemy_will_ult: bool, is_dead: bool) -> Color:
+	if is_ally:
+		if is_ready:
+			return ALLY_BEZEL_READY.lightened(0.25) if (_is_hovered and interactable) else ALLY_BEZEL_READY
+		if _is_hovered and not is_dead:
+			return ALLY_BEZEL_HOVER
+		return ALLY_BEZEL_DEFAULT
+	if enemy_will_ult:
+		return ENEMY_BEZEL_WARNING
+	if _is_hovered and not is_dead:
+		return ENEMY_BEZEL_HOVER
+	return ENEMY_BEZEL_DEFAULT
+
+
+## A resting orb draws its bezel at `BEZEL_DEFAULT_ALPHA`; anything that means "look
+## here" - ready, hovering, an imminent enemy Ultimate - draws it at full strength.
+func _bezel_alpha(alpha_mul: float, is_ready: bool, enemy_will_ult: bool, is_dead: bool) -> float:
+	if is_ready or enemy_will_ult or (_is_hovered and not is_dead):
+		return alpha_mul
+	return BEZEL_DEFAULT_ALPHA * alpha_mul
+
+
+## 4. The leading-edge spark: where the flare sits, and the colours it would be drawn in.
+## The colours are resolved and then not rasterised - that is how this arrived, and a
+## refactor is not allowed to change what a player sees, so it is carried over unchanged.
+## `06_orb_states.png` is the evidence that nothing moved.
+func _draw_spark_flare(center: Vector2, ring_mid_r: float, start_ang: float,
+		is_ally: bool, is_dead: bool, glowing: bool, max_m: int) -> void:
 	var spark_angle: float = NAN
 	var spark_is_preview: bool = false
 	if not is_dead and _preview_gain > 0:
-		var fill_ratio := clampf(_display_moxie / float(max_m), 0.0, 1.0)
-		var total_ratio := fill_ratio + float(_preview_gain) / float(max_m)
+		var fill_ratio: float = clampf(_display_moxie / float(max_m), 0.0, 1.0)
+		var total_ratio: float = fill_ratio + float(_preview_gain) / float(max_m)
 		if total_ratio > 1.0:
 			spark_angle = start_ang + clampf(total_ratio - 1.0, 0.0, 1.0) * TAU
 		else:
@@ -577,26 +614,27 @@ func _draw() -> void:
 	elif glowing:
 		spark_angle = start_ang
 
-	if not is_nan(spark_angle):
-		var pulse := SPARK_PULSE_BASE + SPARK_PULSE_AMP * sin(_anim_time * SPARK_PULSE_SPEED)
-		var tip := center + Vector2(cos(spark_angle), sin(spark_angle)) * ring_mid_r
+	if is_nan(spark_angle):
+		return
+	var pulse: float = SPARK_PULSE_BASE + SPARK_PULSE_AMP * sin(_anim_time * SPARK_PULSE_SPEED)
+	var tip: Vector2 = center + Vector2(cos(spark_angle), sin(spark_angle)) * ring_mid_r
 
-		var halo_rgb: Color
-		var mid_rgb: Color
-		var core_rgb: Color
-		if spark_is_preview:
-			var p_rgb := ALLY_PREVIEW_COLOR if is_ally else ENEMY_PREVIEW_COLOR
-			halo_rgb = p_rgb.darkened(PREVIEW_SPARK_HALO_DARKEN)
-			mid_rgb  = p_rgb.lightened(PREVIEW_SPARK_MID_LIGHTEN)
-			core_rgb = PREVIEW_SPARK_CORE
-		elif is_ally:
-			halo_rgb = ALLY_SPARK_HALO
-			mid_rgb  = ALLY_SPARK_MID
-			core_rgb = ALLY_SPARK_CORE
-		else:
-			halo_rgb = ENEMY_SPARK_HALO
-			mid_rgb  = ENEMY_SPARK_MID
-			core_rgb = ENEMY_SPARK_CORE
+	var halo_rgb: Color
+	var mid_rgb: Color
+	var core_rgb: Color
+	if spark_is_preview:
+		var p_rgb: Color = ALLY_PREVIEW_COLOR if is_ally else ENEMY_PREVIEW_COLOR
+		halo_rgb = p_rgb.darkened(PREVIEW_SPARK_HALO_DARKEN)
+		mid_rgb = p_rgb.lightened(PREVIEW_SPARK_MID_LIGHTEN)
+		core_rgb = PREVIEW_SPARK_CORE
+	elif is_ally:
+		halo_rgb = ALLY_SPARK_HALO
+		mid_rgb = ALLY_SPARK_MID
+		core_rgb = ALLY_SPARK_CORE
+	else:
+		halo_rgb = ENEMY_SPARK_HALO
+		mid_rgb = ENEMY_SPARK_MID
+		core_rgb = ENEMY_SPARK_CORE
 
 #region Helper Methods
 static func _tint(c: Color, a: float) -> Color:

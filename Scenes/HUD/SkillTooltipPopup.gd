@@ -41,18 +41,28 @@ func _build_ui() -> void:
 	_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_margin)
 	_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var content_w := _apply_side_margins()
+	var content_w: float = _apply_side_margins()
 
 	_vbox = VBoxContainer.new()
 	_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vbox.add_theme_constant_override("separation", 5)
 	_margin.add_child(_vbox)
 
-	# Top row: "Skill 1 (Odd) (Unmerged)" + Category Icons
-	var top_row := HBoxContainer.new()
+	_vbox.add_child(_build_header_row())
+	_vbox.add_child(_build_subtitle(content_w))
+	_vbox.add_child(_make_separator(0.14))
+	_vbox.add_child(_build_body(content_w))
+	_footer_sep = _make_separator(0.10)
+	_vbox.add_child(_footer_sep)
+	_vbox.add_child(_build_footer(content_w))
+
+
+## The title row: the skill's name on the left, the (currently off) category icons on the
+## right, so a header never has to be re-laid out when the icons come back.
+func _build_header_row() -> HBoxContainer:
+	var top_row: HBoxContainer = HBoxContainer.new()
 	top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_row.add_theme_constant_override("separation", 8)
-	_vbox.add_child(top_row)
 
 	_header_label = Label.new()
 	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -66,8 +76,11 @@ func _build_ui() -> void:
 	_icons_box.add_theme_constant_override("separation", 4)
 	_icons_box.visible = SHOW_CATEGORY_ICONS
 	top_row.add_child(_icons_box)
+	return top_row
 
-	# Subtitle: Skill Display Name + Effective Value
+
+## The skill's display name and effective value, on one wrapping line.
+func _build_subtitle(content_w: float) -> Label:
 	_subtitle_label = Label.new()
 	_subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_subtitle_label.custom_minimum_size = Vector2(content_w, 0.0)
@@ -75,15 +88,21 @@ func _build_ui() -> void:
 	_subtitle_label.add_theme_font_size_override("font_size", 12)
 	_subtitle_label.add_theme_color_override("font_color", Color(0.75, 0.80, 0.90))
 	_subtitle_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vbox.add_child(_subtitle_label)
+	return _subtitle_label
 
-	var sep1 := ColorRect.new()
-	sep1.custom_minimum_size = Vector2(0, 1)
-	sep1.color = Color(1.0, 1.0, 1.0, 0.14)
-	sep1.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vbox.add_child(sep1)
 
-	# Body ("Deal 6 damage to all enemies.")
+## A one-pixel rule. The two of them differ only in how strongly they read, which is what
+## makes the footer feel like an appendix rather than a second paragraph.
+func _make_separator(alpha: float) -> ColorRect:
+	var separator: ColorRect = ColorRect.new()
+	separator.custom_minimum_size = Vector2(0, 1)
+	separator.color = Color(1.0, 1.0, 1.0, alpha)
+	separator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return separator
+
+
+## The skill text itself ("Deal 6 damage to all enemies."), wrapping to the panel width.
+func _build_body(content_w: float) -> RichTextLabel:
 	_body_rtl = RichTextLabel.new()
 	_body_rtl.bbcode_enabled = true
 	_body_rtl.fit_content = true
@@ -93,20 +112,16 @@ func _build_ui() -> void:
 	_body_rtl.size = Vector2(content_w, 0.0)
 	_body_rtl.add_theme_font_size_override("normal_font_size", 13)
 	_body_rtl.add_theme_font_size_override("bold_font_size", 14)
-	# Inline keyword icons ([img]) need a little vertical breathing room so the
-	# 16px glyph never touches the line above.
+	# Inline keyword icons ([img]) need a little vertical breathing room so the 16px glyph
+	# never touches the line above.
 	_body_rtl.add_theme_constant_override("line_separation", 3)
 	_body_rtl.add_theme_color_override("default_color", Color(0.93, 0.95, 0.98))
 	_body_rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vbox.add_child(_body_rtl)
+	return _body_rtl
 
-	_footer_sep = ColorRect.new()
-	_footer_sep.custom_minimum_size = Vector2(0, 1)
-	_footer_sep.color = Color(1.0, 1.0, 1.0, 0.10)
-	_footer_sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vbox.add_child(_footer_sep)
 
-	# Footer (Moxie transition / Ready cue)
+## The Moxie transition / Ready cue that sits under the second rule.
+func _build_footer(content_w: float) -> RichTextLabel:
 	_footer_rtl = RichTextLabel.new()
 	_footer_rtl.bbcode_enabled = true
 	_footer_rtl.fit_content = true
@@ -117,7 +132,7 @@ func _build_ui() -> void:
 	_footer_rtl.add_theme_font_size_override("normal_font_size", 12)
 	_footer_rtl.add_theme_font_size_override("bold_font_size", 12)
 	_footer_rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vbox.add_child(_footer_rtl)
+	return _footer_rtl
 
 
 ## Applies outer margins and returns the exact inner content width available to wrapped text.
